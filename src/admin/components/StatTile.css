@@ -1,0 +1,68 @@
+.tile {
+  --tile-accent: var(--text-muted);
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-thai);
+}
+
+.tile--accent {
+  --tile-accent: var(--primary-deep);
+}
+.tile--warning {
+  --tile-accent: var(--status-warning);
+}
+.tile--danger {
+  --tile-accent: var(--status-danger);
+}
+
+.tile__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tile-accent);
+}
+
+/* Label and value wear text tokens; only the small icon carries the accent hue. */
+.tile__label {
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.tile__value {
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.tile__note {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tile__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  color: var(--primary-deep);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tile__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

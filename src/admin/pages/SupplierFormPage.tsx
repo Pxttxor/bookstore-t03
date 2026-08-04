@@ -1,0 +1,432 @@
+import { useState, type FormEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import Icon from '../../components/Icon'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
+import Breadcrumb from '../components/Breadcrumb'
+import EmptyState from '../components/EmptyState'
+import { useToast } from '../components/ToastContext'
+import { useSuppliers, type SupplierDraft } from '../suppliers/SupplierContext'
+import { formatSupplierCode, type SupplierBook } from '../suppliers/suppliers'
+import '../components/AdminForm.css'
+import './SupplierFormPage.css'
+
+type FieldName =
+  | 'companyName'
+  | 'contactName'
+  | 'phone'
+  | 'email'
+  | 'address'
+  | 'tradeTerms'
+  | 'creditTerms'
+
+const REQUIRED: FieldName[] = ['companyName', 'contactName', 'phone', 'email', 'address']
+
+const LABELS: Record<FieldName, string> = {
+  companyName: 'ชื่อบริษัท',
+  contactName: 'ผู้ติดต่อ',
+  phone: 'เบอร์โทร',
+  email: 'อีเมล',
+  address: 'ที่อยู่',
+  tradeTerms: 'เงื่อนไขการค้า',
+  creditTerms: 'เงื่อนไขเครดิต',
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+type BookRow = Omit<SupplierBook, 'bookId'> & { bookId: number }
+
+const emptyBook = (bookId: number): BookRow => ({
+  bookId,
+  isbn: '',
+  title: '',
+  author: '',
+  publisher: '',
+  supplyPrice: 0,
+  leadTimeDays: 0,
+})
+
+// The form seeds its state from the supplier being edited, so it has to be
+// remounted when the route switches to a different id.
+export default function SupplierFormPage() {
+  const { id } = useParams()
+  return <SupplierForm key={id ?? 'new'} id={id} />
+}
+
+function SupplierForm({ id }: { id?: string }) {
+  const { user } = useAuth()
+  const { findById, findByCompanyName, add, update } = useSuppliers()
+  const { notify } = useToast()
+  const navigate = useNavigate()
+
+  const editing = id !== undefined
+  const existing = editing ? findById(Number(id)) : undefined
+
+  const [values, setValues] = useState<Record<FieldName, string>>({
+    companyName: existing?.companyName ?? '',
+    contactName: existing?.contactName ?? '',
+    phone: existing?.phone ?? '',
+    email: existing?.email ?? '',
+    address: existing?.address ?? '',
+    tradeTerms: existing?.tradeTerms ?? '',
+    creditTerms: existing?.creditTerms ?? '',
+  })
+  const [books, setBooks] = useState<BookRow[]>(existing?.books ?? [])
+  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
+
+  if (!can.editSuppliers(user!.role)) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <EmptyState
+            icon="lock"
+            title="บทบาทของคุณไม่มีสิทธิ์แก้ไขข้อมูลผู้จัดจำหน่าย"
+            description="การเพิ่มและแก้ไขข้อมูลเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
+            action={{ label: 'กลับไปหน้ารายการ', onClick: () => navigate('/admin/suppliers') }}
+          />
+        </section>
+      </div>
+    )
+  }
+
+  if (editing && !existing) {
+    return (
+      <div className="admin-page">
+        <Breadcrumb
+          items={[
+            { label: 'หน้าหลัก', to: '/admin' },
+            { label: 'ผู้จัดจำหน่าย', to: '/admin/suppliers' },
+            { label: 'ไม่พบข้อมูล' },
+          ]}
+        />
+        <section className="admin-card">
+          <EmptyState
+            icon="building"
+            title="ไม่พบข้อมูลผู้จัดจำหน่าย"
+            description="ไม่สามารถเปิดฟอร์มแก้ไขได้เพราะไม่พบรหัสที่ระบุ"
+            action={{ label: 'กลับไปหน้ารายการ', onClick: () => navigate('/admin/suppliers') }}
+          />
+        </section>
+      </div>
+    )
+  }
+
+  const setField = (field: FieldName, value: string) => {
+    setValues((current) => ({ ...current, [field]: value }))
+    setErrors((current) => ({ ...current, [field]: undefined }))
+  }
+
+  const setBookField = <K extends keyof BookRow>(index: number, field: K, value: BookRow[K]) => {
+    setBooks((current) =>
+      current.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+    )
+  }
+
+  const validate = () => {
+    const found: Partial<Record<FieldName, string>> = {}
+    for (const field of REQUIRED) {
+      if (!values[field].trim()) found[field] = `กรุณากรอก${LABELS[field]}`
+    }
+    if (values.email.trim() && !EMAIL_PATTERN.test(values.email.trim())) {
+      found.email = 'รูปแบบอีเมลไม่ถูกต้อง'
+    }
+    setErrors(found)
+    return Object.keys(found).length === 0
+  }
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!validate()) return
+
+    const duplicate = findByCompanyName(values.companyName, existing?.supplierId)
+    if (duplicate) {
+      notify('error', `พบข้อมูลซ้ำ: ${duplicate.companyName} มีอยู่ในระบบแล้ว`, {
+        label: 'ดูรายการเดิม',
+        onClick: () => navigate(`/admin/suppliers/${duplicate.supplierId}`),
+      })
+      return
+    }
+
+    const draft: SupplierDraft = {
+      companyName: values.companyName.trim(),
+      contactName: values.contactName.trim(),
+      phone: values.phone.trim(),
+      email: values.email.trim(),
+      address: values.address.trim(),
+      tradeTerms: values.tradeTerms.trim(),
+      creditTerms: values.creditTerms.trim(),
+      books: books
+        .filter((row) => row.title.trim() !== '')
+        .map((row) => ({
+          ...row,
+          isbn: row.isbn.trim(),
+          title: row.title.trim(),
+          author: row.author.trim(),
+          publisher: row.publisher.trim(),
+        })),
+    }
+
+    if (existing) {
+      update(existing.supplierId, draft, user!.name)
+      notify('success', `บันทึกการแก้ไข ${draft.companyName} เรียบร้อยแล้ว`)
+      navigate(`/admin/suppliers/${existing.supplierId}`)
+    } else {
+      const created = add(draft)
+      notify(
+        'success',
+        `เพิ่มผู้จัดจำหน่ายสำเร็จ (รหัส ${formatSupplierCode(created.supplierId)})`,
+      )
+      navigate(`/admin/suppliers/${created.supplierId}`)
+    }
+  }
+
+  const title = existing ? 'แก้ไขผู้จัดจำหน่าย' : 'เพิ่มผู้จัดจำหน่าย'
+
+  return (
+    <div className="admin-page">
+      <Breadcrumb
+        items={[
+          { label: 'หน้าหลัก', to: '/admin' },
+          { label: 'ผู้จัดจำหน่าย', to: '/admin/suppliers' },
+          ...(existing
+            ? [{ label: existing.companyName, to: `/admin/suppliers/${existing.supplierId}` }]
+            : []),
+          { label: title },
+        ]}
+      />
+
+      <div className="admin-page__head">
+        <div>
+          <h1 className="admin-page__title">{title}</h1>
+          <p className="admin-page__subtitle">
+            {existing
+              ? `รหัส ${formatSupplierCode(existing.supplierId)} · ระบบจะบันทึกประวัติการแก้ไขทุกครั้ง`
+              : 'ระบบจะออกรหัสผู้จัดจำหน่ายและตั้งสถานะเป็น "ใช้งาน" ให้อัตโนมัติ'}
+          </p>
+        </div>
+      </div>
+
+      <form className="supplier-form" onSubmit={submit} noValidate>
+        <section className="admin-card supplier-form__card">
+          <h2 className="admin-card__title">ข้อมูลทั่วไป</h2>
+
+          <div className="supplier-form__grid">
+            <label className="admin-field supplier-form__wide">
+              <span className="admin-field__label">
+                {LABELS.companyName} <em>*</em>
+              </span>
+              <input
+                className={'admin-input' + (errors.companyName ? ' admin-input--error' : '')}
+                value={values.companyName}
+                onChange={(e) => setField('companyName', e.target.value)}
+              />
+              {errors.companyName && (
+                <span className="admin-field__error">{errors.companyName}</span>
+              )}
+            </label>
+
+            <label className="admin-field">
+              <span className="admin-field__label">
+                {LABELS.contactName} <em>*</em>
+              </span>
+              <input
+                className={'admin-input' + (errors.contactName ? ' admin-input--error' : '')}
+                value={values.contactName}
+                onChange={(e) => setField('contactName', e.target.value)}
+              />
+              {errors.contactName && (
+                <span className="admin-field__error">{errors.contactName}</span>
+              )}
+            </label>
+
+            <label className="admin-field">
+              <span className="admin-field__label">
+                {LABELS.phone} <em>*</em>
+              </span>
+              <input
+                className={'admin-input' + (errors.phone ? ' admin-input--error' : '')}
+                value={values.phone}
+                onChange={(e) => setField('phone', e.target.value)}
+                placeholder="081-234-5678"
+              />
+              {errors.phone && <span className="admin-field__error">{errors.phone}</span>}
+            </label>
+
+            <label className="admin-field">
+              <span className="admin-field__label">
+                {LABELS.email} <em>*</em>
+              </span>
+              <input
+                type="email"
+                className={'admin-input' + (errors.email ? ' admin-input--error' : '')}
+                value={values.email}
+                onChange={(e) => setField('email', e.target.value)}
+                placeholder="contact@example.co.th"
+              />
+              {errors.email && <span className="admin-field__error">{errors.email}</span>}
+            </label>
+
+            <label className="admin-field supplier-form__wide">
+              <span className="admin-field__label">
+                {LABELS.address} <em>*</em>
+              </span>
+              <textarea
+                rows={2}
+                className={'admin-input' + (errors.address ? ' admin-input--error' : '')}
+                value={values.address}
+                onChange={(e) => setField('address', e.target.value)}
+              />
+              {errors.address && <span className="admin-field__error">{errors.address}</span>}
+            </label>
+
+            <label className="admin-field">
+              <span className="admin-field__label">{LABELS.tradeTerms}</span>
+              <input
+                className="admin-input"
+                value={values.tradeTerms}
+                onChange={(e) => setField('tradeTerms', e.target.value)}
+                placeholder="ส่วนลดหน้าปก 30%"
+              />
+            </label>
+
+            <label className="admin-field">
+              <span className="admin-field__label">{LABELS.creditTerms}</span>
+              <input
+                className="admin-input"
+                value={values.creditTerms}
+                onChange={(e) => setField('creditTerms', e.target.value)}
+                placeholder="เครดิต 30 วัน"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="admin-card supplier-form__card">
+          <div className="supplier-form__books-head">
+            <h2 className="admin-card__title">รายการหนังสือที่จำหน่าย</h2>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() =>
+                setBooks((current) => [
+                  ...current,
+                  emptyBook(Date.now() + current.length),
+                ])
+              }
+            >
+              <Icon name="plus" size={16} />
+              เพิ่มรายการ
+            </button>
+          </div>
+
+          {books.length === 0 ? (
+            <p className="admin-field__hint">
+              ยังไม่มีรายการหนังสือ กด &quot;เพิ่มรายการ&quot; เพื่อระบุหนังสือที่รับจากผู้จัดจำหน่ายรายนี้
+            </p>
+          ) : (
+            <ul className="supplier-form__books">
+              {books.map((row, index) => (
+                <li key={row.bookId} className="supplier-form__book">
+                  <label className="admin-field">
+                    <span className="admin-field__label">ชื่อหนังสือ</span>
+                    <input
+                      className="admin-input"
+                      value={row.title}
+                      onChange={(e) => setBookField(index, 'title', e.target.value)}
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span className="admin-field__label">ISBN</span>
+                    <input
+                      className="admin-input"
+                      value={row.isbn}
+                      onChange={(e) => setBookField(index, 'isbn', e.target.value)}
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span className="admin-field__label">ผู้แต่ง</span>
+                    <input
+                      className="admin-input"
+                      value={row.author}
+                      onChange={(e) => setBookField(index, 'author', e.target.value)}
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span className="admin-field__label">สำนักพิมพ์</span>
+                    <input
+                      className="admin-input"
+                      value={row.publisher}
+                      onChange={(e) => setBookField(index, 'publisher', e.target.value)}
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span className="admin-field__label">ราคาส่ง (บาท)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      className="admin-input"
+                      value={row.supplyPrice}
+                      onChange={(e) =>
+                        setBookField(index, 'supplyPrice', Number(e.target.value))
+                      }
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span className="admin-field__label">ระยะเวลาส่ง (วัน)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      className="admin-input"
+                      value={row.leadTimeDays}
+                      onChange={(e) =>
+                        setBookField(index, 'leadTimeDays', Number(e.target.value))
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="icon-btn supplier-form__remove"
+                    title="ลบรายการนี้"
+                    onClick={() => setBooks((current) => current.filter((_, i) => i !== index))}
+                  >
+                    <Icon name="trash" size={17} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {existing && existing.editHistory.length > 0 && (
+          <section className="admin-card supplier-form__card">
+            <h2 className="admin-card__title">ประวัติการแก้ไข</h2>
+            <ul className="supplier-form__history">
+              {[...existing.editHistory].reverse().map((log) => (
+                <li key={log.at}>
+                  <span className="supplier-form__history-when">
+                    {new Date(log.at).toLocaleString('th-TH')}
+                  </span>
+                  <span>{log.summary}</span>
+                  <span className="supplier-form__history-who">โดย {log.by}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <div className="supplier-form__actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate(-1)}
+          >
+            ยกเลิก
+          </button>
+          <button type="submit" className="btn btn-primary btn-sm">
+            บันทึก
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}

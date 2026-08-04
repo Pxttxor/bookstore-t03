@@ -1,0 +1,136 @@
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 64px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topnav__inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.topnav__left {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.topnav__brand {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-deep);
+  letter-spacing: -0.3px;
+}
+
+.topnav__links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.topnav__link {
+  color: var(--nav-link);
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+.topnav__link:hover,
+.topnav__link.is-active {
+  color: var(--primary-deep);
+}
+
+.topnav__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topnav__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  width: 256px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+}
+.topnav__search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+}
+
+.topnav__icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  color: var(--primary-deep);
+  transition: background 0.15s ease;
+}
+.topnav__icon-btn:hover {
+  background: var(--surface-alt);
+}
+
+.topnav__avatar {
+  background: var(--mint);
+  color: var(--on-primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.topnav__avatar:hover {
+  filter: brightness(0.96);
+  background: var(--mint);
+}
+
+.topnav__icon-btn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.topnav__icon-btn:disabled:hover {
+  background: transparent;
+}
+
+.topnav__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--primary-deep);
+  border-radius: var(--radius-pill);
+}
+
+@media (max-width: 768px) {
+  .topnav__links {
+    display: none;
+  }
+  .topnav__search {
+    display: none;
+  }
+  .topnav__left {
+    gap: 16px;
+  }
+}

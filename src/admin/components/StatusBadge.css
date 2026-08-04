@@ -1,0 +1,40 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-thai);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge--success {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+.badge--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+.badge--danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+.badge--neutral {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral);
+}
+.badge--info {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}

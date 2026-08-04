@@ -1,0 +1,138 @@
+.checkout {
+  padding-block: 40px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.checkout__head h1 {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+.checkout__head p {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+.checkout__grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 48px;
+  align-items: start;
+}
+
+/* form card */
+.checkout__form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.checkout__section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.checkout__section-title svg {
+  color: var(--primary-deep);
+}
+
+.checkout__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-body);
+}
+.field__label em {
+  color: var(--danger);
+  font-style: normal;
+}
+.field__input {
+  padding: 14px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field__input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 196, 168, 0.15);
+}
+
+.checkout__save {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-body);
+  cursor: pointer;
+}
+.checkout__save input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.checkout__secure {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+}
+.checkout__secure svg {
+  color: var(--primary-deep);
+  flex-shrink: 0;
+}
+.checkout__secure p {
+  font-size: 14px;
+  color: var(--text-body);
+  line-height: 1.6;
+}
+
+.checkout__pay {
+  width: 100%;
+  padding-block: 16px;
+  border-radius: var(--radius-pill);
+  font-size: 16px;
+}
+.checkout__pay:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .checkout__grid {
+    grid-template-columns: 1fr;
+  }
+  .checkout__head h1 {
+    font-size: 28px;
+  }
+}
+@media (max-width: 560px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}

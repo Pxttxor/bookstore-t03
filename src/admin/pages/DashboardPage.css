@@ -1,0 +1,121 @@
+.dash__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.dash__budget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-thai);
+}
+
+.dash__budget-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-deep);
+}
+
+.dash__budget-head h3 {
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dash__budget-value {
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.dash__budget-note {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dash__inbox,
+.dash__shortcuts {
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dash__inbox-title {
+  font-size: 17px;
+}
+
+.dash__empty {
+  padding-block: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-thai);
+  font-size: 15px;
+}
+
+.dash__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--font-thai);
+  font-size: 15px;
+}
+
+.dash__list li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+
+.dash__code {
+  color: var(--text-heading);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.dash__name {
+  color: var(--text-heading);
+  font-weight: 500;
+}
+
+.dash__amount {
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.dash__meta {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dash__list li .btn {
+  margin-inline-start: auto;
+}
+
+.dash__shortcut-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .dash__list li .btn {
+    margin-inline-start: 0;
+    width: 100%;
+  }
+}

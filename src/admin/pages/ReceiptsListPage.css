@@ -1,0 +1,26 @@
+.receipts__section {
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.receipts__title {
+  font-size: 17px;
+}
+
+.receipts__num {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.receipts__link {
+  color: var(--primary-deep);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.receipts__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

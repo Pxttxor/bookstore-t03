@@ -1,0 +1,11 @@
+.storefront {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--page-bg);
+}
+
+.storefront__main {
+  flex: 1;
+  width: 100%;
+}

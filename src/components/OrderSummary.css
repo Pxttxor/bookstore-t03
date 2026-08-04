@@ -1,0 +1,116 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  align-self: start;
+}
+
+.summary__title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.summary__empty {
+  color: var(--text-muted);
+  font-family: var(--font-thai);
+}
+
+.summary__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px;
+}
+.summary__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.summary__thumb {
+  position: relative;
+  width: 48px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.summary__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.summary__qty {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-deep);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.summary__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.summary__name {
+  font-weight: 600;
+  color: var(--text-heading);
+  font-size: 15px;
+}
+.summary__author {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.summary__price {
+  font-weight: 600;
+  color: var(--primary-deep);
+  white-space: nowrap;
+}
+
+.summary__totals {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.summary__row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-body);
+}
+.summary__free {
+  color: var(--primary-deep);
+  font-weight: 600;
+}
+.summary__row--total {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.summary__row--total span:last-child {
+  color: var(--primary-deep);
+}
+
+.summary__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

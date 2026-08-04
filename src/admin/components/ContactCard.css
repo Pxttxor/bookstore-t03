@@ -1,0 +1,72 @@
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-thai);
+}
+
+.contact__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.contact__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--status-info-bg);
+  color: var(--primary-deep);
+}
+
+.contact__name {
+  font-size: 16px;
+}
+
+.contact__duty {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.contact__channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contact__channels li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-alt);
+  color: var(--text-body);
+  font-size: 13px;
+}
+
+.contact__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  color: var(--primary-deep);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.contact__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

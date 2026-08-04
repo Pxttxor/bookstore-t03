@@ -1,0 +1,28 @@
+/* Shared tab strip for back-office screens that filter one list in place
+   (SCR-22 เอกสารจัดซื้อ, SCR-27 ศูนย์การติดต่อ). Import alongside the page's own CSS. */
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-soft);
+  font-family: var(--font-thai);
+}
+
+.admin-tabs__tab {
+  padding: 10px 18px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.admin-tabs__tab:hover {
+  color: var(--text-heading);
+}
+
+.admin-tabs__tab--active {
+  border-bottom-color: var(--primary);
+  color: var(--primary-deep);
+  font-weight: 600;
+}

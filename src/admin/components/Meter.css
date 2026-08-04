@@ -1,0 +1,28 @@
+.meter {
+  --meter-track: var(--status-info-bg);
+  --meter-fill: var(--primary);
+
+  block-size: 10px;
+  inline-size: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--meter-track);
+  overflow: hidden;
+}
+
+.meter--warning {
+  --meter-track: var(--status-warning-bg);
+  --meter-fill: var(--status-warning);
+}
+
+.meter--danger {
+  --meter-track: var(--status-danger-bg);
+  --meter-fill: var(--status-danger);
+}
+
+.meter__fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--meter-fill);
+  transition: inline-size 0.25s ease;
+}

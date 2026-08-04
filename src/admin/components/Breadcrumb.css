@@ -1,0 +1,25 @@
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-thai);
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.crumbs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.crumbs a:hover {
+  color: var(--primary-deep);
+  text-decoration: underline;
+}
+
+.crumbs__current {
+  color: var(--text-heading);
+  font-weight: 500;
+}

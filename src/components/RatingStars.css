@@ -1,0 +1,20 @@
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #f5b301; /* gold star */
+  line-height: 0;
+}
+
+.rating__star {
+  display: inline-flex;
+}
+
+.rating--interactive .rating__star {
+  padding: 2px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.rating--interactive .rating__star:hover {
+  transform: scale(1.1);
+}

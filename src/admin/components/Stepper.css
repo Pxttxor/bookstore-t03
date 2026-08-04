@@ -1,0 +1,79 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-family: var(--font-thai);
+}
+
+.stepper__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.stepper__step:not(:last-child)::after {
+  content: '';
+  width: 34px;
+  height: 2px;
+  margin-inline: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--border-soft);
+}
+
+.stepper__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border-soft);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stepper__step--done {
+  color: var(--status-success);
+}
+.stepper__step--done .stepper__dot {
+  border-color: var(--status-success);
+  background: var(--status-success);
+  color: #fff;
+}
+.stepper__step--done:not(:last-child)::after {
+  background: var(--status-success);
+}
+
+.stepper__step--active {
+  color: var(--primary-deep);
+  font-weight: 600;
+}
+.stepper__step--active .stepper__dot {
+  border-color: var(--primary);
+  background: var(--status-info-bg);
+  color: var(--primary-deep);
+}
+
+.stepper__step--stopped {
+  color: var(--status-danger);
+  font-weight: 600;
+}
+.stepper__step--stopped .stepper__dot {
+  border-color: var(--status-danger);
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+@media (max-width: 768px) {
+  .stepper__step:not(:last-child)::after {
+    width: 16px;
+    margin-inline: 6px;
+  }
+  .stepper__label {
+    font-size: 13px;
+  }
+}

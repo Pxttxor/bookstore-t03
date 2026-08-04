@@ -1,0 +1,62 @@
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-thai);
+}
+
+.admin-field__label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-heading);
+}
+
+.admin-field__label em {
+  color: var(--danger);
+  font-style: normal;
+}
+
+.admin-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  font-family: var(--font-thai);
+  font-size: 15px;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 196, 168, 0.18);
+}
+
+.admin-input--error {
+  border-color: var(--danger);
+}
+
+.admin-input--error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.admin-input:disabled {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+textarea.admin-input {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.admin-field__error {
+  font-size: 14px;
+  color: var(--danger);
+}
+
+.admin-field__hint {
+  font-size: 14px;
+  color: var(--text-muted);
+}
