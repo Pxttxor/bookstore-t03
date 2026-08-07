@@ -1,0 +1,36 @@
+.stock-adjust__card {
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+
+.stock-adjust__banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+  font-size: 15px;
+}
+
+.stock-adjust__ref {
+  max-width: 460px;
+}
+
+.stock-adjust__num {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.stock-adjust__num--bad {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.stock-adjust__input {
+  width: 110px;
+  text-align: right;
+}

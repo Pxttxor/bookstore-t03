@@ -1,0 +1,14 @@
+.count-list {
+  overflow: hidden;
+}
+
+.count-list__num {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.count-list__variance {
+  color: var(--danger);
+  font-weight: 600;
+}

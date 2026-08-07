@@ -1,0 +1,8 @@
+.book-list {
+  overflow: hidden;
+}
+
+.book-list__num {
+  text-align: right;
+  white-space: nowrap;
+}
