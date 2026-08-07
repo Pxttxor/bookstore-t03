@@ -1,0 +1,33 @@
+.promotion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.promotion-list__condition {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: normal;
+  max-width: 320px;
+}
+
+.promotion-list__discount {
+  font-weight: 600;
+  color: var(--primary-deep);
+}
+
+.promotion-list__dates {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.promotion-list__confirm {
+  font-family: var(--font-thai);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-body);
+}

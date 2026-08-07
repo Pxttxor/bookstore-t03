@@ -1,4 +1,15 @@
-# Logs
+# --- Claude / AI assistant artifacts ---
+# กันไฟล์ที่บ่งบอกการใช้ AI assistant ไม่ให้เข้า repo (match ทุกระดับ รวม frontend/)
+.claude/
+CLAUDE.md
+
+# --- Node / Vite build ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# --- Logs ---
 logs
 *.log
 npm-debug.log*
@@ -7,12 +18,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# --- Go build output ---
+*.exe
+*.exe~
+*.test
+*.out
 
-# Editor directories and files
+# --- Editor / IDE / OS ---
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,3 +34,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# --- เอกสารประกอบ ไม่ใช่ source code ---
+ชี้แจงการส่งงาน.pdf

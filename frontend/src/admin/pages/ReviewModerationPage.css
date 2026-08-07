@@ -1,0 +1,18 @@
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.review-list__comment {
+  white-space: normal;
+  max-width: 360px;
+  color: var(--text-body);
+}
+
+.review-list__flag {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 6px;
+  color: var(--danger);
+}
