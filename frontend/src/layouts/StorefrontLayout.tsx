@@ -5,7 +5,7 @@ import './StorefrontLayout.css'
 
 export default function StorefrontLayout() {
   const { pathname } = useLocation()
-  const showSearch = pathname.startsWith('/book')
+  const showSearch = pathname === '/' || pathname.startsWith('/book')
 
   return (
     <div className="storefront">
