@@ -1,0 +1,53 @@
+.book-detail__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.book-detail__card {
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.book-detail__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+
+.book-detail__facts-wide {
+  grid-column: 1 / -1;
+}
+
+.book-detail__facts dt {
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.book-detail__facts dd {
+  font-size: 15px;
+  color: var(--text-heading);
+}
+
+.book-detail__mono {
+  font-family: var(--font-mono);
+}
+
+.book-detail__num {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.book-detail__num--out {
+  color: var(--danger);
+}
+
+@media (max-width: 1024px) {
+  .book-detail__tiles,
+  .book-detail__facts {
+    grid-template-columns: 1fr;
+  }
+}

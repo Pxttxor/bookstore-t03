@@ -1,0 +1,15 @@
+.count-detail {
+  overflow: hidden;
+}
+
+.count-detail__num {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.count-detail__report {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}

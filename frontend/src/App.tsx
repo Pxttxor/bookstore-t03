@@ -12,6 +12,16 @@ import SignUpPage from './pages/SignUpPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminLayout from './admin/AdminLayout'
 import DashboardPage from './admin/pages/DashboardPage'
+import BookListPage from './admin/pages/BookListPage'
+import BookFormPage from './admin/pages/BookFormPage'
+// The storefront has a BookDetailPage too; this one is the back-office view.
+import AdminBookDetailPage from './admin/pages/BookDetailPage'
+import StockListPage from './admin/pages/StockListPage'
+import StockAdjustPage from './admin/pages/StockAdjustPage'
+import StockCountListPage from './admin/pages/StockCountListPage'
+import StockCountFormPage from './admin/pages/StockCountFormPage'
+import StockCountDetailPage from './admin/pages/StockCountDetailPage'
+import StockDiscrepancyPage from './admin/pages/StockDiscrepancyPage'
 import OrdersListPage from './admin/pages/OrdersListPage'
 import CustomerOrderDetailPage from './admin/pages/CustomerOrderDetailPage'
 import SupplierListPage from './admin/pages/SupplierListPage'
@@ -45,10 +55,23 @@ export default function App() {
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
 
+        <Route path="books" element={<BookListPage />} />
+        <Route path="books/new" element={<BookFormPage />} />
+        <Route path="books/:id" element={<AdminBookDetailPage />} />
+        <Route path="books/:id/edit" element={<BookFormPage />} />
+
         <Route path="suppliers" element={<SupplierListPage />} />
         <Route path="suppliers/new" element={<SupplierFormPage />} />
         <Route path="suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
+
+        <Route path="stock" element={<StockListPage />} />
+        <Route path="stock/low" element={<StockListPage />} />
+        <Route path="stock/adjust" element={<StockAdjustPage />} />
+        <Route path="stock/counts" element={<StockCountListPage />} />
+        <Route path="stock/counts/new" element={<StockCountFormPage />} />
+        <Route path="stock/counts/:id" element={<StockCountDetailPage />} />
+        <Route path="stock/discrepancies" element={<StockDiscrepancyPage />} />
 
         <Route path="alerts" element={<ReorderAlertsPage />} />
 

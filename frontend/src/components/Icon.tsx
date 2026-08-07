@@ -41,6 +41,8 @@ export type IconName =
   | 'file-text'
   | 'shopping-bag'
   | 'tag'
+  | 'clipboard'
+  | 'trending-down'
 
 const PATHS: Record<IconName, ReactNode> = {
   search: (
@@ -244,6 +246,18 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
       <line x1="7" y1="7" x2="7.01" y2="7" />
+    </>
+  ),
+  clipboard: (
+    <>
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    </>
+  ),
+  'trending-down': (
+    <>
+      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+      <polyline points="17 18 23 18 23 12" />
     </>
   ),
 }
