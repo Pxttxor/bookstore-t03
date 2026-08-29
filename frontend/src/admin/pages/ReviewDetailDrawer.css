@@ -1,0 +1,433 @@
+/* Drawer Overlay & Panel */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: drawerFadeIn 0.2s ease-out;
+}
+
+.drawer-panel {
+  width: 100%;
+  max-width: 600px;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes drawerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Header */
+.drawer-header {
+  padding: 20px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawer-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0d9488;
+  background: #ccfbf1;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.drawer-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 4px 0 0 0;
+}
+
+.drawer-close-btn {
+  background: none;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drawer-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Body Content */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #f8fafc;
+}
+
+.drawer-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.drawer-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-section-title svg {
+  color: #0d9488;
+}
+
+.drawer-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.drawer-section-header .drawer-section-title {
+  margin-bottom: 0;
+}
+
+/* Section 1: Book Card */
+.drawer-book-card {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.drawer-book-cover {
+  width: 110px;
+  height: 160px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+.drawer-book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.drawer-book-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.drawer-book-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-book-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.drawer-book-author {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.drawer-book-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.drawer-meta-pill {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.drawer-meta-pill.price {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+/* Section 2: Order Grid */
+.drawer-order-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.drawer-order-item {
+  background: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-order-item.full {
+  grid-column: span 2;
+}
+
+.drawer-order-label {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.drawer-order-val {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.drawer-order-val.code {
+  font-family: monospace;
+  color: #0d9488;
+}
+
+.drawer-order-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.drawer-order-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+/* Section 3: Review Card */
+.drawer-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drawer-reviewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawer-reviewer-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #ccfbf1;
+  color: #0f766e;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #99f6e4;
+}
+
+.drawer-reviewer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-reviewer-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.drawer-reviewer-handle {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.drawer-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.drawer-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-rating-num {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.drawer-review-content {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #f1f5f9;
+}
+
+.drawer-review-headline {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.drawer-review-comment {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #334155;
+  margin: 0 0 10px 0;
+  white-space: pre-wrap;
+}
+
+.drawer-review-date {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Section 4: Staff Reply */
+.drawer-staff-reply-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid #10b981;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.drawer-reply-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.drawer-reply-by {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-reply-date {
+  font-size: 0.78rem;
+  color: #65a30d;
+}
+
+.drawer-reply-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #166534;
+  margin: 0 0 12px 0;
+}
+
+.drawer-edit-reply-btn {
+  padding: 4px 10px;
+}
+
+.drawer-no-reply {
+  text-align: center;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-no-reply p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.drawer-reply-form {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drawer-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Footer */
+.drawer-footer {
+  padding: 16px 24px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+}
