@@ -1,0 +1,433 @@
+### API ของระบบจัดการผู้จัดจำหน่าย (U1–U4) และระบบจัดซื้อ (U5–U10)
+###
+### เปิดไฟล์นี้ใน VS Code แล้วติดตั้งส่วนขยาย REST Client จากนั้นกด "Send Request" เหนือแต่ละบล็อก
+### เดินตามลำดับจากบนลงล่างจะได้ flow ครบตั้งแต่เพิ่มผู้จัดจำหน่ายจนปิดใบส่งคืน
+###
+### ก่อนเริ่ม:  go run ./cmd/api -migrate -seed
+
+@host = http://localhost:8080
+@warehouseToken = {{loginWarehouse.response.body.token}}
+@managerToken = {{loginManager.response.body.token}}
+
+### ตรวจว่าเซิร์ฟเวอร์ทำงานอยู่
+GET {{host}}/api/health
+
+### เข้าสู่ระบบ — พนักงานคลังสินค้า (เจ้าของ U1, U2, U5, U6, U8, U9, U10)
+# @name loginWarehouse
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "warehouse@bookhaven.co.th",
+  "password": "staff1234"
+}
+
+### เข้าสู่ระบบ — ผู้จัดการร้าน (เจ้าของ U3, U7)
+# @name loginManager
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@bookhaven.co.th",
+  "password": "staff1234"
+}
+
+### ตรวจตัวตนจาก token
+GET {{host}}/api/auth/me
+Authorization: Bearer {{warehouseToken}}
+
+
+### ─────────────────────────────────────────────────────────────
+### U4 · ค้นหาและเรียกดูข้อมูลผู้จัดจำหน่าย (SCR-10, SCR-11)
+### ─────────────────────────────────────────────────────────────
+
+### รายการทั้งหมด
+GET {{host}}/api/suppliers
+Authorization: Bearer {{warehouseToken}}
+
+### ค้นหาด้วยคำค้น + กรองสถานะ
+GET {{host}}/api/suppliers?q=ก้าวหน้า&status=ACTIVE
+Authorization: Bearer {{warehouseToken}}
+
+### รายละเอียดผู้จัดจำหน่าย (รวมหนังสือที่เสนอขายและประวัติการแก้ไข)
+GET {{host}}/api/suppliers/1
+Authorization: Bearer {{warehouseToken}}
+
+### ประวัติการสั่งซื้อของผู้จัดจำหน่ายรายนี้
+GET {{host}}/api/suppliers/1/orders
+Authorization: Bearer {{warehouseToken}}
+
+
+### ─────────────────────────────────────────────────────────────
+### U1 · เพิ่มข้อมูลผู้จัดจำหน่าย (SCR-12)
+### ─────────────────────────────────────────────────────────────
+
+### เพิ่มรายใหม่ → 201 สถานะ ACTIVE
+# @name createSupplier
+POST {{host}}/api/suppliers
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "companyName": "สำนักพิมพ์ทดลอง",
+  "contactName": "ทดสอบ ระบบดี",
+  "phone": "02-123-4567",
+  "email": "test@example.co.th",
+  "address": "99 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพฯ 10000",
+  "tradeTerms": "ส่วนลดหน้าปก 30% สั่งขั้นต่ำ 10 เล่ม",
+  "creditTerms": "เครดิต 30 วัน",
+  "books": [
+    { "bookId": 101, "supplyPrice": 280, "leadTimeDays": 7 },
+    { "bookId": 102, "supplyPrice": 235, "leadTimeDays": 7 }
+  ]
+}
+
+@newSupplierId = {{createSupplier.response.body.supplierId}}
+
+### Abnormal — ชื่อบริษัทซ้ำ → 409 SUPPLIER_DUPLICATE
+POST {{host}}/api/suppliers
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "companyName": "สำนักพิมพ์ก้าวหน้า",
+  "contactName": "ทดสอบ ระบบดี",
+  "phone": "02-123-4567",
+  "email": "test@example.co.th",
+  "address": "99 ถนนทดสอบ กรุงเทพฯ 10000",
+  "tradeTerms": "ส่วนลดหน้าปก 30%",
+  "creditTerms": "เครดิต 30 วัน",
+  "books": []
+}
+
+### Abnormal — กรอกข้อมูลไม่ครบ → 422 MISSING_FIELDS
+POST {{host}}/api/suppliers
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "companyName": "กรอกไม่ครบ",
+  "contactName": "",
+  "phone": "",
+  "email": "",
+  "address": "",
+  "tradeTerms": "",
+  "creditTerms": "",
+  "books": []
+}
+
+
+### ─────────────────────────────────────────────────────────────
+### U2 · แก้ไขข้อมูลผู้จัดจำหน่าย (SCR-13) — บันทึกประวัติว่าใครแก้
+### ─────────────────────────────────────────────────────────────
+
+PUT {{host}}/api/suppliers/{{newSupplierId}}
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "companyName": "สำนักพิมพ์ทดลอง",
+  "contactName": "ผู้ติดต่อคนใหม่",
+  "phone": "02-999-8888",
+  "email": "newcontact@example.co.th",
+  "address": "99 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพฯ 10000",
+  "tradeTerms": "ส่วนลดหน้าปก 35% สั่งขั้นต่ำ 20 เล่ม",
+  "creditTerms": "เครดิต 45 วัน",
+  "books": [
+    { "bookId": 101, "supplyPrice": 275, "leadTimeDays": 5 }
+  ]
+}
+
+
+### ─────────────────────────────────────────────────────────────
+### U3 · ปิดใช้งานผู้จัดจำหน่าย (SCR-14) — ผู้จัดการร้านเท่านั้น
+### ─────────────────────────────────────────────────────────────
+
+### Abnormal — พนักงานคลังไม่มีสิทธิ์ → 403 FORBIDDEN
+POST {{host}}/api/suppliers/{{newSupplierId}}/deactivate
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{ "reason": "เลิกกิจการ", "note": "" }
+
+### Abnormal — ผู้จัดจำหน่ายรหัส 2 ยังมีใบสั่งซื้อคงค้าง → 409 SUPPLIER_HAS_OPEN_ORDERS
+POST {{host}}/api/suppliers/2/deactivate
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "reason": "เลิกกิจการ", "note": "" }
+
+### ไม่มีของค้าง ปิดใช้งานได้ → สถานะ CANCELLED
+POST {{host}}/api/suppliers/{{newSupplierId}}/deactivate
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "reason": "เลิกกิจการ",
+  "note": "ปิดจากการทดสอบ API"
+}
+
+
+### ─────────────────────────────────────────────────────────────
+### U5 · แจ้งเตือนสินค้าถึงจุดสั่งซื้อ (SCR-20)
+### ─────────────────────────────────────────────────────────────
+
+### รายการที่ถึงจุดสั่งซื้อ (รายการที่ยังไม่ตั้งค่าติดธง unconfigured)
+GET {{host}}/api/inventory/alerts
+Authorization: Bearer {{warehouseToken}}
+
+### ยอดคงเหลือทั้งหมด
+GET {{host}}/api/inventory
+Authorization: Bearer {{warehouseToken}}
+
+### ตั้งค่าจุดสั่งซื้อของหนังสือที่ยังไม่ได้ตั้ง (เล่ม 115)
+PUT {{host}}/api/inventory/115/reorder-point
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{ "reorderPoint": 6 }
+
+### ล้างค่าจุดสั่งซื้อกลับเป็น "ยังไม่ตั้งค่า"
+PUT {{host}}/api/inventory/115/reorder-point
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{ "reorderPoint": null }
+
+
+### ─────────────────────────────────────────────────────────────
+### U6 · จัดทำใบขอสั่งซื้อ (SCR-21)
+### ─────────────────────────────────────────────────────────────
+
+### Abnormal — เลือกผู้จัดจำหน่ายที่ปิดใช้งานแล้ว (รหัส 8) → 422 SUPPLIER_INACTIVE
+POST {{host}}/api/requisitions
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "supplierId": 8,
+  "items": [{ "bookId": 118, "quantity": 10, "unitPrice": 220 }],
+  "submit": true
+}
+
+### Abnormal — สั่งหนังสือที่ผู้จัดจำหน่ายรายนี้ไม่ได้ขาย → 422 BOOK_NOT_OFFERED
+POST {{host}}/api/requisitions
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "supplierId": 1,
+  "items": [{ "bookId": 119, "quantity": 10, "unitPrice": 420 }],
+  "submit": false
+}
+
+### บันทึกร่าง → สถานะ DRAFT
+# @name createPR
+POST {{host}}/api/requisitions
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "supplierId": 1,
+  "items": [
+    { "bookId": 101, "quantity": 20, "unitPrice": 285 },
+    { "bookId": 103, "quantity": 10, "unitPrice": 310 }
+  ],
+  "submit": false
+}
+
+@prId = {{createPR.response.body.prId}}
+
+### แก้ไขใบร่าง
+PUT {{host}}/api/requisitions/{{prId}}
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "supplierId": 1,
+  "items": [{ "bookId": 101, "quantity": 25, "unitPrice": 285 }],
+  "submit": false
+}
+
+### ส่งขออนุมัติ → SUBMITTED + แจ้งเตือนผู้จัดการอัตโนมัติ
+POST {{host}}/api/requisitions/{{prId}}/submit
+Authorization: Bearer {{warehouseToken}}
+
+### รายการใบขอสั่งซื้อที่รออนุมัติ (SCR-22)
+GET {{host}}/api/requisitions?status=SUBMITTED
+Authorization: Bearer {{managerToken}}
+
+
+### ─────────────────────────────────────────────────────────────
+### U7 · อนุมัติใบสั่งซื้อ (SCR-23) — ผู้จัดการร้านเท่านั้น
+### ─────────────────────────────────────────────────────────────
+
+### งบประมาณคงเหลือ (แถบบนหน้าอนุมัติ)
+GET {{host}}/api/purchasing/budget
+Authorization: Bearer {{managerToken}}
+
+### ตีกลับให้แก้ไข (ใช้กับใบ PR-102 จากข้อมูลตั้งต้น) → REJECTED
+POST {{host}}/api/requisitions/102/reject
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "reason": "ราคาต่อหน่วยสูงกว่าเงื่อนไขการค้าที่ตกลงไว้" }
+
+### อนุมัติ → ระบบออกใบสั่งซื้อให้อัตโนมัติ (201 พร้อม poId)
+# @name approvePR
+POST {{host}}/api/requisitions/{{prId}}/approve
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "overBudgetNote": "" }
+
+@poId = {{approvePR.response.body.poId}}
+
+
+### ─────────────────────────────────────────────────────────────
+### U8 · ส่งใบสั่งซื้อให้ผู้จัดจำหน่าย (SCR-24)
+### ─────────────────────────────────────────────────────────────
+
+### รายละเอียดใบสั่งซื้อ (displayStatus = AWAITING_SEND)
+GET {{host}}/api/orders/{{poId}}
+Authorization: Bearer {{warehouseToken}}
+
+### Abnormal — ยังไม่ส่ง ยืนยันไม่ได้ → 409 ORDER_NOT_SENT
+POST {{host}}/api/orders/{{poId}}/confirm
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{ "expectedDeliveryDate": "2026-09-15" }
+
+### ส่งให้ผู้จัดจำหน่าย → displayStatus = AWAITING_CONFIRM
+POST {{host}}/api/orders/{{poId}}/send
+Authorization: Bearer {{warehouseToken}}
+
+### ผู้จัดจำหน่ายยืนยันพร้อมวันที่ส่งมอบ → CONFIRMED
+### (แก้วันที่ให้เป็นอนาคต ไม่งั้นได้ 422 EXPECTED_DATE_IN_PAST)
+POST {{host}}/api/orders/{{poId}}/confirm
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{ "expectedDeliveryDate": "2026-09-15" }
+
+
+### ─────────────────────────────────────────────────────────────
+### U9 · บันทึกรับสินค้าเข้าคลัง (SCR-25)
+### ─────────────────────────────────────────────────────────────
+
+### รับบางส่วน → PO = RECEIVED_PARTIAL · GR = PARTIAL · สต็อกเพิ่ม
+POST {{host}}/api/orders/{{poId}}/receipts
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "deliveryNoteNo": "DN-2026-0901",
+  "lines": [
+    { "bookId": 101, "receivedQty": 15, "condition": "NORMAL", "note": "" }
+  ]
+}
+
+### รับส่วนที่เหลือจนครบ → PO = RECEIVED_FULL · GR = FULL
+POST {{host}}/api/orders/{{poId}}/receipts
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "deliveryNoteNo": "DN-2026-0902",
+  "lines": [
+    { "bookId": 101, "receivedQty": 10, "condition": "DAMAGED", "note": "ปกหักมุม 10 เล่ม" }
+  ]
+}
+
+### ใบรับสินค้าของใบสั่งซื้อนี้
+GET {{host}}/api/orders/{{poId}}/receipts
+Authorization: Bearer {{warehouseToken}}
+
+### ใบรับสินค้าทั้งหมด
+GET {{host}}/api/receipts
+Authorization: Bearer {{warehouseToken}}
+
+
+### ─────────────────────────────────────────────────────────────
+### U10 · บันทึกส่งคืนสินค้า (SCR-26)
+### ─────────────────────────────────────────────────────────────
+
+### Abnormal — คืนเกินจำนวนที่รับเข้าคลัง → 422 RETURN_EXCEEDS_RECEIVED
+POST {{host}}/api/orders/{{poId}}/returns
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "reason": "ชำรุด",
+  "items": [{ "bookId": 101, "quantity": 999, "reason": "ปกหักมุม" }]
+}
+
+### เปิดใบส่งคืนของที่ชำรุด → TRACKING · ตัดสต็อกออก
+# @name createReturn
+POST {{host}}/api/orders/{{poId}}/returns
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "reason": "ชำรุด",
+  "items": [
+    { "bookId": 101, "quantity": 10, "reason": "ปกหักมุม" }
+  ]
+}
+
+@returnId = {{createReturn.response.body.returnId}}
+
+### Abnormal — ผู้จัดจำหน่ายปฏิเสธการรับคืน → ESCALATED + แจ้งผู้จัดการ
+POST {{host}}/api/returns/{{returnId}}/escalate
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{ "note": "ผู้จัดจำหน่ายแจ้งว่าเลยกำหนดรับคืน 90 วันแล้ว" }
+
+### บันทึกการชดเชยเป็นสินค้าทดแทน → CLOSED · สต็อกกลับคืนมา
+POST {{host}}/api/returns/{{returnId}}/compensation
+Authorization: Bearer {{warehouseToken}}
+Content-Type: application/json
+
+{
+  "type": "REPLACEMENT",
+  "note": "ผู้จัดจำหน่ายส่งของทดแทนครบแล้ว"
+}
+
+### ใบส่งคืนทั้งหมด
+GET {{host}}/api/returns
+Authorization: Bearer {{warehouseToken}}
+
+
+### ─────────────────────────────────────────────────────────────
+### การแจ้งเตือน (SCR-27)
+### ─────────────────────────────────────────────────────────────
+
+### กล่องแจ้งเตือนของผู้จัดการ
+GET {{host}}/api/notifications
+Authorization: Bearer {{managerToken}}
+
+### กล่องแจ้งเตือนของพนักงานคลังสินค้า
+GET {{host}}/api/notifications
+Authorization: Bearer {{warehouseToken}}
+
+### ทำเครื่องหมายอ่านแล้วทั้งหมด
+POST {{host}}/api/notifications/read-all
+Authorization: Bearer {{managerToken}}
+
+
+### ─────────────────────────────────────────────────────────────
+### เอกสารและข้อมูลอ้างอิงอื่น ๆ
+### ─────────────────────────────────────────────────────────────
+
+### หนังสือทั้งหมด (ค้นด้วย q ได้)
+GET {{host}}/api/books?q=habits
+Authorization: Bearer {{warehouseToken}}
+
+### ใบสั่งซื้อทั้งหมด กรองตามสถานะได้
+GET {{host}}/api/orders?status=CONFIRMED
+Authorization: Bearer {{warehouseToken}}
+
+### Abnormal — ไม่ส่ง token → 401 UNAUTHENTICATED
+GET {{host}}/api/suppliers

@@ -1,62 +1,82 @@
-// shared.go — คลาสอ้างอิงข้ามระบบย่อย (เจ้าของคือเพื่อนร่วมทีม) ใส่แบบย่อพอให้ใช้งาน/คอมไพล์ได้
+// shared.go — คลาสอ้างอิงข้ามระบบย่อย ใส่แบบย่อพอให้ใช้งาน/คอมไพล์ได้
 //
-//	Book + BookStatus — ระบบย่อยของ วุฒิภัทร โกฎแสง (ข้อมูลหนังสือ)
-//	Customer/SalesStaff/StoreManager — คลาสบุคคล (ตาม class diagram รวม)
+//	Book, BookStatus, StockTransaction, StockTxnType — ระบบหนังสือ + สินค้าคงคลัง
+//	WarehouseStaff, StoreManager                     — คลาสพนักงาน (ตาม class diagram รวม)
 //
-// คลาสอื่นที่ diagram อ้างถึง (Payment/Shipment/PointTransaction/Review/StockTransaction)
-// อ้างผ่าน FK id (int) ใน order.go จึงไม่ต้องประกาศ struct ที่นี่
+// ใช้ชื่อฟิลด์เดิมตาม class diagram ห้ามตั้งชื่อใหม่ซ้ำซ้อน
 package model
 
 import "time"
 
-// BookStatus — สถานะหนังสือ (เจ้าของ: วุฒิภัทร)
+// BookStatus — สถานะหนังสือ
 type BookStatus string
 
 const (
-	BookStatusActive   BookStatus = "ACTIVE"
-	BookStatusInactive BookStatus = "INACTIVE"
+	BookStatusActive   BookStatus = "ACTIVE"   // ใช้งาน
+	BookStatusInactive BookStatus = "INACTIVE" // ปิดการขาย
 )
 
-// Book — หนังสือ (เจ้าของ: วุฒิภัทร) ใส่แบบย่อสำหรับให้คำสั่งซื้ออ้างอิงราคา/รหัส
+// Book — หนังสือ ใส่แบบย่อสำหรับให้ระบบจัดซื้ออ้างอิง
 type Book struct {
-	BookID      int        `json:"book_id" gorm:"primaryKey;autoIncrement"`
-	ISBN        string     `json:"isbn" gorm:"size:20"`
-	Title       string     `json:"title" gorm:"size:255;not null"`
-	Author      string     `json:"author" gorm:"size:255"`
-	Publisher   string     `json:"publisher" gorm:"size:255"`
-	Price       float64    `json:"price" gorm:"type:numeric(10,2);not null"`
-	Description string     `json:"description" gorm:"type:text"`
-	Status      BookStatus `json:"status" gorm:"size:20;default:'ACTIVE'"`
+	BookID      int
+	ISBN        string
+	Title       string
+	Author      string
+	Publisher   string
+	Price       float64
+	Description string
+	Status      BookStatus
 }
 
-// Customer — ลูกค้า
-type Customer struct {
-	CustomerID     int       `json:"customer_id" gorm:"primaryKey;autoIncrement"`
-	Name           string    `json:"name" gorm:"size:255"`
-	Email          string    `json:"email" gorm:"size:255"`
-	Address        string    `json:"address" gorm:"type:text"`
-	RegisteredDate time.Time `json:"registered_date"`
+// StockTxnType — ประเภทการเคลื่อนไหวสต็อก
+type StockTxnType string
+
+const (
+	StockTxnTypeReceiveIn  StockTxnType = "RECEIVE_IN" // รับเข้า
+	StockTxnTypeSaleOut    StockTxnType = "SALE_OUT"   // ขายออก
+	StockTxnTypeReturn     StockTxnType = "RETURN"     // ส่งคืน
+	StockTxnTypeAdjustment StockTxnType = "ADJUSTMENT" // ปรับปรุงยอด
+)
+
+// StockTransaction — รายการเคลื่อนไหวสต็อก
+// ระบบจัดซื้อสร้างรายการชนิด RECEIVE_IN ให้เมื่อรับสินค้าเข้าคลัง (ดู GoodsReceipt.ToStockTransactions)
+type StockTransaction struct {
+	TxnID          int
+	Type           StockTxnType
+	QuantityChange int
+	Reason         string
+	ReferenceDoc   string
+	TxnDate        time.Time
 }
 
-// SalesStaff — พนักงานฝ่ายขาย (รับผิดชอบ/ดูแลคำสั่งซื้อ)
-type SalesStaff struct {
-	StaffID int    `json:"staff_id" gorm:"primaryKey;autoIncrement"`
-	Name    string `json:"name" gorm:"size:255"`
+// WarehouseStaff — พนักงานคลังสินค้า
+type WarehouseStaff struct {
+	StaffID int
+	Name    string
 }
 
-// HandleOrder — พนักงานฝ่ายขายเปลี่ยนสถานะคำสั่งซื้อ
-func (s *SalesStaff) HandleOrder(o *Order, status OrderStatus, note string) error {
-	return o.UpdateStatus(status, note)
+// CountStock — ตรวจนับสต็อก (รายละเอียดอยู่ในระบบย่อยสินค้าคงคลัง)
+func (w *WarehouseStaff) CountStock() {}
+
+// ReceiveGoods — บันทึกรับสินค้าเข้าคลังตามใบสั่งซื้อ แล้วคืนรายการเคลื่อนไหวสต็อกที่เกิดขึ้น
+func (w *WarehouseStaff) ReceiveGoods(po *PurchaseOrder, gr *GoodsReceipt) []StockTransaction {
+	po.ApplyReceipt(gr)
+	return gr.ToStockTransactions()
 }
 
-// StoreManager — ผู้จัดการร้าน (ดูแลโปรโมชั่น)
+// StoreManager — ผู้จัดการร้าน
 type StoreManager struct {
-	StaffID int    `json:"staff_id" gorm:"primaryKey;autoIncrement"`
-	Name    string `json:"name" gorm:"size:255"`
+	StaffID int
+	Name    string
 }
 
-// ManagePromotion — เปิด/ปิดใช้งานโปรโมชั่น
-func (m *StoreManager) ManagePromotion(p *Promotion, status PromotionStatus) {
-	p.Status = status
+// ApprovePO — อนุมัติใบสั่งซื้อ (บันทึกผู้อนุมัติแล้วเปลี่ยนสถานะ PO)
+func (m *StoreManager) ApprovePO(po *PurchaseOrder) error {
+	po.ApprovedByManagerID = m.StaffID
+	return po.Approve()
 }
 
+// ManagePromotion / ManageMemberTier — เป็นเมธอดของระบบย่อยอื่น (โปรโมชั่น/สมาชิก)
+// ไม่ implement ในขอบเขตนี้
+func (m *StoreManager) ManagePromotion()  {}
+func (m *StoreManager) ManageMemberTier() {}

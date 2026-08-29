@@ -12,7 +12,7 @@ interface MenuItem {
   icon: IconName
   allowed: (role: Role) => boolean
   /** Renders a red dot when the named queue has something waiting on this screen. */
-  dot?: 'reorder' | 'reviews' | 'discrepancy'
+  dot?: 'reorder' | 'reviews' | 'reportedReviews'
   end?: boolean
 }
 
@@ -46,17 +46,6 @@ const MENU: MenuGroup[] = [
     ],
   },
   {
-    heading: 'จัดการข้อมูลหนังสือ',
-    items: [
-      {
-        label: 'รายการหนังสือ',
-        to: '/admin/books',
-        icon: 'book',
-        allowed: can.viewBooks,
-      },
-    ],
-  },
-  {
     heading: 'จัดการผู้จัดจำหน่าย',
     items: [
       {
@@ -81,43 +70,6 @@ const MENU: MenuGroup[] = [
         to: '/admin/purchasing/receipts',
         icon: 'shopping-bag',
         allowed: can.receiveGoods,
-      },
-    ],
-  },
-  {
-    heading: 'คลังสินค้า',
-    items: [
-      {
-        label: 'ยอดคงเหลือ',
-        to: '/admin/stock',
-        icon: 'package',
-        allowed: can.viewStock,
-        end: true,
-      },
-      {
-        label: 'หนังสือที่ใกล้หมด',
-        to: '/admin/stock/low',
-        icon: 'trending-down',
-        allowed: can.viewLowStock,
-      },
-      {
-        label: 'ปรับปรุงจำนวน',
-        to: '/admin/stock/adjust',
-        icon: 'edit',
-        allowed: can.adjustStock,
-      },
-      {
-        label: 'ตรวจนับสต็อก',
-        to: '/admin/stock/counts',
-        icon: 'clipboard',
-        allowed: can.viewStockCounts,
-      },
-      {
-        label: 'ยอดหนังสือไม่ตรง',
-        to: '/admin/stock/discrepancies',
-        icon: 'alert-triangle',
-        allowed: can.viewDiscrepancies,
-        dot: 'discrepancy',
       },
     ],
   },
@@ -153,6 +105,14 @@ const MENU: MenuGroup[] = [
         icon: 'star',
         allowed: can.moderateReview,
         dot: 'reviews',
+        end: true,
+      },
+      {
+        label: 'จัดการรีวิวที่มีปัญหา',
+        to: '/admin/reviews/manage',
+        icon: 'alert-triangle',
+        allowed: can.manageReportedReviews,
+        dot: 'reportedReviews',
       },
     ],
   },
@@ -170,17 +130,17 @@ const MENU: MenuGroup[] = [
 ]
 
 export default function AdminSidebar({ role }: { role: Role }) {
-  const { belowReorder, pendingReports } = useInventory()
-  const { pendingCount } = useReviews()
+  const { belowReorder } = useInventory()
+  const { pendingCount, reportedCount } = useReviews()
 
   const dotCount = (source: MenuItem['dot']) =>
     source === 'reorder'
       ? belowReorder.length
       : source === 'reviews'
-        ? pendingCount
-        : source === 'discrepancy'
-          ? pendingReports.length
-          : 0
+      ? pendingCount
+      : source === 'reportedReviews'
+      ? reportedCount
+      : 0
 
   return (
     <aside className="admin-nav">

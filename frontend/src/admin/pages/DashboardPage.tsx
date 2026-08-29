@@ -6,9 +6,7 @@ import EmptyState from '../components/EmptyState'
 import Meter from '../components/Meter'
 import StatTile from '../components/StatTile'
 import StatusBadge from '../components/StatusBadge'
-import { useBooks } from '../books/BookContext'
 import { useInventory } from '../inventory/InventoryContext'
-import { stockLevel } from '../inventory/inventory'
 import { can } from '../permissions'
 import { usePurchasing } from '../purchasing/PurchasingContext'
 import {
@@ -25,14 +23,10 @@ import './DashboardPage.css'
 export default function DashboardPage() {
   const { user } = useAuth()
   const { suppliers } = useSuppliers()
-  const { books } = useBooks()
-  const { belowReorder, items, pendingReports } = useInventory()
+  const { belowReorder } = useInventory()
   const { requisitions, orders, returns } = usePurchasing()
 
   const role = user!.role
-
-  const outOfStock = items.filter((item) => stockLevel(item) === 'OUT').length
-  const lowStock = items.filter((item) => stockLevel(item) === 'LOW').length
 
   const pending = requisitions.filter((pr) => pr.status === 'SUBMITTED')
   const rejected = requisitions.filter((pr) => pr.status === 'REJECTED')
@@ -82,15 +76,6 @@ export default function DashboardPage() {
               icon="building"
               to="/admin/suppliers"
               linkLabel="ดูรายการผู้จัดจำหน่าย"
-            />
-            <StatTile
-              label="รายงานผลต่างรออนุมัติ"
-              value={pendingReports.length}
-              note="ยอดหนังสือไม่ตรงจากการตรวจนับ"
-              icon="alert-triangle"
-              tone={pendingReports.length > 0 ? 'warning' : 'default'}
-              to="/admin/stock/discrepancies"
-              linkLabel="เปิดรายงานผลต่าง"
             />
             <article className="dash__budget">
               <header className="dash__budget-head">
@@ -180,24 +165,6 @@ export default function DashboardPage() {
               to="/admin/purchasing"
               linkLabel="ดูเอกสารจัดซื้อ"
             />
-            <StatTile
-              label="หนังสือหมดสต็อก"
-              value={outOfStock}
-              note="ยอดคงเหลือเป็น 0"
-              icon="alert-triangle"
-              tone={outOfStock > 0 ? 'danger' : 'default'}
-              to="/admin/stock/low"
-              linkLabel="ดูรายงานหนังสือใกล้หมด"
-            />
-            <StatTile
-              label="หนังสือใกล้หมด"
-              value={lowStock}
-              note="เหลือน้อยแต่ยังไม่หมด"
-              icon="trending-down"
-              tone={lowStock > 0 ? 'warning' : 'default'}
-              to="/admin/stock/low"
-              linkLabel="ดูรายงานหนังสือใกล้หมด"
-            />
           </section>
 
           {rejected.length > 0 && (
@@ -254,10 +221,10 @@ export default function DashboardPage() {
           />
           <StatTile
             label="รายการหนังสือในระบบ"
-            value={books.length}
-            note="ใช้ตอบคำถามลูกค้าและแก้ไขข้อมูลหนังสือ"
+            value={suppliers.reduce((sum, entry) => sum + entry.books.length, 0)}
+            note="ใช้ตอบคำถามลูกค้าเรื่องหนังสือและผู้จัดจำหน่าย"
             icon="book"
-            to="/admin/books"
+            to="/admin/suppliers"
             linkLabel="ดูรายการหนังสือ"
           />
           <StatTile

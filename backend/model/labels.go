@@ -1,65 +1,50 @@
-// labels.go — ป้ายภาษาไทยของ enum ทุกตัว (คู่กับค่า SCREAMING_SNAKE) + String()
+// labels.go — ป้ายภาษาไทยของ enum ทุกตัว (คู่กับค่า SCREAMING_SNAKE)
+// mirror กับฝั่ง frontend (*_STATUS_LABELS ใน BookHeven) ตามกติกาในคู่มือ:
+// ค่า enum เป็นอังกฤษ ส่วนข้อความที่ผู้ใช้เห็นเป็นไทย
 package model
 
-// OrderChannelLabels — ป้ายไทยของช่องทางการสั่งซื้อ
-var OrderChannelLabels = map[OrderChannel]string{
-	OrderChannelWebsite: "เว็บไซต์",
-	OrderChannelMessage: "ข้อความ/แชท",
-	OrderChannelPhone:   "โทรศัพท์",
+// SupplierStatusLabels — ป้ายไทยของสถานะผู้จัดจำหน่าย
+var SupplierStatusLabels = map[SupplierStatus]string{
+	SupplierStatusActive:    "ใช้งาน",
+	SupplierStatusCancelled: "ยกเลิก",
 }
 
-func (c OrderChannel) String() string {
-	if label, ok := OrderChannelLabels[c]; ok {
-		return label
-	}
-	return string(c)
-}
-
-// OrderStatusLabels — ป้ายไทยของสถานะคำสั่งซื้อ
-var OrderStatusLabels = map[OrderStatus]string{
-	OrderStatusPendingConfirm:   "รอยืนยัน",
-	OrderStatusStockConfirmed:   "ยืนยันสต็อกแล้ว",
-	OrderStatusWaitingPayment:   "รอชำระเงิน",
-	OrderStatusVerifyingPayment: "กำลังตรวจสอบการชำระ",
-	OrderStatusPaid:             "ชำระแล้ว",
-	OrderStatusPacking:          "กำลังแพ็ก",
-	OrderStatusReadyToShip:      "พร้อมจัดส่ง",
-	OrderStatusShipped:          "จัดส่งแล้ว",
-	OrderStatusDelivered:        "ส่งถึงแล้ว",
-	OrderStatusCancelled:        "ยกเลิก",
-	OrderStatusRejected:         "ปฏิเสธ",
-}
-
-func (s OrderStatus) String() string {
-	if label, ok := OrderStatusLabels[s]; ok {
+// String คืนป้ายไทย (ถ้าไม่พบคืนค่าดิบ) — ทำให้ fmt แสดงผลเป็นภาษาไทย
+func (s SupplierStatus) String() string {
+	if label, ok := SupplierStatusLabels[s]; ok {
 		return label
 	}
 	return string(s)
 }
 
-// PromotionTypeLabels — ป้ายไทยของประเภทโปรโมชั่น
-var PromotionTypeLabels = map[PromotionType]string{
-	PromotionTypeFestivalDiscount: "ลดตามเทศกาล",
-	PromotionTypeCoupon:           "คูปองส่วนลด",
-	PromotionTypeBuyXQty:          "ซื้อครบจำนวน",
+// PRStatusLabels — ป้ายไทยของสถานะใบขอสั่งซื้อ
+var PRStatusLabels = map[PRStatus]string{
+	PRStatusDraft:     "ร่าง",
+	PRStatusSubmitted: "ส่งขออนุมัติ",
+	PRStatusApproved:  "อนุมัติแล้ว",
+	PRStatusRejected:  "ปฏิเสธ",
 }
 
-func (t PromotionType) String() string {
-	if label, ok := PromotionTypeLabels[t]; ok {
+func (s PRStatus) String() string {
+	if label, ok := PRStatusLabels[s]; ok {
 		return label
 	}
-	return string(t)
+	return string(s)
 }
 
-// PromotionStatusLabels — ป้ายไทยของสถานะโปรโมชั่น
-var PromotionStatusLabels = map[PromotionStatus]string{
-	PromotionStatusActive:   "ใช้งาน",
-	PromotionStatusInactive: "ปิดใช้งาน",
-	PromotionStatusExpired:  "หมดอายุ",
+// POStatusLabels — ป้ายไทยของสถานะใบสั่งซื้อ
+var POStatusLabels = map[POStatus]string{
+	POStatusPendingApproval: "รออนุมัติ",
+	POStatusApproved:        "อนุมัติแล้ว",
+	POStatusConfirmed:       "ยืนยันแล้ว",
+	POStatusReceivedPartial: "รับสินค้าบางส่วน",
+	POStatusReceivedFull:    "รับสินค้าครบแล้ว",
+	POStatusReturned:        "ส่งคืนแล้ว",
+	POStatusCancelled:       "ยกเลิก",
 }
 
-func (s PromotionStatus) String() string {
-	if label, ok := PromotionStatusLabels[s]; ok {
+func (s POStatus) String() string {
+	if label, ok := POStatusLabels[s]; ok {
 		return label
 	}
 	return string(s)
@@ -67,8 +52,8 @@ func (s PromotionStatus) String() string {
 
 // BookStatusLabels — ป้ายไทยของสถานะหนังสือ
 var BookStatusLabels = map[BookStatus]string{
-	BookStatusActive:   "เปิดขาย/ใช้งาน",
-	BookStatusInactive: "ปิดขาย/ไม่ใช้งาน",
+	BookStatusActive:   "ใช้งาน",
+	BookStatusInactive: "ปิดการขาย",
 }
 
 func (s BookStatus) String() string {
@@ -78,3 +63,17 @@ func (s BookStatus) String() string {
 	return string(s)
 }
 
+// StockTxnTypeLabels — ป้ายไทยของประเภทการเคลื่อนไหวสต็อก
+var StockTxnTypeLabels = map[StockTxnType]string{
+	StockTxnTypeReceiveIn:  "รับเข้า",
+	StockTxnTypeSaleOut:    "ขายออก",
+	StockTxnTypeReturn:     "ส่งคืน",
+	StockTxnTypeAdjustment: "ปรับปรุงยอด",
+}
+
+func (s StockTxnType) String() string {
+	if label, ok := StockTxnTypeLabels[s]; ok {
+		return label
+	}
+	return string(s)
+}
