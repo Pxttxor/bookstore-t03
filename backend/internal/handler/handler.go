@@ -19,6 +19,7 @@ import (
 // การเพิ่มระบบย่อยใหม่ = เพิ่มหนึ่งฟิลด์ ไม่กระทบลำดับอาร์กิวเมนต์ของที่มีอยู่
 type Deps struct {
 	Auth          *service.AuthService
+	People        *service.PersonService
 	Suppliers     *service.SupplierService
 	Purchasing    *service.PurchasingService
 	Inventory     *repository.InventoryRepository
@@ -27,6 +28,7 @@ type Deps struct {
 
 type Handler struct {
 	auth          *service.AuthService
+	people        *service.PersonService
 	suppliers     *service.SupplierService
 	purchasing    *service.PurchasingService
 	inventory     *repository.InventoryRepository
@@ -36,6 +38,7 @@ type Handler struct {
 func New(d Deps) *Handler {
 	return &Handler{
 		auth:          d.Auth,
+		people:        d.People,
 		suppliers:     d.Suppliers,
 		purchasing:    d.Purchasing,
 		inventory:     d.Inventory,

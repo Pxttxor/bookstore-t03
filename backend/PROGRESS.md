@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | P0 เสร็จแล้ว |
-| **ทำต่อที่** | **P1 — Person · Customer · UserAccount** (ยังไม่เริ่ม) |
+| **เฟส** | **P1 ทำไปแล้วประมาณ 70%** (ผู้ใช้สั่งพักงาน 29 ส.ค. 23:25) |
+| **ทำต่อที่** | **P1 ข้อ 12** — เขียน `internal/database/seed_person.go` (ลูกค้าตั้งต้น) แล้วต่อด้วยข้อ 13–14 |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · test 24/24 ✅ · migrate+seed ✅ · **smoke 51/51 ✅** (รันซ้ำได้) |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 32/32 ✅** · migrate+seed ✅ · smoke ยังไม่ได้รันรอบ P1 |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -60,7 +60,7 @@ git add -A && git commit
 | # | เฟส | สถานะ | commit | test | migrate+seed | smoke |
 |---|---|---|---|---|---|---|
 | P0 | สะสาง + วางโครง | ✅ | (ดู git log) | 24/24 | ✅ | 51/51 |
-| P1 | Person · Customer · UserAccount | ⬜ | | | | |
+| P1 | Person · Customer · UserAccount | 🔄 70% | — | 32/32 | ✅ | ยังไม่รัน |
 | P2 | Category · Book CRUD · BookChangeLog | ⬜ | | | | |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ⬜ | | | | |
 | P4 | Order · OrderItem · History · Promotion | ⬜ | | | | |
@@ -87,6 +87,30 @@ git add -A && git commit
 | 10b | `gen_seed.py` — เพิ่ม `seedCategories` | เลื่อนไป P2 (ยังไม่มี `model.Category`) |
 | 11 | `applyForeignKeys()` ใน `migrate.go` (FK ที่ GORM ไม่สร้างให้) | ✅ |
 
+### P1 — รายการย่อย (หยุดกลางทาง)
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/person.go` — Person · Employee(ย้ายมา) · Customer · UserAccount + เมธอด | ✅ |
+| 2 | แตก `model/shared.go` → `book.go` / `inventory.go` / `notification.go` (ลบ shared.go แล้ว) | ✅ |
+| 3 | `model/enums_team.go` + `labels_team.go` — `AccountStatus` · `RoleCustomer` · `EmployeeRoles()` · `Role.IsEmployee()` | ✅ |
+| 4 | `model/errors.go` — error ของบัญชี/ลูกค้า 11 ตัว | ✅ |
+| 5 | `migrate.go` — entity ใหม่ 3 ตัว · `backfillPersons()` · CHECK `user_account.status` · unique index อีเมล/ชื่อผู้ใช้ · FK 3 เส้น · view ครบ 4 ตัว | ✅ |
+| 6 | `repository/person.go` — ลูกค้า/บุคคล/บัญชี (join ครบ ไม่ N+1) | ✅ |
+| 7 | `service/auth.go` — ล็อกอินลูกค้า · claim `pid`/`cid` · `Me(Identity)` · `Identity.IsCustomer()` | ✅ |
+| 8 | `service/person.go` — สมัคร · ยืนยัน OTP · โปรไฟล์ · ระงับ/ปลดระงับบัญชี | ✅ |
+| 9 | `handler/person.go` + `dto_person.go` + เส้นทาง 8 เส้น + ต่อสายใน `cmd/api` | ✅ |
+| 10 | `model/person_test.go` — 7 เคส (test รวม 24 → 32) | ✅ |
+| 11 | `handler_test.go` — เพิ่ม 7 path ใหม่เข้า `TestProtectedRoutesRequireToken` | ✅ |
+| 12 | **`internal/database/seed_person.go`** — ลูกค้าตั้งต้น (ยังไม่เขียน) | ⬜ |
+| 13 | **`cmd/smoke/flow_person.go`** — เคสสมัคร/ยืนยัน/ล็อกอิน/สิทธิ์ลูกค้า (ยังไม่เขียน) | ⬜ |
+| 14 | **รัน smoke ทั้งชุดให้ผ่าน** แล้วปิดเฟส P1 | ⬜ |
+
+**หมายเหตุก่อนทำต่อ:** ชื่อลูกค้าใน `seed_person.go` ควรตรงกับ `SEED_ORDERS` ของ frontend
+(`ณภัทร วงศ์สว่าง` · `กัญญา ศรีสาย` · `สมศักดิ์ ใจดี` พร้อมที่อยู่ใน `frontend/src/admin/orders/orders.ts`)
+เพื่อให้ P4 ผูกคำสั่งซื้อเข้ากับลูกค้าได้โดยไม่ต้องแก้ข้อมูลย้อนหลัง
+ควร seed บัญชีให้ครบทั้งสามสถานะ (ACTIVE / UNVERIFIED / SUSPENDED) เพื่อให้ smoke ทดสอบได้ทุกเส้น
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -107,8 +131,9 @@ git add -A && git commit
 |---|---|---|---|---|---|---|---|---|
 | Supplier | Supplier · SupplierBook | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Purchasing | PurchaseRequisition(+Item) · PurchaseOrder(+Item) · GoodsReceipt(+Item) · PurchaseReturn(+Item) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| People | Person · Customer · Member · UserAccount | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| People | Employee (+ view warehouse_staff / store_manager) | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ |
+| People | Person · Customer · UserAccount | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ |
+| People | Member (รอ MembershipTier) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| People | Employee (+ view ครบ 4 บทบาท) | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Book | Category · Book · BookChangeLog | 🔄 Book อ่านอย่างเดียว | ⬜ | ⬜ | ⬜ | 🔄 | ✅ | ⬜ |
 | Inventory | InventoryItem · StockTransaction | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | StockCount(+Item) · StockDiscrepancyReport | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

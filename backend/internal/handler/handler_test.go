@@ -80,6 +80,13 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodPost, "/api/returns/7001/escalate"},
 		{http.MethodPost, "/api/returns/7001/compensation"},
 		{http.MethodGet, "/api/purchasing/budget"},
+		{http.MethodGet, "/api/customers"},
+		{http.MethodGet, "/api/customers/1"},
+		{http.MethodGet, "/api/customers/me"},
+		{http.MethodPut, "/api/customers/me"},
+		{http.MethodPost, "/api/accounts/1/suspend"},
+		{http.MethodPost, "/api/accounts/1/reactivate"},
+		{http.MethodGet, "/api/auth/me"},
 		{http.MethodGet, "/api/notifications"},
 		{http.MethodPost, "/api/notifications/read-all"},
 	}

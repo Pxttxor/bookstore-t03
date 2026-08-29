@@ -47,7 +47,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	fresh, err := h.auth.Me(current.EmployeeID)
+	fresh, err := h.auth.Me(*current)
 	if err != nil {
 		httpx.Error(w, err)
 		return

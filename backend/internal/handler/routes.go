@@ -21,6 +21,17 @@ var (
 	rolePurchasing = []model.Role{model.RoleWarehouse, model.RoleManager}
 	roleWarehouse  = []model.Role{model.RoleWarehouse}
 	roleManager    = []model.Role{model.RoleManager}
+
+	// roleCatalogue — ฝ่ายขายเป็นเจ้าของแคตตาล็อกและข้อมูลลูกค้า ผู้จัดการดูได้ทั้งหมด
+	roleCatalogue = []model.Role{model.RoleSales, model.RoleManager}
+	roleCustomer  = []model.Role{model.RoleCustomer}
+
+	// roleAnyUser — ทุกคนที่ล็อกอินแล้ว รวมลูกค้า
+	// ใช้เฉพาะเส้นทางที่ service กรองข้อมูลตามเจ้าของให้อีกชั้น
+	roleAnyUser = []model.Role{
+		model.RoleWarehouse, model.RoleManager, model.RoleSales,
+		model.RoleDelivery, model.RoleCustomer,
+	}
 )
 
 // registrar — ลงทะเบียนเส้นทางหนึ่งเส้นพร้อม RequireAuth + RequireRole
@@ -33,6 +44,8 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	// ── เปิดสาธารณะ ─────────────────────────────────────────────────────
 	mux.HandleFunc("GET /api/health", h.health)
 	mux.HandleFunc("POST /api/auth/login", h.login)
+	mux.HandleFunc("POST /api/auth/register", h.register)    // สมัครบัญชีลูกค้า
+	mux.HandleFunc("POST /api/auth/verify-otp", h.verifyOtp) // ยืนยันตัวตนก่อนเข้าใช้งาน
 
 	register := registrar(func(pattern string, roles []model.Role, handler http.HandlerFunc) {
 		mux.Handle(pattern, middleware.Chain(handler,
@@ -41,8 +54,8 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 		))
 	})
 
-	register("GET /api/auth/me", roleStaff, h.me)
-
+	h.registerAuthRoutes(register)
+	h.registerCustomerRoutes(register)     // ลูกค้า + บัญชีผู้ใช้
 	h.registerSupplierRoutes(register)     // U1–U4
 	h.registerCatalogueRoutes(register)    // หนังสือ + สินค้าคงคลัง (รองรับ U5)
 	h.registerPurchasingRoutes(register)   // U5–U10

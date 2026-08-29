@@ -98,3 +98,29 @@ var (
 	ErrForbidden = newErr(http.StatusForbidden, "FORBIDDEN",
 		"คุณไม่มีสิทธิ์ทำรายการนี้")
 )
+
+// ── บัญชีผู้ใช้และลูกค้า ────────────────────────────────────────────────
+var (
+	ErrPersonNotFound   = NotFound("PERSON_NOT_FOUND", "ไม่พบข้อมูลบุคคล")
+	ErrCustomerNotFound = NotFound("CUSTOMER_NOT_FOUND", "ไม่พบข้อมูลลูกค้า")
+	ErrAccountNotFound  = NotFound("ACCOUNT_NOT_FOUND", "ไม่พบบัญชีผู้ใช้")
+
+	ErrEmailTaken = Conflict("EMAIL_TAKEN",
+		"อีเมลนี้ถูกใช้สมัครไปแล้ว")
+	ErrUsernameTaken = Conflict("USERNAME_TAKEN",
+		"ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว")
+
+	ErrPasswordTooShort = Validation("PASSWORD_TOO_SHORT",
+		"รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
+	ErrInvalidOtp = Validation("INVALID_OTP",
+		"รหัสยืนยันไม่ถูกต้อง")
+
+	ErrAccountNotVerified = newErr(http.StatusUnauthorized, "ACCOUNT_NOT_VERIFIED",
+		"กรุณายืนยันตัวตนก่อนเข้าสู่ระบบ")
+	ErrAccountSuspended = newErr(http.StatusUnauthorized, "ACCOUNT_SUSPENDED",
+		"บัญชีนี้ถูกระงับการใช้งาน")
+	ErrAccountAlreadySuspended = Conflict("ACCOUNT_ALREADY_SUSPENDED",
+		"บัญชีนี้ถูกระงับไปแล้ว")
+	ErrAccountNotSuspended = Conflict("ACCOUNT_NOT_SUSPENDED",
+		"บัญชีนี้ไม่ได้ถูกระงับอยู่")
+)

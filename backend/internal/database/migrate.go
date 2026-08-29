@@ -18,8 +18,11 @@ import (
 // entities — เรียงตามลำดับตาราง schema ในเอกสารที่ส่งอาจารย์
 // ตารางแม่ต้องมาก่อนตารางลูกเสมอ เพราะ FK อ้างถึงกัน
 var entities = []any{
+	&model.Person{},
 	&model.Book{},
 	&model.Employee{},
+	&model.Customer{},
+	&model.UserAccount{},
 	&model.Supplier{},
 	&model.SupplierBook{},
 	&model.SupplierEditLog{},
@@ -42,6 +45,9 @@ func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(entities...); err != nil {
 		return fmt.Errorf("สร้างตารางไม่สำเร็จ: %w", err)
 	}
+	if err := backfillPersons(db); err != nil {
+		return err
+	}
 	if err := applyChecks(db); err != nil {
 		return err
 	}
@@ -52,6 +58,55 @@ func Migrate(db *gorm.DB) error {
 		return err
 	}
 	return applyViews(db)
+}
+
+// backfillPersons — เติมแถวใน person ให้พนักงานที่ยังไม่มี แล้วผูก employee.person_id
+//
+// จำเป็นเพราะ person ถูกเพิ่มทีหลัง ตอนที่ตาราง employee มีข้อมูลอยู่แล้ว
+// AutoMigrate เพิ่มคอลัมน์ NOT NULL บนตารางที่มีข้อมูลไม่ได้ (ADD COLUMN ... NOT NULL
+// without default → ERROR: column contains null values) จึงต้อง
+// ประกาศฟิลด์แบบ nullable → เติมค่า → ค่อยบังคับ NOT NULL ที่นี่
+//
+// รันซ้ำได้: แถวที่ผูกแล้วจะไม่ถูกแตะ และการบังคับ NOT NULL ทำเฉพาะเมื่อไม่เหลือค่าว่าง
+func backfillPersons(db *gorm.DB) error {
+	// อีเมลของ employee เป็น unique index อยู่แล้ว จึงใช้เป็นกุญแจจับคู่ได้ปลอดภัย
+	insert := `INSERT INTO person (first_name, last_name, phone, email)
+	           SELECT e.first_name, e.last_name, e.phone, e.email
+	           FROM employee e
+	           WHERE (e.person_id IS NULL OR e.person_id = 0)
+	             AND NOT EXISTS (SELECT 1 FROM person p WHERE lower(p.email) = lower(e.email))`
+	if err := db.Exec(insert).Error; err != nil {
+		return fmt.Errorf("สร้างแถว person ให้พนักงานไม่สำเร็จ: %w", err)
+	}
+
+	link := `UPDATE employee e SET person_id = p.person_id
+	         FROM person p
+	         WHERE (e.person_id IS NULL OR e.person_id = 0)
+	           AND lower(p.email) = lower(e.email)`
+	if err := db.Exec(link).Error; err != nil {
+		return fmt.Errorf("ผูก employee เข้ากับ person ไม่สำเร็จ: %w", err)
+	}
+
+	// บังคับ NOT NULL เฉพาะเมื่อเติมครบแล้ว ไม่งั้น migrate จะล้มทั้งชุดเพราะข้อมูลเก่าแถวเดียว
+	var orphans int64
+	if err := db.Model(&model.Employee{}).
+		Where("person_id IS NULL OR person_id = 0").Count(&orphans).Error; err != nil {
+		return fmt.Errorf("นับพนักงานที่ยังไม่มี person ไม่สำเร็จ: %w", err)
+	}
+	if orphans > 0 {
+		return fmt.Errorf("ยังมีพนักงาน %d รายที่ผูกกับ person ไม่ได้ (อีเมลซ้ำหรือว่าง)", orphans)
+	}
+
+	statements := []string{
+		`ALTER TABLE employee ALTER COLUMN person_id SET NOT NULL`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_person ON employee (person_id)`,
+	}
+	for _, statement := range statements {
+		if err := db.Exec(statement).Error; err != nil {
+			return fmt.Errorf("บังคับความสัมพันธ์ employee → person ไม่สำเร็จ: %w", err)
+		}
+	}
+	return nil
 }
 
 // foreignKey — คอลัมน์หนึ่งที่ชี้ไปยังคีย์หลักของอีกตาราง
@@ -70,6 +125,9 @@ type foreignKey struct {
 //     (เช่น SupplierBook.Book — ทั้งสอง struct มีฟิลด์ชื่อ BookID เหมือนกัน)
 var foreignKeys = []foreignKey{
 	{"supplier_book", "book_id", "book", "book_id"},
+	{"employee", "person_id", "person", "person_id"},
+	{"customer", "person_id", "person", "person_id"},
+	{"user_account", "person_id", "person", "person_id"},
 }
 
 // applyForeignKeys — เพิ่ม FK แบบรันซ้ำได้
@@ -103,7 +161,10 @@ func checks() []enumCheck {
 	return []enumCheck{
 		{"supplier", "status", values(model.SupplierStatusActive, model.SupplierStatusCancelled)},
 		{"book", "status", values(model.BookStatusActive, model.BookStatusInactive)},
-		{"employee", "role", values(model.RoleWarehouse, model.RoleManager, model.RoleSales, model.RoleDelivery)},
+		// ห้ามใส่ RoleCustomer — ลูกค้าไม่ใช่พนักงาน อยู่คนละตาราง
+		{"employee", "role", values(model.EmployeeRoles()...)},
+		{"user_account", "status", values(
+			model.AccountStatusUnverified, model.AccountStatusActive, model.AccountStatusSuspended)},
 		{"purchase_requisition", "status", values(
 			model.PRStatusDraft, model.PRStatusSubmitted, model.PRStatusApproved, model.PRStatusRejected)},
 		{"purchase_order", "status", values(
@@ -195,6 +256,9 @@ func applyIndexes(db *gorm.DB) error {
 		 ON purchase_order (supplier_id, status)`,
 		`CREATE INDEX IF NOT EXISTS idx_purchase_requisition_supplier_status
 		 ON purchase_requisition (supplier_id, status)`,
+		// อีเมลกับชื่อผู้ใช้ต้องไม่ซ้ำแบบไม่สนตัวพิมพ์ — เป็นกุญแจที่ใช้ค้นตอนล็อกอิน
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_person_email ON person (lower(email))`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_user_account_username ON user_account (lower(username))`,
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement).Error; err != nil {
@@ -208,17 +272,24 @@ func applyIndexes(db *gorm.DB) error {
 // โค้ดใช้ตาราง employee ตารางเดียว (single-table inheritance) แล้วเปิด view สองตัวทับ
 // เพื่อให้ชื่อที่เห็นในฐานข้อมูลตรงกับเอกสาร และ query ตามบทบาทได้ตรง ๆ
 func applyViews(db *gorm.DB) error {
-	statements := []string{
-		`CREATE OR REPLACE VIEW warehouse_staff AS
-		 SELECT employee_id, first_name, last_name, phone, email
-		 FROM employee WHERE role = 'warehouse'`,
-		`CREATE OR REPLACE VIEW store_manager AS
-		 SELECT employee_id, first_name, last_name, phone, email
-		 FROM employee WHERE role = 'manager'`,
+	// ต้อง DROP ก่อนเสมอ — CREATE OR REPLACE VIEW เปลี่ยนชุดคอลัมน์ไม่ได้
+	// (เพิ่ม person_id เข้าไปจะได้ ERROR: cannot change name of view column)
+	roles := []struct{ view, role string }{
+		{"warehouse_staff", string(model.RoleWarehouse)},
+		{"store_manager", string(model.RoleManager)},
+		{"sales_staff", string(model.RoleSales)},
+		{"delivery_staff", string(model.RoleDelivery)},
 	}
-	for _, statement := range statements {
-		if err := db.Exec(statement).Error; err != nil {
-			return fmt.Errorf("สร้าง view ไม่สำเร็จ: %w", err)
+	for _, r := range roles {
+		if err := db.Exec("DROP VIEW IF EXISTS " + r.view).Error; err != nil {
+			return fmt.Errorf("ลบ view %s ไม่สำเร็จ: %w", r.view, err)
+		}
+		create := fmt.Sprintf(
+			`CREATE VIEW %s AS
+			 SELECT employee_id, person_id, first_name, last_name, phone, email
+			 FROM employee WHERE role = '%s'`, r.view, r.role)
+		if err := db.Exec(create).Error; err != nil {
+			return fmt.Errorf("สร้าง view %s ไม่สำเร็จ: %w", r.view, err)
 		}
 	}
 	return nil

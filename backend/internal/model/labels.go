@@ -65,6 +65,7 @@ var RoleLabels = map[Role]string{
 	RoleManager:   "ผู้จัดการร้าน",
 	RoleSales:     "พนักงานฝ่ายขาย",
 	RoleDelivery:  "พนักงานจัดส่ง",
+	RoleCustomer:  "ลูกค้า",
 }
 
 // Label — ป้ายไทยของสถานะ ใช้ประกอบข้อความแจ้งเตือนและข้อความ error
