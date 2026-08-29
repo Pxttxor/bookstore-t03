@@ -24,6 +24,12 @@ lerna-debug.log*
 *.test
 *.out
 
+# --- Secrets ---
+# .env เก็บ DSN ของ PostgreSQL (มีรหัสผ่าน) และ JWT_SECRET — ห้ามขึ้น repo
+.env
+.env.local
+!.env.example
+
 # --- Editor / IDE / OS ---
 .vscode/*
 !.vscode/extensions.json
