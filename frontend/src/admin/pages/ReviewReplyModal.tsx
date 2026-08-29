@@ -67,7 +67,7 @@ export default function ReviewReplyModal({
             rows={4}
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
-            placeholder="พิมพ์ข้อความตอบกลับของฝ่ายขายถึงลูกค้า..."
+            placeholder="พิมพ์ข้อความตอบกลับอย่างเป็นทางการถึงลูกค้า..."
             autoFocus
           />
         </label>

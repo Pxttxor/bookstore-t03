@@ -29,6 +29,7 @@ import ContactCentrePage from './admin/pages/ContactCentrePage'
 import PromotionListPage from './admin/pages/PromotionListPage'
 import PromotionFormPage from './admin/pages/PromotionFormPage'
 import ReviewModerationPage from './admin/pages/ReviewModerationPage'
+import ReviewManagerPage from './admin/pages/ReviewManagerPage'
 
 export default function App() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="promotions/:id/edit" element={<PromotionFormPage />} />
 
         <Route path="reviews" element={<ReviewModerationPage />} />
+        <Route path="reviews/manage" element={<ReviewManagerPage />} />
 
         <Route path="contacts" element={<ContactCentrePage />} />
 

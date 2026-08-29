@@ -137,44 +137,44 @@ export default function ReviewModerationPage() {
   }
 
   return (
-    <div className="review-mod-page">
+    <div className="review-mod-page-sales">
       <Breadcrumb items={[{ label: 'หน้าหลัก', to: '/admin' }, { label: 'ตรวจสอบรีวิว' }]} />
 
       {/* KPI Cards */}
-      <section className="review-kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-icon-wrap total"><Icon name="bar-chart" size={20} /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">รีวิวทั้งหมด</span>
-            <span className="kpi-value total">{kpiTotal.toLocaleString()}</span>
+      <section className="review-kpi-grid-sales">
+        <div className="kpi-card-sales">
+          <div className="kpi-icon-wrap-sales total"><Icon name="bar-chart" size={20} /></div>
+          <div className="kpi-content-sales">
+            <span className="kpi-label-sales">รีวิวทั้งหมด</span>
+            <span className="kpi-value-sales total">{kpiTotal.toLocaleString()}</span>
           </div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-icon-wrap unreplied"><Icon name="clock" size={20} /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">รอตอบกลับ</span>
-            <span className="kpi-value unreplied">{kpiUnreplied}</span>
+        <div className="kpi-card-sales">
+          <div className="kpi-icon-wrap-sales unreplied"><Icon name="clock" size={20} /></div>
+          <div className="kpi-content-sales">
+            <span className="kpi-label-sales">รอตอบกลับ</span>
+            <span className="kpi-value-sales unreplied">{kpiUnreplied}</span>
           </div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-icon-wrap replied"><Icon name="check-circle" size={20} /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">ตอบกลับแล้ว</span>
-            <span className="kpi-value replied">{kpiReplied.toLocaleString()}</span>
+        <div className="kpi-card-sales">
+          <div className="kpi-icon-wrap-sales replied"><Icon name="check-circle" size={20} /></div>
+          <div className="kpi-content-sales">
+            <span className="kpi-label-sales">ตอบกลับแล้ว</span>
+            <span className="kpi-value-sales replied">{kpiReplied.toLocaleString()}</span>
           </div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-icon-wrap reported"><Icon name="flag" size={20} /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">รายงานผู้จัดการแล้ว</span>
-            <span className="kpi-value reported">{kpiReported}</span>
+        <div className="kpi-card-sales">
+          <div className="kpi-icon-wrap-sales reported"><Icon name="flag" size={20} /></div>
+          <div className="kpi-content-sales">
+            <span className="kpi-label-sales">รายงานผู้จัดการแล้ว</span>
+            <span className="kpi-value-sales reported">{kpiReported}</span>
           </div>
         </div>
       </section>
 
       {/* Search & Filter */}
-      <section className="review-filter-bar">
-        <div className="search-input-wrap">
+      <section className="review-filter-bar-sales">
+        <div className="search-input-wrap-sales">
           <Icon name="search" size={18} />
           <input
             type="search"
@@ -183,8 +183,8 @@ export default function ReviewModerationPage() {
             onChange={(e) => { setTerm(e.target.value); setPage(1) }}
           />
         </div>
-        <div className="filter-select-group">
-          <div className="select-pill">
+        <div className="filter-select-group-sales">
+          <div className="select-pill-sales">
             <Icon name="filter" size={16} />
             <span>สถานะ:</span>
             <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as FilterStatus); setPage(1) }}>
@@ -194,7 +194,7 @@ export default function ReviewModerationPage() {
               <option value="REPORTED">รายงานผู้จัดการแล้ว</option>
             </select>
           </div>
-          <div className="select-pill">
+          <div className="select-pill-sales">
             <Icon name="sort" size={16} />
             <span>เรียงตาม:</span>
             <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortOrder); setPage(1) }}>
@@ -207,7 +207,7 @@ export default function ReviewModerationPage() {
       </section>
 
       {/* Review Cards */}
-      <section className="review-cards-container">
+      <section className="review-cards-container-sales">
         {rows.length === 0 ? (
           <EmptyState
             icon="star"
@@ -224,38 +224,38 @@ export default function ReviewModerationPage() {
               <article
                 key={review.reviewId}
                 className={[
-                  'review-card',
-                  isReported ? 'review-card--reported' : '',
-                  isFlagged && !isReported ? 'review-card--flagged' : '',
+                  'review-card-sales',
+                  isReported ? 'review-card-sales--reported' : '',
+                  isFlagged && !isReported ? 'review-card-sales--flagged' : '',
                 ].filter(Boolean).join(' ')}
               >
                 {/* LEFT: Book cover + info side-by-side */}
-                <div className="review-card-left">
-                  <div className="review-book-cover">
+                <div className="review-card-left-sales">
+                  <div className="review-book-cover-sales">
                     {bookCover ? (
                       <img src={bookCover} alt={review.bookTitle} />
                     ) : (
-                      <div className="review-book-cover-placeholder">
+                      <div className="review-book-cover-placeholder-sales">
                         <Icon name="book" size={28} />
                       </div>
                     )}
                   </div>
-                  <div className="review-book-meta">
-                    <h3 className="review-book-title">{review.bookTitle}</h3>
-                    <p className="review-book-author">{review.author || 'ไม่ระบุผู้แต่ง'}</p>
-                    <p className="review-book-isbn">ISBN: {review.isbn || '978-0000000000'}</p>
+                  <div className="review-book-meta-sales">
+                    <h3 className="review-book-title-sales">{review.bookTitle}</h3>
+                    <p className="review-book-author-sales">{review.author || 'ไม่ระบุผู้แต่ง'}</p>
+                    <p className="review-book-isbn-sales">ISBN: {review.isbn || '978-0000000000'}</p>
                   </div>
                 </div>
 
                 {/* Divider */}
-                <div className="review-card-divider" />
+                <div className="review-card-divider-sales" />
 
                 {/* RIGHT: Review content & Actions */}
-                <div className="review-card-right">
+                <div className="review-card-right-sales">
                   {/* UNDER REVIEW badge */}
                   {isReported && (
-                    <div className="review-card-status-bar">
-                      <span className="review-under-review-badge">
+                    <div className="review-card-status-bar-sales">
+                      <span className="review-under-review-badge-sales">
                         <Icon name="alert-triangle" size={13} />
                         UNDER REVIEW
                       </span>
@@ -263,53 +263,53 @@ export default function ReviewModerationPage() {
                   )}
 
                   {/* Reviewer header */}
-                  <div className="review-user-header">
-                    <div className="review-user-profile">
-                      <div className="review-user-avatar">{getInitials(review.customerName)}</div>
-                      <div className="review-user-info">
-                        <div className="review-user-name-row">
-                          <span className="review-user-name">{review.customerName}</span>
-                          {review.username && <span className="review-user-handle">{review.username}</span>}
-                          {review.verifiedPurchase && <span className="review-verified-badge">ผู้ซื้อที่ยืนยันแล้ว</span>}
+                  <div className="review-user-header-sales">
+                    <div className="review-user-profile-sales">
+                      <div className="review-user-avatar-sales">{getInitials(review.customerName)}</div>
+                      <div className="review-user-info-sales">
+                        <div className="review-user-name-row-sales">
+                          <span className="review-user-name-sales">{review.customerName}</span>
+                          {review.username && <span className="review-user-handle-sales">{review.username}</span>}
+                          {review.verifiedPurchase && <span className="review-verified-badge-sales">ผู้ซื้อที่ยืนยันแล้ว</span>}
                         </div>
-                        <p className="review-post-date">
+                        <p className="review-post-date-sales">
                           {new Date(review.createdDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <div className="review-stars-wrap">
+                    <div className="review-stars-wrap-sales">
                       <RatingStars value={review.rating} size={16} />
                     </div>
                   </div>
 
                   {/* Review body */}
-                  <div className="review-comment-box">
-                    <span className="quote-watermark">"</span>
+                  <div className="review-comment-box-sales">
+                    <span className="quote-watermark-sales">"</span>
 
                     {review.headline && (
-                      <h4 className={`review-headline${isFlagged ? ' review-headline--italic' : ''}`}>
+                      <h4 className={`review-headline-sales${isFlagged ? ' review-headline-sales--italic' : ''}`}>
                         {review.headline}
                       </h4>
                     )}
 
-                    <p className={`review-comment-text${isReported ? ' review-comment-text--muted' : ''}`}>
+                    <p className={`review-comment-text-sales${isReported ? ' review-comment-text-sales--muted' : ''}`}>
                       {isReported ? `[ ${review.comment} ]` : review.comment}
                     </p>
 
                     {/* Inline report detail box (only when already reported) */}
                     {isReported && review.report && (
-                      <div className="review-report-detail-box">
-                        <div className="review-report-detail-title">
+                      <div className="review-report-detail-box-sales">
+                        <div className="review-report-detail-title-sales">
                           <Icon name="alert-triangle" size={15} />
                           พบเนื้อหาที่อาจไม่เหมาะสม — รอผู้จัดการตรวจสอบ
                         </div>
-                        <p className="review-report-detail-row">
+                        <p className="review-report-detail-row-sales">
                           <strong>Reason:</strong> {review.report.reason}
                         </p>
-                        <p className="review-report-detail-row">
+                        <p className="review-report-detail-row-sales">
                           <strong>Reported By:</strong> {review.report.reportedBy || 'ฝ่ายขาย'}
                         </p>
-                        <p className="review-report-detail-row">
+                        <p className="review-report-detail-row-sales">
                           <strong>Date:</strong>{' '}
                           {review.report.reportedDate
                             ? new Date(review.report.reportedDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -320,7 +320,7 @@ export default function ReviewModerationPage() {
 
                     {/* Flagged but not yet reported — warning banner */}
                     {isFlagged && !isReported && (
-                      <div className="review-flagged-warning">
+                      <div className="review-flagged-warning-sales">
                         <Icon name="alert-triangle" size={14} />
                         <span>ระบบตรวจพบข้อความมีปัญหา — กด "รายงานให้ผู้จัดการ" เพื่อดำเนินการ</span>
                       </div>
@@ -328,33 +328,33 @@ export default function ReviewModerationPage() {
 
                     {/* Staff reply */}
                     {review.reply && (
-                      <div className="review-staff-reply-nested">
-                        <div className="review-reply-label">ฝ่ายขายตอบกลับ:</div>
-                        <p className="review-reply-content">{review.reply.replyText}</p>
+                      <div className="review-staff-reply-nested-sales">
+                        <div className="review-reply-label-sales">ฝ่ายขายตอบกลับ:</div>
+                        <p className="review-reply-content-sales">{review.reply.replyText}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Action bar */}
-                  <div className="review-card-actions">
-                    <div className="actions-left">
+                  <div className="review-card-actions-sales">
+                    <div className="actions-left-sales">
                       {!review.reply && !isReported && (
-                        <button type="button" className="btn-reply-action" onClick={() => setReplyReview(review)}>
+                        <button type="button" className="btn-reply-action-sales" onClick={() => setReplyReview(review)}>
                           ตอบกลับรีวิว
                         </button>
                       )}
-                      <button type="button" className="btn-detail-action" onClick={() => setDetailReview(review)}>
+                      <button type="button" className="btn-detail-action-sales" onClick={() => setDetailReview(review)}>
                         ดูรายละเอียด
                       </button>
                     </div>
-                    <div className="actions-right">
+                    <div className="actions-right-sales">
                       {isReported ? (
-                        <button type="button" className="btn-reported-status" onClick={() => setStatusReview(review)}>
+                        <button type="button" className="btn-reported-status-sales" onClick={() => setStatusReview(review)}>
                           <Icon name="clock" size={15} />
                           รอผู้จัดการตรวจสอบ (คลิกดูสถานะ)
                         </button>
                       ) : (
-                        <button type="button" className="btn-report-action" onClick={() => setReportReview(review)}>
+                        <button type="button" className="btn-report-action-sales" onClick={() => setReportReview(review)}>
                           <Icon name="flag" size={15} />
                           รายงานให้ผู้จัดการ
                         </button>
