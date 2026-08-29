@@ -289,23 +289,23 @@ Content-Type: application/json
 ### ─────────────────────────────────────────────────────────────
 
 ### รายละเอียดใบสั่งซื้อ (displayStatus = AWAITING_SEND)
-GET {{host}}/api/orders/{{poId}}
+GET {{host}}/api/purchase-orders/{{poId}}
 Authorization: Bearer {{warehouseToken}}
 
 ### Abnormal — ยังไม่ส่ง ยืนยันไม่ได้ → 409 ORDER_NOT_SENT
-POST {{host}}/api/orders/{{poId}}/confirm
+POST {{host}}/api/purchase-orders/{{poId}}/confirm
 Authorization: Bearer {{warehouseToken}}
 Content-Type: application/json
 
 { "expectedDeliveryDate": "2026-09-15" }
 
 ### ส่งให้ผู้จัดจำหน่าย → displayStatus = AWAITING_CONFIRM
-POST {{host}}/api/orders/{{poId}}/send
+POST {{host}}/api/purchase-orders/{{poId}}/send
 Authorization: Bearer {{warehouseToken}}
 
 ### ผู้จัดจำหน่ายยืนยันพร้อมวันที่ส่งมอบ → CONFIRMED
 ### (แก้วันที่ให้เป็นอนาคต ไม่งั้นได้ 422 EXPECTED_DATE_IN_PAST)
-POST {{host}}/api/orders/{{poId}}/confirm
+POST {{host}}/api/purchase-orders/{{poId}}/confirm
 Authorization: Bearer {{warehouseToken}}
 Content-Type: application/json
 
@@ -317,7 +317,7 @@ Content-Type: application/json
 ### ─────────────────────────────────────────────────────────────
 
 ### รับบางส่วน → PO = RECEIVED_PARTIAL · GR = PARTIAL · สต็อกเพิ่ม
-POST {{host}}/api/orders/{{poId}}/receipts
+POST {{host}}/api/purchase-orders/{{poId}}/receipts
 Authorization: Bearer {{warehouseToken}}
 Content-Type: application/json
 
@@ -329,7 +329,7 @@ Content-Type: application/json
 }
 
 ### รับส่วนที่เหลือจนครบ → PO = RECEIVED_FULL · GR = FULL
-POST {{host}}/api/orders/{{poId}}/receipts
+POST {{host}}/api/purchase-orders/{{poId}}/receipts
 Authorization: Bearer {{warehouseToken}}
 Content-Type: application/json
 
@@ -341,7 +341,7 @@ Content-Type: application/json
 }
 
 ### ใบรับสินค้าของใบสั่งซื้อนี้
-GET {{host}}/api/orders/{{poId}}/receipts
+GET {{host}}/api/purchase-orders/{{poId}}/receipts
 Authorization: Bearer {{warehouseToken}}
 
 ### ใบรับสินค้าทั้งหมด
@@ -354,7 +354,7 @@ Authorization: Bearer {{warehouseToken}}
 ### ─────────────────────────────────────────────────────────────
 
 ### Abnormal — คืนเกินจำนวนที่รับเข้าคลัง → 422 RETURN_EXCEEDS_RECEIVED
-POST {{host}}/api/orders/{{poId}}/returns
+POST {{host}}/api/purchase-orders/{{poId}}/returns
 Authorization: Bearer {{warehouseToken}}
 Content-Type: application/json
 
@@ -365,7 +365,7 @@ Content-Type: application/json
 
 ### เปิดใบส่งคืนของที่ชำรุด → TRACKING · ตัดสต็อกออก
 # @name createReturn
-POST {{host}}/api/orders/{{poId}}/returns
+POST {{host}}/api/purchase-orders/{{poId}}/returns
 Authorization: Bearer {{warehouseToken}}
 Content-Type: application/json
 
@@ -426,7 +426,7 @@ GET {{host}}/api/books?q=habits
 Authorization: Bearer {{warehouseToken}}
 
 ### ใบสั่งซื้อทั้งหมด กรองตามสถานะได้
-GET {{host}}/api/orders?status=CONFIRMED
+GET {{host}}/api/purchase-orders?status=CONFIRMED
 Authorization: Bearer {{warehouseToken}}
 
 ### Abnormal — ไม่ส่ง token → 401 UNAUTHENTICATED

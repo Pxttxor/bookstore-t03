@@ -10,6 +10,16 @@ import (
 	"bookstore-t03/internal/service"
 )
 
+// registerSupplierRoutes — U1–U4 จัดการข้อมูลผู้จัดจำหน่าย
+func (h *Handler) registerSupplierRoutes(register registrar) {
+	register("GET /api/suppliers", roleOffice, h.listSuppliers)                        // U4 · can.viewSuppliers
+	register("GET /api/suppliers/{id}", roleOffice, h.getSupplier)                     // U4
+	register("GET /api/suppliers/{id}/orders", roleOffice, h.supplierOrders)           // U4 · SCR-11
+	register("POST /api/suppliers", roleWarehouse, h.createSupplier)                   // U1 · can.editSuppliers
+	register("PUT /api/suppliers/{id}", roleWarehouse, h.updateSupplier)               // U2 · can.editSuppliers
+	register("POST /api/suppliers/{id}/deactivate", roleManager, h.deactivateSupplier) // U3 · can.deactivateSupplier
+}
+
 // ── เข้าสู่ระบบ ─────────────────────────────────────────────────────────
 
 type loginRequest struct {

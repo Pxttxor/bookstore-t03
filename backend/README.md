@@ -156,12 +156,12 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | POST | `/requisitions` · PUT `/requisitions/{id}` · POST `/requisitions/{id}/submit` | U6 | คลังสินค้า |
 | POST | `/requisitions/{id}/approve` · `/requisitions/{id}/reject` | U7 | ผู้จัดการร้าน |
 | GET | `/purchasing/budget` | U7 | คลัง, ผจก. |
-| GET | `/orders` · `/orders/{id}` | U8 | คลัง, ผจก. |
-| POST | `/orders/{id}/send` · `/orders/{id}/confirm` | U8 | คลังสินค้า |
-| GET | `/orders/{id}/receipts` · `/receipts` | U9 | คลัง, ผจก. |
-| POST | `/orders/{id}/receipts` | U9 | คลังสินค้า |
-| GET | `/orders/{id}/returns` · `/returns` · `/returns/{id}` | U10 | คลัง, ผจก. |
-| POST | `/orders/{id}/returns` · `/returns/{id}/escalate` · `/returns/{id}/compensation` | U10 | คลังสินค้า |
+| GET | `/purchase-orders` · `/purchase-orders/{id}` | U8 | คลัง, ผจก. |
+| POST | `/purchase-orders/{id}/send` · `/purchase-orders/{id}/confirm` | U8 | คลังสินค้า |
+| GET | `/purchase-orders/{id}/receipts` · `/receipts` | U9 | คลัง, ผจก. |
+| POST | `/purchase-orders/{id}/receipts` | U9 | คลังสินค้า |
+| GET | `/purchase-orders/{id}/returns` · `/returns` · `/returns/{id}` | U10 | คลัง, ผจก. |
+| POST | `/purchase-orders/{id}/returns` · `/returns/{id}/escalate` · `/returns/{id}/compensation` | U10 | คลังสินค้า |
 | GET/POST | `/notifications` · `/notifications/{id}/read` · `/notifications/read-all` | — | พนักงานทุกบทบาท |
 
 สิทธิ์ของทุกเส้นทางตรงกับ `can.*` ใน `frontend/src/admin/permissions.ts` — หน้าจอซ่อนหรือปิดปุ่มไว้แล้ว

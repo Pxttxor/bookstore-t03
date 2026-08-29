@@ -64,7 +64,13 @@ func main() {
 	supplierService := service.NewSupplierService(db, supplierRepo, purchasingRepo, inventoryRepo)
 	purchasingService := service.NewPurchasingService(db, purchasingRepo, supplierRepo, inventoryRepo, notificationRepo)
 
-	api := handler.New(authService, supplierService, purchasingService, inventoryRepo, notificationRepo)
+	api := handler.New(handler.Deps{
+		Auth:          authService,
+		Suppliers:     supplierService,
+		Purchasing:    purchasingService,
+		Inventory:     inventoryRepo,
+		Notifications: notificationRepo,
+	})
 	routes := api.Routes(handler.RouteConfig{Auth: authService, CORSOrigins: cfg.CORSOrigins})
 
 	server := &http.Server{

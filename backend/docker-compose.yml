@@ -19,8 +19,11 @@ services:
       POSTGRES_DB: bookstore_t03
       POSTGRES_USER: bookstore
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bookstore}
-      # ให้ข้อความ error ของ PostgreSQL เป็นภาษาอังกฤษเสมอ อ่าน log ง่ายกว่า
-      LANG: C
+      # ต้องบังคับ UTF8 — ข้อมูลเกือบทั้งระบบเป็นภาษาไทย
+      # ถ้าปล่อยให้ initdb เลือกเอง (หรือไปตั้ง LANG=C) จะได้ฐานข้อมูลเป็น SQL_ASCII
+      # แล้ว driver จะปฏิเสธคำสั่งด้วย "simple protocol queries must be run with client_encoding=UTF8"
+      # หมายเหตุ: ค่านี้มีผลตอน initdb เท่านั้น เปลี่ยนทีหลังต้อง docker compose down -v
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
     ports:
       - "5433:5432"
     volumes:

@@ -25,7 +25,7 @@ func newTestRoutes(t *testing.T) http.Handler {
 		}
 	}()
 
-	h := New(nil, nil, nil, nil, nil)
+	h := New(Deps{})
 	return h.Routes(RouteConfig{Auth: stubAuth{}, CORSOrigins: []string{"http://localhost:5173"}})
 }
 
@@ -67,14 +67,14 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodPost, "/api/requisitions/101/submit"},
 		{http.MethodPost, "/api/requisitions/101/approve"},
 		{http.MethodPost, "/api/requisitions/101/reject"},
-		{http.MethodGet, "/api/orders"},
-		{http.MethodGet, "/api/orders/2401"},
-		{http.MethodPost, "/api/orders/2401/send"},
-		{http.MethodPost, "/api/orders/2401/confirm"},
-		{http.MethodGet, "/api/orders/2401/receipts"},
-		{http.MethodPost, "/api/orders/2401/receipts"},
-		{http.MethodGet, "/api/orders/2401/returns"},
-		{http.MethodPost, "/api/orders/2401/returns"},
+		{http.MethodGet, "/api/purchase-orders"},
+		{http.MethodGet, "/api/purchase-orders/2401"},
+		{http.MethodPost, "/api/purchase-orders/2401/send"},
+		{http.MethodPost, "/api/purchase-orders/2401/confirm"},
+		{http.MethodGet, "/api/purchase-orders/2401/receipts"},
+		{http.MethodPost, "/api/purchase-orders/2401/receipts"},
+		{http.MethodGet, "/api/purchase-orders/2401/returns"},
+		{http.MethodPost, "/api/purchase-orders/2401/returns"},
 		{http.MethodGet, "/api/receipts"},
 		{http.MethodGet, "/api/returns/7001"},
 		{http.MethodPost, "/api/returns/7001/escalate"},

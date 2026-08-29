@@ -1,7 +1,12 @@
 // seed.go — ใส่ข้อมูลตั้งต้นลงฐานข้อมูล
 //
-// ข้อมูลอยู่ใน seed_data.go ซึ่งสร้างจาก SEED_* ของ frontend (ดู tools/gen_seed.py)
-// ทำงานเมื่อฐานข้อมูลยังว่างเท่านั้น รันซ้ำแล้วจะข้ามไปเฉย ๆ ไม่ทับข้อมูลที่ผู้ใช้ทดสอบไว้
+// ข้อมูลมาจากสองแหล่ง:
+//   - seed_data.go       สร้างด้วยสคริปต์จาก SEED_* ของ frontend (ดู tools/gen_seed.py) ห้ามแก้ด้วยมือ
+//   - seed_*.go ที่เหลือ เขียนด้วยมือ สำหรับระบบย่อยที่ frontend ยังไม่มีข้อมูลตั้งต้นให้
+//
+// ตรวจความว่างเป็น "รายตาราง" ไม่ใช่ทั้งก้อน — เพราะระบบถูกสร้างทีละเฟส
+// ถ้าเช็คทั้งก้อน พอเฟสแรก seed ไปแล้ว เฟสถัดไปสั่ง -seed จะไม่ได้ข้อมูลของตัวเองเลย
+// ตารางที่มีข้อมูลอยู่แล้วจะถูกข้าม ไม่ทับของที่ผู้ใช้ทดสอบไว้
 package database
 
 import (
@@ -38,6 +43,8 @@ var seedEmployees = []model.Employee{
 
 // sequences — คอลัมน์ identity ทุกตัวที่ต้องเลื่อนเลขต่อจากข้อมูลตั้งต้น
 // ถ้าไม่ทำ แถวใหม่แถวแรกจะได้ id = 1 แล้วชนกับ id ที่ seed ใส่ไว้ทันที
+//
+// เพิ่มตารางใหม่ที่มี id อัตโนมัติเมื่อไร ต้องเพิ่มเข้าลิสต์นี้ด้วย
 var sequences = []struct{ table, column string }{
 	{"book", "book_id"},
 	{"supplier", "supplier_id"},
@@ -51,92 +58,87 @@ var sequences = []struct{ table, column string }{
 	{"notification", "id"},
 }
 
-// Seed — ใส่ข้อมูลตั้งต้นถ้าฐานข้อมูลยังว่าง
-func Seed(db *gorm.DB) error {
-	var suppliers int64
-	if err := db.Model(&model.Supplier{}).Count(&suppliers).Error; err != nil {
-		return fmt.Errorf("นับข้อมูลผู้จัดจำหน่ายไม่สำเร็จ: %w", err)
+// tableEmpty — ตารางของชนิด T ยังไม่มีข้อมูลเลยหรือไม่
+func tableEmpty[T any](tx *gorm.DB, label string) (bool, error) {
+	var count int64
+	if err := tx.Model(new(T)).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("นับข้อมูล%sไม่สำเร็จ: %w", label, err)
 	}
-	if suppliers > 0 {
-		fmt.Println("[seed] มีข้อมูลอยู่แล้ว ข้ามการใส่ข้อมูลตั้งต้น")
-		return nil
-	}
+	return count == 0, nil
+}
 
+// seedIfEmpty — ใส่ข้อมูลตั้งต้นของตารางหนึ่ง ถ้าตารางนั้นยังว่าง
+// คืนจำนวนแถวที่ใส่จริง (0 = ข้ามเพราะมีข้อมูลอยู่แล้ว หรือไม่มีข้อมูลตั้งต้นให้ใส่)
+func seedIfEmpty[T any](tx *gorm.DB, rows []T, label string) (int, error) {
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	empty, err := tableEmpty[T](tx, label)
+	if err != nil || !empty {
+		return 0, err
+	}
+	if err := tx.Create(&rows).Error; err != nil {
+		return 0, fmt.Errorf("ใส่ข้อมูล%sไม่สำเร็จ: %w", label, err)
+	}
+	return len(rows), nil
+}
+
+// Seed — ใส่ข้อมูลตั้งต้นของตารางที่ยังว่าง
+func Seed(db *gorm.DB) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(seedPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("เข้ารหัสรหัสผ่านไม่สำเร็จ: %w", err)
 	}
 
+	inserted := map[string]int{}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
+		// พนักงาน — ต้องใส่ hash ก่อน จึงคัดลอกออกมาแก้แทนการแก้ตัวแปรระดับแพ็กเกจ
 		employees := make([]model.Employee, len(seedEmployees))
 		copy(employees, seedEmployees)
 		for i := range employees {
 			employees[i].PasswordHash = string(hash)
 		}
-		if err := tx.Create(&employees).Error; err != nil {
-			return fmt.Errorf("ใส่ข้อมูลพนักงานไม่สำเร็จ: %w", err)
+		n, err := seedIfEmpty(tx, employees, "พนักงาน")
+		if err != nil {
+			return err
 		}
+		inserted["พนักงาน"] = n
 
-		if err := tx.Create(&seedBooks).Error; err != nil {
-			return fmt.Errorf("ใส่ข้อมูลหนังสือไม่สำเร็จ: %w", err)
+		if n, err = seedIfEmpty(tx, seedBooks, "หนังสือ"); err != nil {
+			return err
 		}
+		inserted["หนังสือ"] = n
 
-		for _, row := range seedSuppliers {
-			supplier := row.Supplier
-			supplier.Books = make([]model.SupplierBook, len(row.Offers))
-			for i, offer := range row.Offers {
-				supplier.Books[i] = model.SupplierBook{
-					SupplierID:   supplier.SupplierID,
-					BookID:       offer.BookID,
-					SupplyPrice:  offer.SupplyPrice,
-					LeadTimeDays: offer.LeadTimeDays,
-				}
-			}
-			if row.Deactivation != nil {
-				supplier.Deactivation = row.Deactivation
-			}
-			if err := tx.Create(&supplier).Error; err != nil {
-				return fmt.Errorf("ใส่ข้อมูลผู้จัดจำหน่าย %d ไม่สำเร็จ: %w", supplier.SupplierID, err)
-			}
+		if n, err = seedSupplierRows(tx); err != nil {
+			return err
 		}
+		inserted["ผู้จัดจำหน่าย"] = n
 
-		inventory := make([]model.InventoryItem, len(seedInventory))
-		lastUpdated := mustTime("2026-08-01T02:00:00.000Z")
-		for i, row := range seedInventory {
-			inventory[i] = model.InventoryItem{
-				InventoryID:    row.InventoryID,
-				BookID:         row.BookID,
-				QuantityOnHand: row.QuantityOnHand,
-				ReorderPoint:   row.ReorderPoint,
-				LastUpdated:    lastUpdated,
-			}
+		if n, err = seedInventoryRows(tx); err != nil {
+			return err
 		}
-		if err := tx.Create(&inventory).Error; err != nil {
-			return fmt.Errorf("ใส่ข้อมูลสินค้าคงคลังไม่สำเร็จ: %w", err)
-		}
-		if err := tx.Create(&seedStockTransactions).Error; err != nil {
-			return fmt.Errorf("ใส่ประวัติการเคลื่อนไหวสต็อกไม่สำเร็จ: %w", err)
-		}
+		inserted["สินค้าคงคลัง"] = n
 
-		if err := tx.Create(&seedRequisitions).Error; err != nil {
-			return fmt.Errorf("ใส่ใบขอสั่งซื้อไม่สำเร็จ: %w", err)
+		if n, err = seedIfEmpty(tx, seedStockTransactions, "ประวัติการเคลื่อนไหวสต็อก"); err != nil {
+			return err
 		}
+		inserted["เคลื่อนไหวสต็อก"] = n
 
-		// ยอดรวมของใบสั่งซื้อไม่ได้เก็บไว้ใน seed — คำนวณจากรายการเหมือนตอนใช้งานจริง
-		orders := make([]model.PurchaseOrder, len(seedOrders))
-		copy(orders, seedOrders)
-		for i := range orders {
-			orders[i].RecalculateTotal()
+		if n, err = seedIfEmpty(tx, seedRequisitions, "ใบขอสั่งซื้อ"); err != nil {
+			return err
 		}
-		if err := tx.Create(&orders).Error; err != nil {
-			return fmt.Errorf("ใส่ใบสั่งซื้อไม่สำเร็จ: %w", err)
-		}
+		inserted["PR"] = n
 
-		if len(seedReceipts) > 0 {
-			if err := tx.Create(&seedReceipts).Error; err != nil {
-				return fmt.Errorf("ใส่ใบรับสินค้าไม่สำเร็จ: %w", err)
-			}
+		if n, err = seedOrderRows(tx); err != nil {
+			return err
 		}
+		inserted["PO"] = n
+
+		if n, err = seedIfEmpty(tx, seedReceipts, "ใบรับสินค้า"); err != nil {
+			return err
+		}
+		inserted["GR"] = n
 		return nil
 	})
 	if err != nil {
@@ -146,10 +148,65 @@ func Seed(db *gorm.DB) error {
 	if err := resetSequences(db); err != nil {
 		return err
 	}
-	fmt.Printf("[seed] ใส่ข้อมูลตั้งต้นแล้ว: พนักงาน %d · หนังสือ %d · ผู้จัดจำหน่าย %d · PR %d · PO %d · GR %d\n",
-		len(seedEmployees), len(seedBooks), len(seedSuppliers),
-		len(seedRequisitions), len(seedOrders), len(seedReceipts))
+
+	fmt.Printf("[seed] พนักงาน %d · หนังสือ %d · ผู้จัดจำหน่าย %d · สินค้าคงคลัง %d · เคลื่อนไหวสต็อก %d · PR %d · PO %d · GR %d\n",
+		inserted["พนักงาน"], inserted["หนังสือ"], inserted["ผู้จัดจำหน่าย"], inserted["สินค้าคงคลัง"],
+		inserted["เคลื่อนไหวสต็อก"], inserted["PR"], inserted["PO"], inserted["GR"])
 	return nil
+}
+
+// seedSupplierRows — ผู้จัดจำหน่ายพร้อมรายการหนังสือที่เสนอขายและเหตุผลการปิดใช้งาน
+// สร้างทีละรายเพราะแต่ละรายมีตารางลูกไม่เท่ากัน
+func seedSupplierRows(tx *gorm.DB) (int, error) {
+	empty, err := tableEmpty[model.Supplier](tx, "ผู้จัดจำหน่าย")
+	if err != nil || !empty {
+		return 0, err
+	}
+	for _, row := range seedSuppliers {
+		supplier := row.Supplier
+		supplier.Books = make([]model.SupplierBook, len(row.Offers))
+		for i, offer := range row.Offers {
+			supplier.Books[i] = model.SupplierBook{
+				SupplierID:   supplier.SupplierID,
+				BookID:       offer.BookID,
+				SupplyPrice:  offer.SupplyPrice,
+				LeadTimeDays: offer.LeadTimeDays,
+			}
+		}
+		if row.Deactivation != nil {
+			supplier.Deactivation = row.Deactivation
+		}
+		if err := tx.Create(&supplier).Error; err != nil {
+			return 0, fmt.Errorf("ใส่ข้อมูลผู้จัดจำหน่าย %d ไม่สำเร็จ: %w", supplier.SupplierID, err)
+		}
+	}
+	return len(seedSuppliers), nil
+}
+
+// seedInventoryRows — ยอดคงเหลือตั้งต้น (เวลาอัปเดตล่าสุดใช้ค่าเดียวกันทั้งชุด)
+func seedInventoryRows(tx *gorm.DB) (int, error) {
+	lastUpdated := mustTime("2026-08-01T02:00:00.000Z")
+	rows := make([]model.InventoryItem, len(seedInventory))
+	for i, row := range seedInventory {
+		rows[i] = model.InventoryItem{
+			InventoryID:    row.InventoryID,
+			BookID:         row.BookID,
+			QuantityOnHand: row.QuantityOnHand,
+			ReorderPoint:   row.ReorderPoint,
+			LastUpdated:    lastUpdated,
+		}
+	}
+	return seedIfEmpty(tx, rows, "สินค้าคงคลัง")
+}
+
+// seedOrderRows — ใบสั่งซื้อ ยอดรวมไม่ได้เก็บใน seed จึงคำนวณจากรายการเหมือนตอนใช้งานจริง
+func seedOrderRows(tx *gorm.DB) (int, error) {
+	rows := make([]model.PurchaseOrder, len(seedOrders))
+	copy(rows, seedOrders)
+	for i := range rows {
+		rows[i].RecalculateTotal()
+	}
+	return seedIfEmpty(tx, rows, "ใบสั่งซื้อ")
 }
 
 // resetSequences — เลื่อน sequence ของทุกคอลัมน์ identity ให้เริ่มต่อจาก id สูงสุดที่มีอยู่

@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | P0 — สะสาง + วางโครง |
-| **ทำต่อที่** | P0 ขั้น 3 — เปลี่ยนชื่อ `/api/orders` → `/api/purchase-orders` |
+| **เฟส** | P0 เสร็จแล้ว |
+| **ทำต่อที่** | **P1 — Person · Customer · UserAccount** (ยังไม่เริ่ม) |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · test 24/24 ✅ · migrate+seed ✅ · **smoke 51/51 ✅** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · test 24/24 ✅ · migrate+seed ✅ · **smoke 51/51 ✅** (รันซ้ำได้) |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -59,7 +59,7 @@ git add -A && git commit
 
 | # | เฟส | สถานะ | commit | test | migrate+seed | smoke |
 |---|---|---|---|---|---|---|
-| P0 | สะสาง + วางโครง | 🔄 | — | 24/24 | ✅ | 51/51 |
+| P0 | สะสาง + วางโครง | ✅ | (ดู git log) | 24/24 | ✅ | 51/51 |
 | P1 | Person · Customer · UserAccount | ⬜ | | | | |
 | P2 | Category · Book CRUD · BookChangeLog | ⬜ | | | | |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ⬜ | | | | |
@@ -78,13 +78,24 @@ git add -A && git commit
 | 2 | `docker-compose.yml` + เปิด DB บน Pi 5 + `.env`/`.env.example` | ✅ |
 | 3 | แก้ line ending (`*.go text eol=lf`) — `gofmt -l` เคยขึ้นทุกไฟล์เพราะ CRLF | ✅ |
 | 4 | แก้ FK กลับทางที่ `SupplierBook.Book` (`-:migration`) | ✅ |
-| 5 | เปลี่ยนชื่อ `/api/orders` → `/api/purchase-orders` | ⬜ |
-| 6 | แตก `Routes()` → `routes.go` + `handler.New(Deps)` | ⬜ |
-| 7 | แตก `service/purchasing.go` (855 บรรทัด) → 4 ไฟล์ | ⬜ |
-| 8 | แตก `cmd/smoke/main.go` (696 บรรทัด) → `main`/`client`/`env`/`flow_*` | ⬜ |
-| 9 | `Seed()` guard ต่อตาราง (`seedIfEmpty[T]`) | ⬜ |
-| 10 | `gen_seed.py` — ตัด `seedStockTransactions` · เพิ่ม `seedCategories` | ⬜ |
-| 11 | `applyForeignKeys()` ใน `migrate.go` (FK ที่ GORM ไม่สร้างให้) | ⬜ |
+| 5 | เปลี่ยนชื่อ `/api/orders` → `/api/purchase-orders` | ✅ |
+| 6 | แตก `Routes()` → `routes.go` + `handler.New(Deps)` | ✅ |
+| 7 | แตก `service/purchasing.go` (855 บรรทัด) → 4 ไฟล์ | ✅ |
+| 8 | แตก `cmd/smoke/main.go` (696 บรรทัด) → `main`/`client`/`env`/`flow_*` | ✅ |
+| 9 | `Seed()` guard ต่อตาราง (`seedIfEmpty[T]`) | ✅ |
+| 10 | `gen_seed.py` — ตัด `seedStockTransactions` ออก (ย้ายไป `seed_inventory.go` เขียนมือ) | ✅ |
+| 10b | `gen_seed.py` — เพิ่ม `seedCategories` | เลื่อนไป P2 (ยังไม่มี `model.Category`) |
+| 11 | `applyForeignKeys()` ใน `migrate.go` (FK ที่ GORM ไม่สร้างให้) | ✅ |
+
+### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
+
+| # | เจออะไร | แก้ยังไง |
+|---|---|---|
+| A | `gofmt -l .` ขึ้นชื่อ **ทุกไฟล์** — `core.autocrlf=true` เช็คเอาต์ `.go` เป็น CRLF · verify gate ใช้ไม่ได้จริงมาตลอด | ปัก `*.go text eol=lf` ใน `.gitattributes` + แปลงไฟล์ในเครื่อง |
+| B | `gofmt -l` คืน exit code 0 เสมอ → `gofmt -l . && echo OK` ผ่านหลอกทุกครั้ง | เปลี่ยนเป็น `test -z "$(gofmt -l .)"` ทุกที่ |
+| C | GORM สร้าง FK **กลับทาง** `book.book_id → supplier_book.book_id` ทำให้ AutoMigrate ล้มตั้งแต่ตารางแรก | `-:migration` บน `SupplierBook.Book` + ประกาศ FK จริงใน `foreignKeys` |
+| D | ฐานข้อมูลถูก init เป็น `SQL_ASCII` (จาก `LANG: C` ที่ใส่เองใน compose) → driver ปฏิเสธคำสั่ง | `POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8` + สร้าง volume ใหม่ |
+| E | `cmd/smoke` ไม่ idempotent — เคส U5 ผ่านเฉพาะรอบแรก เพราะรอบก่อนตั้งจุดสั่งซื้อเล่ม 115 ไปแล้ว | เพิ่มขั้นเตรียมข้อมูล ล้างจุดสั่งซื้อก่อนตรวจ |
 
 ---
 

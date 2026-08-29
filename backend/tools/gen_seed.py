@@ -61,9 +61,9 @@ assert len(suppliers) == 12, len(suppliers)
 # ── สินค้าคงคลัง ─────────────────────────────────────────────────────────
 inventory = re.findall(r"item\((\d+), (\d+), (\d+), (\d+|undefined)\)", inv_ts)
 assert len(inventory) == 23, len(inventory)
-txn_re = re.compile(r"txn\((\d+), (\d+), '(\w+)', (-?\d+), " + STR + r", " + STR + r", " + STR + r"\)")
-txns = [(int(t[0]), int(t[1]), t[2], int(t[3]), unq(t[4]), unq(t[5]), t[6])
-        for t in txn_re.findall(inv_ts)]
+# หมายเหตุ: ไม่อ่าน SEED_STOCK_TRANSACTIONS จาก frontend อีกแล้ว
+# ฝั่ง frontend ถูกลบจนเหลือ [] การสร้างต่อจึงเท่ากับลบข้อมูลแปดแถวทิ้งเงียบ ๆ
+# ข้อมูลย้ายไปอยู่ที่ internal/database/seed_inventory.go ซึ่งเขียนด้วยมือ
 
 # ── เอกสารจัดซื้อ ────────────────────────────────────────────────────────
 def obj_blocks(source, marker):
@@ -209,14 +209,6 @@ for inv in inventory:
 w("}")
 w("")
 
-w("// seedStockTransactions — ประวัติการเคลื่อนไหวสต็อกที่ทำให้ยอดคงเหลือข้างบนสมเหตุสมผล")
-w("var seedStockTransactions = []model.StockTransaction{")
-for t in txns:
-    w("\t{TxnID: %d, BookID: %d, Type: model.StockTxnType(%s), QuantityChange: %d, Reason: %s, ReferenceDoc: %s, TxnDate: mustTime(%s)},"
-      % (t[0], t[1], q(t[2]), t[3], q(t[4]), q(t[5]), q(t[6])))
-w("}")
-w("")
-
 w("// seedRequisitions — ใบขอสั่งซื้อ 3 ใบ สถานะรออนุมัติ เพื่อให้หน้าอนุมัติมีของตั้งแต่เข้าระบบครั้งแรก")
 w("var seedRequisitions = []model.PurchaseRequisition{")
 for r in requisitions:
@@ -269,11 +261,16 @@ for g in receipts:
 w("}")
 w("")
 
+# seedStockTransactions ย้ายไปอยู่ใน seed_inventory.go ที่เขียนด้วยมือแล้ว
+# ถ้าหลุดกลับมาที่นี่ จะประกาศตัวแปรซ้ำ (คอมไพล์ไม่ผ่าน) หรือทับข้อมูลแปดแถวนั้นทิ้ง
+assert "seedStockTransactions" not in "\n".join(L), \
+    "seedStockTransactions ต้องไม่ถูกสร้างจากสคริปต์นี้ — ดู internal/database/seed_inventory.go"
+
 io.open(OUT, "w", encoding="utf-8", newline="\n").write("\n".join(L) + "\n")
 subprocess.run(["gofmt", "-w", OUT], check=True)  # ให้ผ่าน `gofmt -l .` ตั้งแต่สร้างเสร็จ
 print("wrote", OUT)
-print("books=%d suppliers=%d inventory=%d txns=%d PR=%d PO=%d GR=%d"
-      % (len(books), len(suppliers), len(inventory), len(txns),
+print("books=%d suppliers=%d inventory=%d PR=%d PO=%d GR=%d"
+      % (len(books), len(suppliers), len(inventory),
          len(requisitions), len(orders), len(receipts)))
 print("offers/supplier:", [len(s["offers"]) for s in suppliers])
 print("deactivated:", [s["id"] for s in suppliers if s["deact"]])

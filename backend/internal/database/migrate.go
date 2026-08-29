@@ -48,7 +48,48 @@ func Migrate(db *gorm.DB) error {
 	if err := applyIndexes(db); err != nil {
 		return err
 	}
+	if err := applyForeignKeys(db); err != nil {
+		return err
+	}
 	return applyViews(db)
+}
+
+// foreignKey — คอลัมน์หนึ่งที่ชี้ไปยังคีย์หลักของอีกตาราง
+type foreignKey struct {
+	table, column string
+	refTable      string
+	refColumn     string
+}
+
+// foreignKeys — FK ที่ AutoMigrate สร้างให้ไม่ได้ ต้องยิง SQL เอง
+//
+// สองกรณีที่ตกหล่น:
+//  1. association (→) ของ class diagram ที่โค้ดเก็บเป็น FK id เปล่า ๆ ตามกติกาของโปรเจกต์
+//     GORM ไม่รู้ว่าเป็นความสัมพันธ์ จึงไม่สร้าง constraint ให้
+//  2. ความสัมพันธ์ที่ GORM เดาทิศทางผิดจนต้องปิดด้วย `-:migration`
+//     (เช่น SupplierBook.Book — ทั้งสอง struct มีฟิลด์ชื่อ BookID เหมือนกัน)
+var foreignKeys = []foreignKey{
+	{"supplier_book", "book_id", "book", "book_id"},
+}
+
+// applyForeignKeys — เพิ่ม FK แบบรันซ้ำได้
+//
+// PostgreSQL ไม่มี ADD CONSTRAINT IF NOT EXISTS จึงต้องห่อด้วยบล็อก DO
+// แล้วกลืน duplicate_object ทิ้ง · ต้องรันหลังข้อมูลพร้อมแล้วเสมอ
+// ไม่งั้นแถวที่ค่าอ้างอิงยังว่างจะทำให้สร้าง constraint ไม่ผ่าน
+func applyForeignKeys(db *gorm.DB) error {
+	for _, fk := range foreignKeys {
+		name := fmt.Sprintf("fk_%s_%s", fk.table, fk.column)
+		statement := fmt.Sprintf(`DO $$ BEGIN
+			ALTER TABLE %s ADD CONSTRAINT %s
+			FOREIGN KEY (%s) REFERENCES %s(%s);
+		EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+			fk.table, name, fk.column, fk.refTable, fk.refColumn)
+		if err := db.Exec(statement).Error; err != nil {
+			return fmt.Errorf("สร้าง foreign key %s ไม่สำเร็จ: %w", name, err)
+		}
+	}
+	return nil
 }
 
 // enumCheck — คอลัมน์หนึ่งกับชุดค่าที่ยอมรับ
