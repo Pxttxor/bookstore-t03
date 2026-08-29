@@ -38,7 +38,12 @@ type SupplierBook struct {
 
 	// อ่านอย่างเดียว เติมจากตาราง book ตอน preload
 	// frontend คาดหวัง isbn/title/author/publisher ติดมากับ SupplierBook — handler แบนออกมาให้
-	Book *Book `gorm:"foreignKey:BookID;references:BookID" json:"-"`
+	//
+	// `-:migration` จำเป็น: ทั้ง SupplierBook และ Book มีฟิลด์ชื่อ BookID เหมือนกัน
+	// GORM จึงเดาเป็น has one แล้วสร้าง FK กลับทาง (book.book_id -> supplier_book.book_id)
+	// ทำให้ AutoMigrate ล้มตั้งแต่ตารางแรก · ความสัมพันธ์ยังใช้ Preload ได้ตามปกติ
+	// ส่วน FK จริงสร้างด้วย SQL ใน applyForeignKeys()
+	Book *Book `gorm:"foreignKey:BookID;references:BookID;-:migration" json:"-"`
 }
 
 func (SupplierBook) TableName() string { return "supplier_book" }
