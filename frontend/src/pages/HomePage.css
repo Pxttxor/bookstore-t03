@@ -2,36 +2,6 @@
   padding-block: 32px 64px;
 }
 
-/* search box */
-.home__search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 420px;
-  padding: 10px 18px;
-  margin-bottom: 24px;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  color: var(--text-muted);
-}
-.home__search input {
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-  font-size: 15px;
-  color: var(--text-heading);
-}
-
-/* search result heading */
-.home__result-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: var(--text-heading);
-}
-
 /* category chips */
 .home__chips {
   padding-block: 16px 24px;

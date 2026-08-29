@@ -12,19 +12,29 @@ import {
   type Review,
 } from './reviews'
 
-const STORAGE_KEY = 'bookhaven.reviews.v1'
+const STORAGE_KEY = 'bookhaven.reviews.v3'
 
 export interface ReplyDraft {
   replyText: string
   repliedBy: string
 }
 
+export interface ReportDraft {
+  reason: string
+  detail?: string
+  reportedBy: string
+}
+
 interface ReviewValue {
   reviews: Review[]
   pendingCount: number
+  unrepliedCount: number
+  repliedCount: number
+  reportedCount: number
   findById: (reviewId: number) => Review | undefined
   moderate: (reviewId: number, action: ModerateAction) => void
   reply: (reviewId: number, draft: ReplyDraft) => void
+  reportToManager: (reviewId: number, draft: ReportDraft) => void
 }
 
 const ReviewContext = createContext<ReviewValue | null>(null)
@@ -69,6 +79,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
           r.reviewId === reviewId
             ? {
                 ...r,
+                status: 'PUBLISHED' as const,
                 reply: {
                   replyId: (r.reply?.replyId ?? 0) + 1,
                   replyText: draft.replyText.trim(),
@@ -81,9 +92,42 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    const pendingCount = reviews.filter((r) => r.status === 'PENDING').length
+    const reportToManager = (reviewId: number, draft: ReportDraft) => {
+      persist(
+        reviews.map((r) =>
+          r.reviewId === reviewId
+            ? {
+                ...r,
+                report: {
+                  isReported: true,
+                  reason: draft.reason,
+                  detail: draft.detail,
+                  reportedDate: new Date().toISOString(),
+                  reportedBy: draft.reportedBy,
+                  managerStatus: 'PENDING',
+                },
+              }
+            : r,
+        ),
+      )
+    }
 
-    return { reviews, pendingCount, findById, moderate, reply }
+    const pendingCount = reviews.filter((r) => r.status === 'PENDING').length
+    const unrepliedCount = reviews.filter((r) => !r.reply).length
+    const repliedCount = reviews.filter((r) => !!r.reply).length
+    const reportedCount = reviews.filter((r) => r.report?.isReported).length
+
+    return {
+      reviews,
+      pendingCount,
+      unrepliedCount,
+      repliedCount,
+      reportedCount,
+      findById,
+      moderate,
+      reply,
+      reportToManager,
+    }
   }, [reviews])
 
   return <ReviewContext.Provider value={value}>{children}</ReviewContext.Provider>

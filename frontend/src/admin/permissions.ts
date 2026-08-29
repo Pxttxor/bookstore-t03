@@ -20,25 +20,6 @@ export const can = {
   receiveGoods: (role: Role) => role === 'warehouse',
   createReturn: (role: Role) => role === 'warehouse',
 
-  // Book management (Book subsystem). Sales staff record every entry in the book change
-  // log per the class diagram, so editing the catalogue belongs to them; warehouse and
-  // the store manager read it to do their own jobs.
-  viewBooks: (role: Role) => role === 'sales' || role === 'warehouse' || role === 'manager',
-  editBooks: (role: Role) => role === 'sales',
-
-  // Inventory subsystem. WarehouseStaff.countStock() owns adjusting and counting stock;
-  // reading the on-hand figure is open to the three office roles.
-  viewStock: (role: Role) => role === 'warehouse' || role === 'sales' || role === 'manager',
-  // The low-stock report has warehouse as its only actor; this gates the menu shortcut
-  // and the dashboard tile. The tab itself stays on /admin/stock, which is open data.
-  viewLowStock: (role: Role) => role === 'warehouse',
-  adjustStock: (role: Role) => role === 'warehouse',
-  countStock: (role: Role) => role === 'warehouse',
-  viewStockCounts: (role: Role) => role === 'warehouse' || role === 'manager',
-  // Warehouse raises the discrepancy report; only the store manager decides on it.
-  viewDiscrepancies: (role: Role) => role === 'warehouse' || role === 'manager',
-  resolveDiscrepancy: (role: Role) => role === 'manager',
-
   // Contact centre (SCR-27). Sales sees the directory tab only, read-only.
   viewContacts: (role: Role) =>
     role === 'warehouse' || role === 'manager' || role === 'sales',
