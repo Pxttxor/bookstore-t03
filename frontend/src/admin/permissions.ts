@@ -33,6 +33,7 @@ export const can = {
   // Review moderation (Review subsystem). SalesStaff.moderateReview; the store manager
   // may moderate reviews and handle escalations too.
   moderateReview: (role: Role) => role === 'sales' || role === 'manager',
+  manageReportedReviews: (role: Role) => role === 'manager',
 
   // Customer orders (Order + Delivery subsystems). Responsibility is split by role:
   // sales handle intake and payment, warehouse packs, delivery ships and confirms.

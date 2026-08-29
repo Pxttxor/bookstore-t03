@@ -44,6 +44,9 @@ export type IconName =
   | 'flag'
   | 'bar-chart'
   | 'sort'
+  | 'check-check'
+  | 'trash-x'
+  | 'message-plus'
 
 const PATHS: Record<IconName, ReactNode> = {
   search: (
@@ -265,6 +268,28 @@ const PATHS: Record<IconName, ReactNode> = {
       <polyline points="7 9 11 5 15 9" />
       <line x1="18" y1="19" x2="18" y2="11" />
       <polyline points="14 15 18 19 22 15" />
+    </>
+  ),
+  'check-check': (
+    <>
+      <path d="M18 6 7 17l-5-5" />
+      <path d="m22 10-7.5 7.5L13 16" />
+    </>
+  ),
+  'trash-x': (
+    <>
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="14" y2="15" />
+      <line x1="14" y1="11" x2="10" y2="15" />
+    </>
+  ),
+  'message-plus': (
+    <>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <line x1="12" y1="8" x2="12" y2="14" />
+      <line x1="9" y1="11" x2="15" y2="11" />
     </>
   ),
 }
