@@ -25,6 +25,7 @@ type Deps struct {
 	Stock         *service.InventoryService
 	Orders        *service.OrderService
 	Promotions    *service.PromotionService
+	Payments      *service.PaymentService
 	Purchasing    *service.PurchasingService
 	Inventory     *repository.InventoryRepository
 	Notifications *repository.NotificationRepository
@@ -38,6 +39,7 @@ type Handler struct {
 	stock         *service.InventoryService
 	orders        *service.OrderService
 	promotions    *service.PromotionService
+	payments      *service.PaymentService
 	purchasing    *service.PurchasingService
 	inventory     *repository.InventoryRepository
 	notifications *repository.NotificationRepository
@@ -52,6 +54,7 @@ func New(d Deps) *Handler {
 		stock:         d.Stock,
 		orders:        d.Orders,
 		promotions:    d.Promotions,
+		payments:      d.Payments,
 		purchasing:    d.Purchasing,
 		inventory:     d.Inventory,
 		notifications: d.Notifications,

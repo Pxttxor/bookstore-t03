@@ -25,6 +25,7 @@ type OrderService struct {
 	books         *repository.BookRepository
 	inventory     *repository.InventoryRepository
 	people        *repository.PersonRepository
+	payments      *repository.PaymentRepository
 	notifications *repository.NotificationRepository
 }
 
@@ -35,11 +36,12 @@ func NewOrderService(
 	books *repository.BookRepository,
 	inventory *repository.InventoryRepository,
 	people *repository.PersonRepository,
+	payments *repository.PaymentRepository,
 	notifications *repository.NotificationRepository,
 ) *OrderService {
 	return &OrderService{
 		db: db, orders: orders, promotions: promotions, books: books,
-		inventory: inventory, people: people, notifications: notifications,
+		inventory: inventory, people: people, payments: payments, notifications: notifications,
 	}
 }
 
@@ -63,8 +65,10 @@ type PlaceOrderInput struct {
 	Items           []OrderLineInput   `json:"items"`
 }
 
+// PaymentSlipInput — หลักฐานการโอน · BankID ระบุหรือไม่ก็ได้ (0..1 ใน class diagram)
 type PaymentSlipInput struct {
 	SlipFileName string `json:"slipFileName"`
+	BankID       *int   `json:"bankId,omitempty"`
 }
 
 // OrderNoteInput — เหตุผลที่แนบมากับการยกเลิกหรือปฏิเสธ
@@ -125,6 +129,9 @@ func (s *OrderService) Place(input PlaceOrderInput, current Identity) (*OrderVie
 
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.orders.Create(tx, order); err != nil {
+			return err
+		}
+		if err := s.openPayment(tx, order); err != nil {
 			return err
 		}
 		body := fmt.Sprintf("%s · %s · ฿%.2f · %d เล่ม",
@@ -201,6 +208,24 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	return order, nil
 }
 
+// openPayment — เปิดแถวการชำระเงินคู่กับคำสั่งซื้อ (Order "1" --> "1" Payment)
+//
+// ใบที่แนบสลิปมาตั้งแต่ตอนสั่ง (เส้นทางเว็บไซต์) เข้าสถานะรอตรวจทันที
+// ใบที่ยังไม่ได้ชำระ (โทรศัพท์/ข้อความ) เป็น WAITING ไว้ก่อน
+func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order) error {
+	payment := model.Payment{
+		OrderID: order.OrderID,
+		Amount:  order.NetAmount,
+		Status:  model.PaymentStatusWaiting,
+	}
+	if order.SlipFileName != "" {
+		if err := payment.UploadSlip(order.SlipFileName, nil, order.OrderDate); err != nil {
+			return err
+		}
+	}
+	return s.payments.Create(tx, &payment)
+}
+
 // applyPromotion — ผูกโปรโมชั่นที่ลูกค้าเลือกแล้วคำนวณส่วนลดใหม่
 func (s *OrderService) applyPromotion(order *model.Order, promotionID *int) error {
 	if promotionID == nil || *promotionID == 0 {
@@ -248,10 +273,33 @@ func (s *OrderService) SubmitPayment(
 	}
 
 	return s.advance(orderID, model.OrderStatusVerifyingPayment, current.Name, "แนบหลักฐานการชำระเงิน",
-		func(_ *gorm.DB, order *model.Order) error {
+		func(tx *gorm.DB, order *model.Order) error {
 			if current.IsCustomer() && order.CustomerID != current.CustomerID {
 				return model.ErrForbidden
 			}
+			if input.BankID != nil {
+				exists, err := s.payments.BankExists(tx, *input.BankID)
+				if err != nil {
+					return err
+				}
+				if !exists {
+					return model.ErrBankNotFound
+				}
+			}
+
+			payment, err := s.payments.FindByOrderForUpdate(tx, orderID)
+			if err != nil {
+				return err
+			}
+			// ยอดอาจเปลี่ยนไปจากตอนเปิดใบถ้ามีการแก้ส่วนลด จึงเขียนยอดล่าสุดลงไปด้วย
+			payment.Amount = order.NetAmount
+			if err := payment.UploadSlip(slip, input.BankID, time.Now()); err != nil {
+				return err
+			}
+			if err := s.payments.Save(tx, payment); err != nil {
+				return err
+			}
+
 			order.SlipFileName = slip
 			return nil
 		})
@@ -261,6 +309,9 @@ func (s *OrderService) SubmitPayment(
 func (s *OrderService) VerifyPayment(orderID int, by string) (*OrderView, error) {
 	return s.advance(orderID, model.OrderStatusPaid, by, "ตรวจสอบการชำระเงินแล้ว",
 		func(tx *gorm.DB, order *model.Order) error {
+			if err := s.decidePayment(tx, orderID, "", by); err != nil {
+				return err
+			}
 			body := fmt.Sprintf("%s · ฿%.2f · %d เล่ม",
 				model.FormatOrderCode(order.OrderID), order.NetAmount, order.ItemCount())
 			return pushBothChannels(tx, s.notifications, model.RoleWarehouse,
@@ -275,7 +326,27 @@ func (s *OrderService) RejectPayment(orderID int, input OrderNoteInput, by strin
 	if note == "" {
 		return nil, model.ErrReasonRequired
 	}
-	return s.advance(orderID, model.OrderStatusRejected, by, note, nil)
+	return s.advance(orderID, model.OrderStatusRejected, by, note,
+		func(tx *gorm.DB, _ *model.Order) error {
+			return s.decidePayment(tx, orderID, note, by)
+		})
+}
+
+// decidePayment — ฝ่ายขายตัดสินสลิป · reason ว่าง = ผ่าน · มีข้อความ = ปฏิเสธ
+func (s *OrderService) decidePayment(tx *gorm.DB, orderID int, reason, by string) error {
+	payment, err := s.payments.FindByOrderForUpdate(tx, orderID)
+	if err != nil {
+		return err
+	}
+	if reason == "" {
+		err = payment.Verify(by, time.Now())
+	} else {
+		err = payment.Reject(reason, by, time.Now())
+	}
+	if err != nil {
+		return err
+	}
+	return s.payments.Save(tx, payment)
 }
 
 // Pack — คลังแพ็กสินค้า (PAID → PACKING) แล้ว**ตัดสต็อกจริงตอนนี้**

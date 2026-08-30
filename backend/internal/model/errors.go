@@ -182,3 +182,18 @@ func OrderTransitionRejected(from, to OrderStatus) *DomainError {
 	return Conflict("ORDER_TRANSITION_REJECTED",
 		"เปลี่ยนสถานะจาก \""+from.Label()+"\" เป็น \""+to.Label()+"\" ไม่ได้")
 }
+
+// ── ตรวจสอบการชำระเงิน (ระบบย่อยของบัญชาการ) ───────────────────────────
+var (
+	ErrPaymentNotFound       = NotFound("PAYMENT_NOT_FOUND", "ไม่พบข้อมูลการชำระเงิน")
+	ErrPaymentReportNotFound = NotFound("PAYMENT_REPORT_NOT_FOUND", "ไม่พบรายงานการรับชำระเงิน")
+	ErrBankNotFound          = NotFound("BANK_NOT_FOUND", "ไม่พบบัญชีธนาคารที่เลือก")
+
+	ErrPaymentAlreadyVerified = Conflict("PAYMENT_ALREADY_VERIFIED",
+		"การชำระเงินนี้ตรวจสอบผ่านไปแล้ว")
+	ErrPaymentNotVerifiable = Conflict("PAYMENT_NOT_VERIFIABLE",
+		"การชำระเงินนี้ไม่ได้อยู่ในสถานะที่ตรวจสอบได้")
+
+	ErrReportPeriodRange = Validation("REPORT_PERIOD_RANGE",
+		"วันเริ่มต้นของรอบรายงานต้องไม่หลังวันสิ้นสุด")
+)

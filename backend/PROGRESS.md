@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P4 เสร็จแล้ว** (30 ส.ค. 2569) |
-| **ทำต่อที่** | **P5** — Payment · PaymentReport · Bank |
+| **เฟส** | **P0–P4 เสร็จแล้ว** · **P5 ทำไปแล้วประมาณ 60%** (ผู้ใช้สั่งพักงาน 30 ส.ค. 09:45) |
+| **ทำต่อที่** | **P5 ข้อ 7** — เขียน `handler/payment.go` + `dto_payment.go` + เส้นทาง แล้วต่อด้วยข้อ 8–10 |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 59/59 ✅** · migrate+seed ✅ · **smoke 171/171 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 59/59 ✅** · **migrate+seed ของ P5 ยังไม่ได้รัน** · smoke 171/171 ✅ (ผลของ P4) |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -64,7 +64,7 @@ git add -A && git commit
 | P2 | Category · Book CRUD · BookChangeLog | ✅ | (ดู git log) | 41/41 | ✅ | 103/103 |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ✅ | (ดู git log) | 47/47 | ✅ | 129/129 |
 | P4 | Order · OrderItem · History · Promotion | ✅ | (ดู git log) | 59/59 | ✅ | 171/171 |
-| P5 | Payment · Bank · PaymentReport | ⬜ | | | | |
+| P5 | Payment · Bank · PaymentReport | 🔄 60% | — | 59/59 | ยังไม่รัน | ยังไม่รัน |
 | P6 | Shipment · Tracking · Carrier · Summary | ⬜ | | | | |
 | P7 | MembershipTier · Member · Point · Reward | ⬜ | | | | |
 | P8 | Review · Reply · Report · ProfanityFilter | ⬜ | | | | |
@@ -200,6 +200,38 @@ git add -A && git commit
 | D | สต็อกถูกตัดตอน "แพ็ก" ไม่ใช่ "ยืนยันสต็อก" | ขั้นยืนยันสต็อกเป็นการตรวจว่ามีของพอ · ของออกจากคลังจริงตอนแพ็ก · ยกเลิกใบที่แพ็กแล้วไม่ได้ จึงไม่ต้องมีเส้นทางคืนสต็อก |
 | E | smoke ตัดสต็อกจริงทุกรอบ | รอบแรกคืนยอดแค่เล่มเดียวทั้งที่ใบมีสองเล่ม อีกเล่มจึงลดลงทีละหนึ่งจนหมดและ smoke ล้ม → เปลี่ยนไปใช้เล่มที่มีของเยอะ (113/116) และคืนยอด **ทุกเล่มในใบ** |
 
+### P5 — รายการย่อย (หยุดกลางทาง)
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/payment.go` — `Bank` · `Payment` (+`UploadSlip`/`Verify`/`Reject`) · `PaymentReport` · `FormatPaymentCode`/`FormatPaymentReportCode` | ✅ |
+| 2 | `model/enums_team.go` + `labels_team.go` — `PaymentStatus` (WAITING/VERIFYING/SUCCESS/REJECTED) + ป้ายไทย | ✅ |
+| 3 | `model/errors.go` — 6 ตัว (`PAYMENT_ALREADY_VERIFIED` · `PAYMENT_NOT_VERIFIABLE` · `REPORT_PERIOD_RANGE` ฯลฯ) | ✅ |
+| 4 | `migrate.go` — 3 entity ใหม่ · CHECK `payment.status` · FK 2 เส้น · `seed.go` เพิ่ม sequence 3 ตัว | ✅ |
+| 5 | `repository/payment.go` — CRUD + `SummarizeSuccess()` สำหรับรายงาน + `PaymentsByOrder()` | ✅ |
+| 6 | `service/payment.go` + ต่อเข้า `service/order.go` (เปิดแถว payment ตอนสั่งซื้อ · `UploadSlip` ตอนแนบสลิป · `Verify`/`Reject` ตอนฝ่ายขายตัดสิน) | ✅ |
+| 6b | `database/seed_payment.go` (ธนาคาร 3 แห่ง) + `seed_order.go` สร้างแถว payment ให้คำสั่งซื้อตั้งต้น | ✅ |
+| 7 | **`handler/payment.go` + `dto_payment.go` + เส้นทาง + `Deps.Payments`** — ยังไม่เขียน (ต่อสาย `Deps`/`cmd/api` ไว้แล้ว) | ⬜ |
+| 8 | **`model/payment_test.go`** — เคส `UploadSlip`/`Verify`/`Reject` และ guard สถานะ | ⬜ |
+| 9 | **`cmd/smoke/flow_payment.go`** + เพิ่มการตรวจแถว payment ใน `flow_order.go` | ⬜ |
+| 10 | **รัน `-migrate -seed` แล้วรัน smoke ทั้งชุดให้ผ่าน** แล้วปิดเฟส | ⬜ |
+
+**ที่ออกแบบไว้แล้ว ทำต่อได้เลย:**
+
+- เส้นทางที่ตั้งใจจะเปิด — `GET /api/banks` (พนักงาน) · `GET /api/payments` + `/payments/{id}`
+  (ฝ่ายขาย, ผจก.) · `GET /api/orders/{id}/payment` · `GET`/`POST /api/payment-reports` (ผจก.)
+- **การตรวจผ่าน/ปฏิเสธไม่มีเส้นทางของตัวเอง** — ใช้ `/api/orders/{id}/verify-payment`
+  กับ `/reject-payment` ที่มีอยู่แล้ว เพราะเป็นเหตุการณ์เดียวกับการเปลี่ยนสถานะคำสั่งซื้อ
+  แยกเป็นสองปุ่มเมื่อไรก็มีโอกาสที่ `payment` กับ `customer_order` ไม่ตรงกัน
+- `Order.slip_file_name` กับ `Payment.slip_image_url` เก็บค่าเดียวกันโดยตั้งใจ —
+  ตัวแรกเป็นสำเนาสำหรับหน้าจอ (สัญญาเดิมกับ frontend) ตัวหลังเป็นค่าจริงของระบบย่อยนี้
+  เขียนพร้อมกันในทรานแซกชันเดียว
+- รายงานเก็บ **ผลลัพธ์** ลงเป็นแถว ไม่ได้คำนวณสดตอนเปิดดู (`generatedDate` ใน diagram)
+  และนับจาก `verified_date` เพราะตอบคำถามว่า "รอบนี้ร้านรับเงินเข้ามาเท่าไร"
+
+**หมายเหตุสำคัญ:** ตาราง `bank` / `payment` / `payment_report` **ยังไม่ถูกสร้างในฐานข้อมูล**
+เพราะยังไม่ได้รัน `go run ./cmd/api -migrate` หลังแก้ `migrate.go` · ต้องรันก่อนทดสอบอะไรที่แตะ DB
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -228,7 +260,7 @@ git add -A && git commit
 | Inventory | StockCount(+Item) · StockDiscrepancyReport | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 | Order | Order · OrderItem · OrderStatusHistory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Promotion | Promotion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Payment | Payment · PaymentReport · Bank | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Payment | Payment · PaymentReport · Bank | ✅ | ✅ | ✅ | ⬜ | ✅ | ✅ | ⬜ |
 | Membership | MembershipTier · PointTransaction · Reward · Redemption | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Review | Review · ReviewReply · ReviewReport · ProfanityFilter | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

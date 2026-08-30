@@ -82,3 +82,14 @@ func (s OrderStatus) Label() string     { return lookup(OrderStatusLabels, s) }
 func (c OrderChannel) Label() string    { return lookup(OrderChannelLabels, c) }
 func (t PromotionType) Label() string   { return lookup(PromotionTypeLabels, t) }
 func (s PromotionStatus) Label() string { return lookup(PromotionStatusLabels, s) }
+
+// PaymentStatusLabels — ระบบย่อยนี้ไม่มีหน้าจอฝั่ง frontend ให้ยึด
+// ข้อความจึงเลือกให้อ่านเข้าคู่กับป้ายของ OrderStatus ที่ผู้ใช้เห็นอยู่แล้ว
+var PaymentStatusLabels = map[PaymentStatus]string{
+	PaymentStatusWaiting:   "รอชำระเงิน",
+	PaymentStatusVerifying: "รอตรวจสอบ",
+	PaymentStatusSuccess:   "ชำระเงินสำเร็จ",
+	PaymentStatusRejected:  "ปฏิเสธการชำระเงิน",
+}
+
+func (s PaymentStatus) Label() string { return lookup(PaymentStatusLabels, s) }

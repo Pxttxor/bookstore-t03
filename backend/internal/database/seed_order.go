@@ -32,6 +32,10 @@ type seedOrderRow struct {
 	OrderDate     string // ISO-8601
 	Address       string
 	SlipFileName  string
+	// สถานะการชำระเงินระบุตรง ๆ ไม่ได้เดาจากสถานะคำสั่งซื้อ เพราะสองอย่างนี้เป็นคนละชุด
+	PaymentStatus model.PaymentStatus
+	BankID        *int
+	VerifiedAt    string // ISO-8601 · มีเฉพาะใบที่ตรวจสอบแล้ว
 	Lines         []seedOrderLine
 	// Timeline เรียงตามเวลา ตัวสุดท้ายคือสถานะปัจจุบันของใบนี้
 	Timeline []seedOrderStep
@@ -51,8 +55,8 @@ var seedCustomerOrders = []seedOrderRow{
 		OrderID: 1001, CustomerEmail: "napat@example.com", Channel: model.OrderChannelWebsite,
 		OrderDate:    "2026-08-04T02:10:00.000Z",
 		Address:      "88/12 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110",
-		SlipFileName: "slip-1001.jpg",
-		Lines:        []seedOrderLine{{BookID: 109, Quantity: 1}, {BookID: 101, Quantity: 2}},
+		SlipFileName: "slip-1001.jpg", PaymentStatus: model.PaymentStatusVerifying,
+		Lines: []seedOrderLine{{BookID: 109, Quantity: 1}, {BookID: 101, Quantity: 2}},
 		Timeline: []seedOrderStep{
 			{model.OrderStatusPendingConfirm, "2026-08-04T02:10:00.000Z", "รับคำสั่งซื้อ"},
 		},
@@ -61,8 +65,9 @@ var seedCustomerOrders = []seedOrderRow{
 		OrderID: 1002, CustomerEmail: "kanya@example.com", Channel: model.OrderChannelWebsite,
 		OrderDate:    "2026-08-03T01:00:00.000Z",
 		Address:      "199 หมู่ 4 ตำบลสุรนารี อำเภอเมือง จังหวัดนครราชสีมา 30000",
-		SlipFileName: "slip-1002.png",
-		Lines:        []seedOrderLine{{BookID: 106, Quantity: 1}, {BookID: 104, Quantity: 1}},
+		SlipFileName: "slip-1002.png", PaymentStatus: model.PaymentStatusSuccess,
+		BankID: intPtr(1), VerifiedAt: "2026-08-03T03:00:00.000Z",
+		Lines: []seedOrderLine{{BookID: 106, Quantity: 1}, {BookID: 104, Quantity: 1}},
 		Timeline: []seedOrderStep{
 			{model.OrderStatusPendingConfirm, "2026-08-03T01:00:00.000Z", "รับคำสั่งซื้อ"},
 			{model.OrderStatusStockConfirmed, "2026-08-03T02:00:00.000Z", "ยืนยันสต็อกแล้ว"},
@@ -76,8 +81,9 @@ var seedCustomerOrders = []seedOrderRow{
 		OrderID: 1003, CustomerEmail: "somsak@example.com", Channel: model.OrderChannelWebsite,
 		OrderDate:    "2026-07-30T01:00:00.000Z",
 		Address:      "45/7 ถนนนิมมานเหมินท์ ตำบลสุเทพ อำเภอเมือง จังหวัดเชียงใหม่ 50200",
-		SlipFileName: "slip-1003.jpg",
-		Lines:        []seedOrderLine{{BookID: 110, Quantity: 1}},
+		SlipFileName: "slip-1003.jpg", PaymentStatus: model.PaymentStatusSuccess,
+		BankID: intPtr(2), VerifiedAt: "2026-07-30T03:00:00.000Z",
+		Lines: []seedOrderLine{{BookID: 110, Quantity: 1}},
 		Timeline: []seedOrderStep{
 			{model.OrderStatusPendingConfirm, "2026-07-30T01:00:00.000Z", "รับคำสั่งซื้อ"},
 			{model.OrderStatusStockConfirmed, "2026-07-30T02:00:00.000Z", "ยืนยันสต็อกแล้ว"},
@@ -150,6 +156,9 @@ func seedCustomerOrderRows(tx *gorm.DB) (int, error) {
 		if err := tx.Create(&order).Error; err != nil {
 			return 0, fmt.Errorf("ใส่คำสั่งซื้อ %d ไม่สำเร็จ: %w", row.OrderID, err)
 		}
+		if err := seedPaymentFor(tx, row, order); err != nil {
+			return 0, err
+		}
 	}
 	return len(seedCustomerOrders), nil
 }
@@ -164,4 +173,26 @@ func customerIDByEmail(tx *gorm.DB, email string) (int, error) {
 		return 0, fmt.Errorf("หาลูกค้าอีเมล %s ไม่เจอ: %w", email, err)
 	}
 	return customer.CustomerID, nil
+}
+
+// seedPaymentFor — เปิดแถวการชำระเงินคู่กับคำสั่งซื้อตั้งต้น (Order "1" --> "1" Payment)
+func seedPaymentFor(tx *gorm.DB, row seedOrderRow, order model.Order) error {
+	transferred := mustTime(row.OrderDate)
+	payment := model.Payment{
+		OrderID:      order.OrderID,
+		BankID:       row.BankID,
+		Amount:       order.NetAmount,
+		TransferDate: &transferred,
+		SlipImageURL: row.SlipFileName,
+		Status:       row.PaymentStatus,
+	}
+	if row.VerifiedAt != "" {
+		verified := mustTime(row.VerifiedAt)
+		payment.VerifiedDate = &verified
+		payment.VerifiedBy = "ณัฐวุฒิ แสงจันทร์"
+	}
+	if err := tx.Create(&payment).Error; err != nil {
+		return fmt.Errorf("ใส่การชำระเงินของคำสั่งซื้อ %d ไม่สำเร็จ: %w", order.OrderID, err)
+	}
+	return nil
 }

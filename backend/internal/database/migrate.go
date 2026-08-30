@@ -46,6 +46,9 @@ var entities = []any{
 	&model.Order{},
 	&model.OrderItem{},
 	&model.OrderStatusHistory{},
+	&model.Bank{},
+	&model.Payment{},
+	&model.PaymentReport{},
 	&model.Notification{},
 }
 
@@ -200,6 +203,8 @@ var foreignKeys = []foreignKey{
 	{"customer_order", "customer_id", "customer", "customer_id"},
 	{"customer_order", "promotion_id", "promotion", "promotion_id"},
 	{"customer_order_item", "book_id", "book", "book_id"},
+	{"payment", "order_id", "customer_order", "order_id"},
+	{"payment", "bank_id", "bank", "bank_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
@@ -265,6 +270,9 @@ func checks() []enumCheck {
 			model.PromotionTypeFestival, model.PromotionTypeCoupon, model.PromotionTypeBuyXQty)},
 		{"promotion", "status", values(
 			model.PromotionStatusActive, model.PromotionStatusInactive, model.PromotionStatusExpired)},
+		{"payment", "status", values(
+			model.PaymentStatusWaiting, model.PaymentStatusVerifying,
+			model.PaymentStatusSuccess, model.PaymentStatusRejected)},
 		{"notification", "channel", values(model.ChannelInApp, model.ChannelEmail)},
 	}
 }

@@ -160,3 +160,26 @@ func (s PromotionStatus) IsValid() bool {
 	}
 	return false
 }
+
+// ── ตรวจสอบการชำระเงิน (เจ้าของคลาส: บัญชาการ อภัยสอน) ──────────────────
+
+// PaymentStatus — สถานะการชำระเงินของคำสั่งซื้อ
+//
+// WAITING = ยังไม่แนบสลิป · VERIFYING = แนบแล้วรอฝ่ายขายตรวจ
+// เป็นคนละชุดกับ OrderStatus โดยตั้งใจ — ใบสั่งซื้อเดินเรื่องหลายขั้นกว่าการชำระเงิน
+type PaymentStatus string
+
+const (
+	PaymentStatusWaiting   PaymentStatus = "WAITING"
+	PaymentStatusVerifying PaymentStatus = "VERIFYING"
+	PaymentStatusSuccess   PaymentStatus = "SUCCESS"
+	PaymentStatusRejected  PaymentStatus = "REJECTED"
+)
+
+func (s PaymentStatus) IsValid() bool {
+	switch s {
+	case PaymentStatusWaiting, PaymentStatusVerifying, PaymentStatusSuccess, PaymentStatusRejected:
+		return true
+	}
+	return false
+}
