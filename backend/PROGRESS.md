@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P1 ทำไปแล้วประมาณ 70%** (ผู้ใช้สั่งพักงาน 29 ส.ค. 23:25) |
-| **ทำต่อที่** | **P1 ข้อ 12** — เขียน `internal/database/seed_person.go` (ลูกค้าตั้งต้น) แล้วต่อด้วยข้อ 13–14 |
+| **เฟส** | **P1 เสร็จแล้ว** (30 ส.ค. 2569) · กำลังเริ่ม **P2** |
+| **ทำต่อที่** | **P2** — Category · Book CRUD · BookChangeLog |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 32/32 ✅** · migrate+seed ✅ · smoke ยังไม่ได้รันรอบ P1 |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 32/32 ✅** · migrate+seed ✅ · **smoke 79/79 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -60,7 +60,7 @@ git add -A && git commit
 | # | เฟส | สถานะ | commit | test | migrate+seed | smoke |
 |---|---|---|---|---|---|---|
 | P0 | สะสาง + วางโครง | ✅ | (ดู git log) | 24/24 | ✅ | 51/51 |
-| P1 | Person · Customer · UserAccount | 🔄 70% | — | 32/32 | ✅ | ยังไม่รัน |
+| P1 | Person · Customer · UserAccount | ✅ | (ดู git log) | 32/32 | ✅ | 79/79 |
 | P2 | Category · Book CRUD · BookChangeLog | ⬜ | | | | |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ⬜ | | | | |
 | P4 | Order · OrderItem · History · Promotion | ⬜ | | | | |
@@ -102,14 +102,21 @@ git add -A && git commit
 | 9 | `handler/person.go` + `dto_person.go` + เส้นทาง 8 เส้น + ต่อสายใน `cmd/api` | ✅ |
 | 10 | `model/person_test.go` — 7 เคส (test รวม 24 → 32) | ✅ |
 | 11 | `handler_test.go` — เพิ่ม 7 path ใหม่เข้า `TestProtectedRoutesRequireToken` | ✅ |
-| 12 | **`internal/database/seed_person.go`** — ลูกค้าตั้งต้น (ยังไม่เขียน) | ⬜ |
-| 13 | **`cmd/smoke/flow_person.go`** — เคสสมัคร/ยืนยัน/ล็อกอิน/สิทธิ์ลูกค้า (ยังไม่เขียน) | ⬜ |
-| 14 | **รัน smoke ทั้งชุดให้ผ่าน** แล้วปิดเฟส P1 | ⬜ |
+| 12 | `internal/database/seed_person.go` — ลูกค้าตั้งต้น 3 ราย ครบทั้งสามสถานะบัญชี | ✅ |
+| 13 | `cmd/smoke/flow_person.go` — 28 เคส (สมัคร · OTP · ล็อกอิน · โปรไฟล์ · ระงับบัญชี · สิทธิ์) | ✅ |
+| 14 | รัน smoke ทั้งชุด — **79/79 ผ่าน รันซ้ำได้** | ✅ |
 
-**หมายเหตุก่อนทำต่อ:** ชื่อลูกค้าใน `seed_person.go` ควรตรงกับ `SEED_ORDERS` ของ frontend
-(`ณภัทร วงศ์สว่าง` · `กัญญา ศรีสาย` · `สมศักดิ์ ใจดี` พร้อมที่อยู่ใน `frontend/src/admin/orders/orders.ts`)
-เพื่อให้ P4 ผูกคำสั่งซื้อเข้ากับลูกค้าได้โดยไม่ต้องแก้ข้อมูลย้อนหลัง
-ควร seed บัญชีให้ครบทั้งสามสถานะ (ACTIVE / UNVERIFIED / SUSPENDED) เพื่อให้ smoke ทดสอบได้ทุกเส้น
+**ลูกค้าตั้งต้นที่ seed ไว้** — ชื่อและที่อยู่คัดจาก `SEED_ORDERS` ของ frontend ตรงตัว
+(`frontend/src/admin/orders/orders.ts`) เพื่อให้ **P4 ผูกคำสั่งซื้อเข้ากับ `customer_id` ได้เลย
+ไม่ต้องแก้ข้อมูลย้อนหลัง** · รหัสผ่านทุกบัญชี `customer1234` (คนละตัวกับพนักงาน)
+
+| อีเมล | ชื่อ | สถานะบัญชี |
+|---|---|---|
+| `napat@example.com` | ณภัทร วงศ์สว่าง | `ACTIVE` |
+| `kanya@example.com` | กัญญา ศรีสาย | `UNVERIFIED` |
+| `somsak@example.com` | สมศักดิ์ ใจดี | `SUSPENDED` |
+
+`sequences` ใน `seed.go` เพิ่ม `person` · `customer` · `user_account` แล้ว (ทั้งสามมี id อัตโนมัติ)
 
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
@@ -131,7 +138,7 @@ git add -A && git commit
 |---|---|---|---|---|---|---|---|---|
 | Supplier | Supplier · SupplierBook | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Purchasing | PurchaseRequisition(+Item) · PurchaseOrder(+Item) · GoodsReceipt(+Item) · PurchaseReturn(+Item) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| People | Person · Customer · UserAccount | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ |
+| People | Person · Customer · UserAccount | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | People | Member (รอ MembershipTier) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | People | Employee (+ view ครบ 4 บทบาท) | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Book | Category · Book · BookChangeLog | 🔄 Book อ่านอย่างเดียว | ⬜ | ⬜ | ⬜ | 🔄 | ✅ | ⬜ |

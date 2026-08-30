@@ -46,6 +46,9 @@ var seedEmployees = []model.Employee{
 //
 // เพิ่มตารางใหม่ที่มี id อัตโนมัติเมื่อไร ต้องเพิ่มเข้าลิสต์นี้ด้วย
 var sequences = []struct{ table, column string }{
+	{"person", "person_id"},
+	{"customer", "customer_id"},
+	{"user_account", "account_id"},
 	{"book", "book_id"},
 	{"supplier", "supplier_id"},
 	{"supplier_edit_log", "log_id"},
@@ -105,6 +108,16 @@ func Seed(db *gorm.DB) error {
 		}
 		inserted["พนักงาน"] = n
 
+		// ลูกค้าใช้รหัสผ่านคนละตัวกับพนักงาน จึงเข้ารหัสแยกอีกครั้ง
+		customerHash, err := bcrypt.GenerateFromPassword([]byte(seedCustomerPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("เข้ารหัสรหัสผ่านลูกค้าไม่สำเร็จ: %w", err)
+		}
+		if n, err = seedCustomerRows(tx, string(customerHash)); err != nil {
+			return err
+		}
+		inserted["ลูกค้า"] = n
+
 		if n, err = seedIfEmpty(tx, seedBooks, "หนังสือ"); err != nil {
 			return err
 		}
@@ -149,9 +162,9 @@ func Seed(db *gorm.DB) error {
 		return err
 	}
 
-	fmt.Printf("[seed] พนักงาน %d · หนังสือ %d · ผู้จัดจำหน่าย %d · สินค้าคงคลัง %d · เคลื่อนไหวสต็อก %d · PR %d · PO %d · GR %d\n",
-		inserted["พนักงาน"], inserted["หนังสือ"], inserted["ผู้จัดจำหน่าย"], inserted["สินค้าคงคลัง"],
-		inserted["เคลื่อนไหวสต็อก"], inserted["PR"], inserted["PO"], inserted["GR"])
+	fmt.Printf("[seed] พนักงาน %d · ลูกค้า %d · หนังสือ %d · ผู้จัดจำหน่าย %d · สินค้าคงคลัง %d · เคลื่อนไหวสต็อก %d · PR %d · PO %d · GR %d\n",
+		inserted["พนักงาน"], inserted["ลูกค้า"], inserted["หนังสือ"], inserted["ผู้จัดจำหน่าย"],
+		inserted["สินค้าคงคลัง"], inserted["เคลื่อนไหวสต็อก"], inserted["PR"], inserted["PO"], inserted["GR"])
 	return nil
 }
 

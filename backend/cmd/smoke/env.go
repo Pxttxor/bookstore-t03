@@ -10,4 +10,7 @@ type env struct {
 	manager   string
 	sales     string
 	delivery  string
+
+	// token ของลูกค้าที่ flow สมัครสมาชิกสร้างขึ้นระหว่างทาง
+	customer string
 }
