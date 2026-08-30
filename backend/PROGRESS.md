@@ -166,7 +166,7 @@ git add -A && git commit
 
 | # | เรื่อง | รายละเอียด |
 |---|---|---|
-| A | ป้ายไทยของ `StockCountStatus`/`ApprovalStatus`/`StockLevel` หายไปจาก frontend | `inventory.ts` ถูก revert เมื่อ 7 ส.ค. เหลือแค่ `InventoryItem`/`StockTransaction` · กู้ข้อความเดิมด้วย `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts` แล้วคัดมาตรงตัว |
+| A | ป้ายไทยของ `StockCountStatus`/`ApprovalStatus`/`StockLevel` หายไปจาก frontend | `inventory.ts` ถูกตัดเหลือแค่ `InventoryItem`/`StockTransaction` ใน `634200d` (29 ส.ค. · commit ของดวงกมล **ไม่ใช่การ revert เมื่อ 7 ส.ค. อย่างที่เคยเขียนไว้**) · กู้ข้อความเดิมด้วย `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts` แล้วคัดมาตรงตัว |
 | B | `ApplyStockChanges` เดิมปัดยอดติดลบขึ้นเป็นศูนย์ | ถูกสำหรับ U9/U10 แต่จะกลืน abnormal flow ของการปรับยอดด้วยมือ → แยกเป็น `ApplyStrictStockChanges` และให้ service ตรวจยอดรวมทุกเล่มก่อนเขียน |
 | C | อนุมัติผลต่าง = **ตั้งยอดเท่าที่นับได้** ไม่ใช่บวก `variance` | ระหว่างรอผู้จัดการตัดสิน หนังสืออาจเคลื่อนไหวไปแล้ว `variance` ที่เก็บไว้จึงล้าสมัย (พฤติกรรมเดียวกับ `decide()` ฝั่งหน้าจอ) |
 | D | `stock_count_item` ต้องเขียนหลัง `stock_discrepancy_report` | เพราะถือ `report_id` เป็น FK · ลำดับในทรานแซกชันคือ หัวเอกสาร → รายงาน → รายการที่นับ |
@@ -331,10 +331,9 @@ git add -A && git commit
 | 3 | `PROGRESS.md` · `backend/CLAUDE.md` · `../../CLAUDE.md` — ตัดคำว่า "กำลังขยาย" ออก ปิดทั้ง 10 เฟส | ✅ |
 | 4 | verify รวมทั้งชุด (build · vet · gofmt · test 96 · migrate+seed · smoke 300 สามรอบ) | ✅ |
 
-**`npm run build` ของ frontend ยังพังอยู่ 46 error** — ทั้งหมดมาจาก `inventory.ts` ที่ถูก revert
-เมื่อ 7 ส.ค. (ขาด `StockCount`/`StockDiscrepancyReport`/`ApprovalStatus`/`stockLevel` ที่ 4 หน้ายังอ้าง)
-**เป็นหนี้เดิม ไม่ใช่ผลของ P9** — `permissions.ts` ผ่าน eslint และไม่มี error ของตัวเอง
-ผู้ใช้ตัดสินแล้วว่าอยู่นอกขอบเขตรอบนี้
+**`npm run build` ของ frontend ยังพังอยู่ 46 error** — **เป็นหนี้เดิม ไม่ใช่ผลของ P9**
+(`permissions.ts` ผ่าน eslint และไม่มี error ของตัวเอง) · ผู้ใช้ตัดสินแล้วว่าอยู่นอกขอบเขตรอบนี้
+· **รายการ error ครบทุกบรรทัดพร้อมสาเหตุและทางแก้อยู่ที่ [`../frontend/BUILD_ERRORS.md`](../frontend/BUILD_ERRORS.md)**
 
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
@@ -375,13 +374,13 @@ git add -A && git commit
 ## หนี้ / ค้าง
 
 - [x] ~~`frontend/src/admin/permissions.ts` ขาด `can.*`~~ — เติมครบ 21 ตัวใน P9 แล้ว
-- [ ] **`frontend` build พังอยู่ 46 error** — `inventory.ts` ถูก revert เมื่อ 7 ส.ค. เหลือแค่
-      `InventoryItem`/`StockTransaction` แต่ `BookDetailPage` · `StockAdjustPage` ·
-      `StockCountDetailPage` · `StockCountFormPage` · `StockCountListPage` · `StockDiscrepancyPage` ·
-      `StockListPage` ยังอ้างของที่หายไป (`stockLevel`, `STOCK_COUNT_STATUS_LABELS`,
-      `APPROVAL_STATUS_*`, `adjustStock`, `saveStockCount`, `findCount`, `reports` …)
-      · ข้อมูลชุดเดิมกู้ได้จาก `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts`
-      **นอกขอบเขตรอบนี้** ผู้ใช้ตัดสินใจแล้ว
+- [ ] **`frontend` build พังอยู่ 46 error** — `634200d` (29 ส.ค. · commit ของดวงกมล) ตัด
+      `inventory.ts`/`InventoryContext.tsx` ให้เหลือแค่ `InventoryItem`/`StockTransaction`
+      พร้อมถอด route/เมนู/ไอคอนออกด้วย แต่ **ไม่ได้ลบไฟล์หน้าจอ 7 หน้าที่ import ของพวกนั้น**
+      → ไฟล์กำพร้าที่คอมไพล์ไม่ผ่าน · กู้ของเดิมได้จาก `28c4fdf`
+      · **รายละเอียดครบ (log ดิบ · สาเหตุ 3 ราก · ทางแก้ 3 ทาง) อยู่ที่
+      [`../frontend/BUILD_ERRORS.md`](../frontend/BUILD_ERRORS.md)**
+      · **นอกขอบเขตรอบนี้** ผู้ใช้ตัดสินใจแล้ว · ทาง 1 กับทาง 2 ต้องคุยกับเจ้าของ commit ก่อน
 - [ ] FK ~28 ตัวที่ diagram วาดเส้นแต่ไม่ระบุ attribute เป็น deviation ที่ **ต้องคุยกับเจ้าของคลาสก่อนรวมงาน**
       · รายการอยู่ใน README หัวข้อ "จุดที่ต่างจาก class diagram" (ข้อ 25–27 เป็นของระบบย่อยรีวิว)
 - [ ] frontend ยังอ่าน/เขียน `localStorage` ไม่ได้ต่อ API จริงเลยสักหน้า — งานรอบถัดไป
