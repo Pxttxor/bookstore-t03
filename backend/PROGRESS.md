@@ -32,8 +32,8 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P8 เสร็จแล้ว** |
-| **ทำต่อที่** | **P9** — เก็บงาน (permissions.ts · เอกสาร · verify รวม) |
+| **เฟส** | **P0–P9 เสร็จครบทั้งแผน** — backend ครอบทั้ง 46 คลาสของ class diagram แล้ว |
+| **ทำต่อที่** | ต่อ frontend เข้ากับ API (ยังใช้ `localStorage` อยู่) — เป็นงานรอบถัดไป ยังไม่มีแผน |
 | **branch** | `feat/backend-46-classes` |
 | **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 96/96 ✅** · migrate+seed ✅ · **smoke 300/300 ✅ (รันซ้ำสามรอบได้ผลเท่าเดิม)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
@@ -68,7 +68,7 @@ git add -A && git commit
 | P6 | Shipment · Tracking · Carrier · Summary | ✅ | (ดู git log) | 74/74 | ✅ | 217/217 |
 | P7 | MembershipTier · Member · Point · Reward | ✅ | (ดู git log) | 84/84 | ✅ | 261/261 |
 | P8 | Review · Reply · Report · ProfanityFilter | ✅ | (ดู git log) | 96/96 | ✅ | 300/300 |
-| P9 | เก็บงาน (เอกสาร · permissions.ts · verify รวม) | ⬜ | | | | |
+| P9 | เก็บงาน (เอกสาร · permissions.ts · verify รวม) | ✅ | (ดู git log) | 96/96 | ✅ | 300/300 |
 
 ### P0 — รายการย่อย
 
@@ -322,6 +322,20 @@ git add -A && git commit
 | F | รีวิวสะสมทุกรอบที่รัน smoke | เหมือนคำสั่งซื้อ/พัสดุ/แจ้งเตือน — ลบไม่ได้เพราะไม่มี endpoint ลบ · ไม่กระทบความ idempotent เพราะทุกรอบเปิดใบใหม่ `order_id` จึงไม่ซ้ำ (ตรวจแล้วรันติดกันสามรอบได้ 300/300 เท่ากัน) |
 | G | ไม่ต้องล้าง volume รอบนี้ | ทั้งสามตารางเป็นตารางใหม่ `seedIfEmpty` จึงใส่ข้อมูลให้บนฐานเดิมได้เลย (ต่างจาก P5–P7 ที่ไปเพิ่มข้อมูลให้ตารางที่ seed ไปแล้ว) |
 
+### P9 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `frontend/src/admin/permissions.ts` — เติม `can.*` **21 ตัว** (7 ตัวที่หน้าจอเรียกอยู่แล้วแต่ยังไม่มี + 14 ตัวของระบบย่อยที่ทำเพิ่มใน P1–P8) ค่าบทบาทลอกจาก `routes.go` ทีละเส้น | ✅ |
+| 2 | `README.md` — เติมช่องว่างที่ค้างจาก P5–P7 (ตาราง schema ของระบบสมาชิก · enum `PointTxnType`/`RewardType` · เส้นทาง API 15 เส้น · ทรานแซกชัน 17–24) พร้อมของ P8 | ✅ |
+| 3 | `PROGRESS.md` · `backend/CLAUDE.md` · `../../CLAUDE.md` — ตัดคำว่า "กำลังขยาย" ออก ปิดทั้ง 10 เฟส | ✅ |
+| 4 | verify รวมทั้งชุด (build · vet · gofmt · test 96 · migrate+seed · smoke 300 สามรอบ) | ✅ |
+
+**`npm run build` ของ frontend ยังพังอยู่ 46 error** — ทั้งหมดมาจาก `inventory.ts` ที่ถูก revert
+เมื่อ 7 ส.ค. (ขาด `StockCount`/`StockDiscrepancyReport`/`ApprovalStatus`/`stockLevel` ที่ 4 หน้ายังอ้าง)
+**เป็นหนี้เดิม ไม่ใช่ผลของ P9** — `permissions.ts` ผ่าน eslint และไม่มี error ของตัวเอง
+ผู้ใช้ตัดสินแล้วว่าอยู่นอกขอบเขตรอบนี้
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -360,6 +374,14 @@ git add -A && git commit
 
 ## หนี้ / ค้าง
 
-- [ ] `frontend/src/admin/permissions.ts` ยังขาด `can.*` 15 ตัว (7 ตัวหน้า admin เรียกอยู่แล้ว + ใหม่ 8 ตัว) — ทำที่ P9
-- [ ] `frontend` build พังอยู่ (`inventory.ts` ขาด `StockCount`/`StockDiscrepancyReport`/`ApprovalStatus` แต่ 4 หน้ายังอ้าง) — **นอกขอบเขตรอบนี้** ผู้ใช้ตัดสินใจแล้ว
+- [x] ~~`frontend/src/admin/permissions.ts` ขาด `can.*`~~ — เติมครบ 21 ตัวใน P9 แล้ว
+- [ ] **`frontend` build พังอยู่ 46 error** — `inventory.ts` ถูก revert เมื่อ 7 ส.ค. เหลือแค่
+      `InventoryItem`/`StockTransaction` แต่ `BookDetailPage` · `StockAdjustPage` ·
+      `StockCountDetailPage` · `StockCountFormPage` · `StockCountListPage` · `StockDiscrepancyPage` ·
+      `StockListPage` ยังอ้างของที่หายไป (`stockLevel`, `STOCK_COUNT_STATUS_LABELS`,
+      `APPROVAL_STATUS_*`, `adjustStock`, `saveStockCount`, `findCount`, `reports` …)
+      · ข้อมูลชุดเดิมกู้ได้จาก `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts`
+      **นอกขอบเขตรอบนี้** ผู้ใช้ตัดสินใจแล้ว
 - [ ] FK ~28 ตัวที่ diagram วาดเส้นแต่ไม่ระบุ attribute เป็น deviation ที่ **ต้องคุยกับเจ้าของคลาสก่อนรวมงาน**
+      · รายการอยู่ใน README หัวข้อ "จุดที่ต่างจาก class diagram" (ข้อ 25–27 เป็นของระบบย่อยรีวิว)
+- [ ] frontend ยังอ่าน/เขียน `localStorage` ไม่ได้ต่อ API จริงเลยสักหน้า — งานรอบถัดไป
