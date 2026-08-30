@@ -33,6 +33,9 @@ var (
 	roleSales    = []model.Role{model.RoleSales}
 	roleDelivery = []model.Role{model.RoleDelivery}
 
+	// roleDeliveryAdmin — สรุปบัญชีพัสดุเป็นงานของฝ่ายจัดส่ง ผู้จัดการดูได้ด้วย
+	roleDeliveryAdmin = []model.Role{model.RoleDelivery, model.RoleManager}
+
 	// roleOrderIntake — ลูกค้าสั่งเอง หรือฝ่ายขายรับออร์เดอร์ทางโทรศัพท์/ข้อความแทน
 	roleOrderIntake = []model.Role{model.RoleCustomer, model.RoleSales}
 
@@ -77,6 +80,7 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerOrderRoutes(register)        // คำสั่งซื้อลูกค้า
 	h.registerPromotionRoutes(register)    // โปรโมชั่นและส่วนลด
 	h.registerPaymentRoutes(register)      // ตรวจสอบการชำระเงิน + รายงานรับชำระ
+	h.registerDeliveryRoutes(register)     // พัสดุ · ติดตามสถานะ · สรุปบัญชีพัสดุ
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 

@@ -49,6 +49,10 @@ var entities = []any{
 	&model.Bank{},
 	&model.Payment{},
 	&model.PaymentReport{},
+	&model.ShippingCompany{},
+	&model.Shipment{},
+	&model.ShipmentTracking{},
+	&model.DeliverySummary{},
 	&model.Notification{},
 }
 
@@ -61,6 +65,9 @@ func Migrate(db *gorm.DB) error {
 		return err
 	}
 	if err := backfillBookCategories(db); err != nil {
+		return err
+	}
+	if err := backfillCarriers(db); err != nil {
 		return err
 	}
 	if err := applyChecks(db); err != nil {
@@ -205,6 +212,9 @@ var foreignKeys = []foreignKey{
 	{"customer_order_item", "book_id", "book", "book_id"},
 	{"payment", "order_id", "customer_order", "order_id"},
 	{"payment", "bank_id", "bank", "bank_id"},
+	{"shipment", "order_id", "customer_order", "order_id"},
+	{"shipment", "carrier_id", "shipping_company", "carrier_id"},
+	{"shipment_tracking", "shipment_id", "shipment", "shipment_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
@@ -273,6 +283,8 @@ func checks() []enumCheck {
 		{"payment", "status", values(
 			model.PaymentStatusWaiting, model.PaymentStatusVerifying,
 			model.PaymentStatusSuccess, model.PaymentStatusRejected)},
+		{"shipment", "status", values(model.ShipmentStatuses()...)},
+		{"shipment_tracking", "status", values(model.ShipmentStatuses()...)},
 		{"notification", "channel", values(model.ChannelInApp, model.ChannelEmail)},
 	}
 }
@@ -388,6 +400,25 @@ func applyViews(db *gorm.DB) error {
 		if err := db.Exec(create).Error; err != nil {
 			return fmt.Errorf("สร้าง view %s ไม่สำเร็จ: %w", r.view, err)
 		}
+	}
+	return nil
+}
+
+// backfillCarriers — ใส่บริษัทขนส่งตั้งต้นให้ก่อนถ้าตารางยังว่าง
+//
+// เหตุผลเดียวกับ backfillBookCategories: Migrate รันก่อน Seed เสมอ ถ้าฐานเดิมมีแถว shipment
+// อยู่แล้วแต่ shipping_company ยังว่าง constraint `shipment.carrier_id → shipping_company`
+// จะสร้างไม่ผ่าน · ข้อมูลชุดเต็มยังมาจาก seedCarriers เหมือนเดิม
+func backfillCarriers(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&model.ShippingCompany{}).Count(&count).Error; err != nil {
+		return fmt.Errorf("นับบริษัทขนส่งไม่สำเร็จ: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+	if err := db.Create(&seedCarriers).Error; err != nil {
+		return fmt.Errorf("ใส่บริษัทขนส่งตั้งต้นไม่สำเร็จ: %w", err)
 	}
 	return nil
 }

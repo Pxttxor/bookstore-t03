@@ -36,7 +36,9 @@ type seedOrderRow struct {
 	PaymentStatus model.PaymentStatus
 	BankID        *int
 	VerifiedAt    string // ISO-8601 · มีเฉพาะใบที่ตรวจสอบแล้ว
-	Lines         []seedOrderLine
+	// Shipment มีเฉพาะใบที่ฝ่ายจัดส่งบันทึกพัสดุแล้ว (ดู seed_delivery.go)
+	Shipment *seedShipment
+	Lines    []seedOrderLine
 	// Timeline เรียงตามเวลา ตัวสุดท้ายคือสถานะปัจจุบันของใบนี้
 	Timeline []seedOrderStep
 }
@@ -83,6 +85,18 @@ var seedCustomerOrders = []seedOrderRow{
 		Address:      "45/7 ถนนนิมมานเหมินท์ ตำบลสุเทพ อำเภอเมือง จังหวัดเชียงใหม่ 50200",
 		SlipFileName: "slip-1003.jpg", PaymentStatus: model.PaymentStatusSuccess,
 		BankID: intPtr(2), VerifiedAt: "2026-07-30T03:00:00.000Z",
+		// เลขพัสดุกับชื่อบริษัทขนส่งคัดจาก SEED_ORDERS ของ frontend ตรงตัว
+		Shipment: &seedShipment{
+			CarrierID: 1, TrackingNumber: "TH-2026-073001",
+			RecipientName: "สมศักดิ์ ใจดี", ShippedDate: "2026-07-31",
+			Status: model.ShipmentStatusDelivered,
+			Tracking: []seedTrackingStep{
+				{model.ShipmentStatusPreparing, "คลังสินค้า BookHaven", "2026-07-30T07:10:00.000Z", "เปิดรายการจัดส่ง"},
+				{model.ShipmentStatusShipped, "ศูนย์คัดแยกกรุงเทพฯ", "2026-07-31T02:00:00.000Z", "ส่งมอบให้ขนส่งแล้ว"},
+				{model.ShipmentStatusInTransit, "ศูนย์กระจายสินค้าเชียงใหม่", "2026-07-31T22:40:00.000Z", "พัสดุถึงศูนย์ปลายทาง"},
+				{model.ShipmentStatusDelivered, "อำเภอเมือง เชียงใหม่", "2026-08-01T04:30:00.000Z", "ผู้รับเซ็นรับพัสดุแล้ว"},
+			},
+		},
 		Lines: []seedOrderLine{{BookID: 110, Quantity: 1}},
 		Timeline: []seedOrderStep{
 			{model.OrderStatusPendingConfirm, "2026-07-30T01:00:00.000Z", "รับคำสั่งซื้อ"},
@@ -157,6 +171,9 @@ func seedCustomerOrderRows(tx *gorm.DB) (int, error) {
 			return 0, fmt.Errorf("ใส่คำสั่งซื้อ %d ไม่สำเร็จ: %w", row.OrderID, err)
 		}
 		if err := seedPaymentFor(tx, row, order); err != nil {
+			return 0, err
+		}
+		if err := seedShipmentFor(tx, row); err != nil {
 			return 0, err
 		}
 	}

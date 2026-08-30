@@ -197,3 +197,23 @@ var (
 	ErrReportPeriodRange = Validation("REPORT_PERIOD_RANGE",
 		"วันเริ่มต้นของรอบรายงานต้องไม่หลังวันสิ้นสุด")
 )
+
+// ── จัดการการจัดส่ง (ระบบย่อยของดวงกมล) ────────────────────────────────
+var (
+	ErrShipmentNotFound      = NotFound("SHIPMENT_NOT_FOUND", "ไม่พบรายการจัดส่ง")
+	ErrCarrierNotFound       = NotFound("CARRIER_NOT_FOUND", "ไม่พบบริษัทขนส่งที่เลือก")
+	ErrShipmentExists        = Conflict("SHIPMENT_EXISTS", "คำสั่งซื้อนี้มีรายการจัดส่งอยู่แล้ว")
+	ErrTrackingRequired      = Validation("TRACKING_REQUIRED", "กรุณากรอกเลขติดตามพัสดุ")
+	ErrRecipientRequired     = Validation("RECIPIENT_REQUIRED", "กรุณาระบุชื่อผู้รับ")
+	ErrInvalidShipmentStatus = Validation("INVALID_SHIPMENT_STATUS", "สถานะการจัดส่งไม่ถูกต้อง")
+
+	// ยืนยันรับสินค้าต้องเขียนทั้งคำสั่งซื้อและพัสดุพร้อมกัน จึงบันทึกที่คำสั่งซื้อที่เดียว
+	ErrDeliverViaOrder = Validation("DELIVER_VIA_ORDER",
+		"การยืนยันรับสินค้าให้บันทึกที่คำสั่งซื้อ เพื่อให้สถานะของใบกับพัสดุตรงกัน")
+)
+
+// ShipmentTransitionRejected — อัปเดตสถานะพัสดุข้ามขั้นตอน
+func ShipmentTransitionRejected(from, to ShipmentStatus) *DomainError {
+	return Conflict("SHIPMENT_TRANSITION_REJECTED",
+		"เปลี่ยนสถานะพัสดุจาก \""+from.Label()+"\" เป็น \""+to.Label()+"\" ไม่ได้")
+}

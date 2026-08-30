@@ -183,3 +183,36 @@ func (s PaymentStatus) IsValid() bool {
 	}
 	return false
 }
+
+// ── จัดการการจัดส่ง (เจ้าของคลาส: ดวงกมล กองพันธ์) ─────────────────────
+
+// ShipmentStatus — สถานะของพัสดุหนึ่งชิ้น
+//
+// เป็นคนละชุดกับ OrderStatus โดยตั้งใจ — ใบสั่งซื้อเดินเรื่องตั้งแต่รับออร์เดอร์
+// ส่วนพัสดุเริ่มนับตั้งแต่ฝ่ายจัดส่งเตรียมของ และมีปลายทาง FAILED ที่ใบสั่งซื้อไม่มี
+type ShipmentStatus string
+
+const (
+	ShipmentStatusPreparing ShipmentStatus = "PREPARING"
+	ShipmentStatusShipped   ShipmentStatus = "SHIPPED"
+	ShipmentStatusInTransit ShipmentStatus = "IN_TRANSIT"
+	ShipmentStatusDelivered ShipmentStatus = "DELIVERED"
+	ShipmentStatusFailed    ShipmentStatus = "FAILED"
+)
+
+func (s ShipmentStatus) IsValid() bool {
+	switch s {
+	case ShipmentStatusPreparing, ShipmentStatusShipped, ShipmentStatusInTransit,
+		ShipmentStatusDelivered, ShipmentStatusFailed:
+		return true
+	}
+	return false
+}
+
+// ShipmentStatuses — ค่าทั้งหมดของสถานะพัสดุ (ใช้สร้าง CHECK ใน migrate)
+func ShipmentStatuses() []ShipmentStatus {
+	return []ShipmentStatus{
+		ShipmentStatusPreparing, ShipmentStatusShipped, ShipmentStatusInTransit,
+		ShipmentStatusDelivered, ShipmentStatusFailed,
+	}
+}

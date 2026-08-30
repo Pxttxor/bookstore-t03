@@ -135,6 +135,10 @@ internal/
 | `bank` | bank_id | — |
 | `payment` | payment_id | order_id → customer_order (unique) · bank_id → bank (nullable) |
 | `payment_report` | report_id | — |
+| `shipping_company` | carrier_id | — |
+| `shipment` | shipment_id | order_id → customer_order (unique) · carrier_id → shipping_company |
+| `shipment_tracking` | tracking_id | shipment_id → shipment |
+| `delivery_summary` | summary_id | — |
 
 ตารางลูกทั้งเจ็ดใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
 ซ้ำในเอกสารฉบับเดียวไม่ได้ — service ตรวจให้ก่อนแล้วคืนข้อความไทย
@@ -168,6 +172,7 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | `PromotionType` | FESTIVAL_DISCOUNT, COUPON, BUY_X_QTY |
 | `PromotionStatus` | ACTIVE, INACTIVE, EXPIRED |
 | `PaymentStatus` | WAITING, VERIFYING, SUCCESS, REJECTED |
+| `ShipmentStatus` | PREPARING, SHIPPED, IN_TRANSIT, DELIVERED, FAILED |
 
 ---
 
@@ -213,6 +218,10 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | GET | `/payments` · `/payments/{id}` | — | ฝ่ายขาย, ผจก. |
 | GET | `/orders/{id}/payment` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะใบตัวเอง) |
 | GET/POST | `/payment-reports` | — | ผู้จัดการร้าน |
+| GET | `/carriers` | — | พนักงานทุกบทบาท |
+| GET | `/shipments` · `/shipments/{id}` · `/orders/{id}/shipment` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะพัสดุของใบตัวเอง) |
+| POST | `/shipments/{id}/tracking` | — | ฝ่ายจัดส่ง |
+| GET/POST | `/delivery-summaries` | — | ฝ่ายจัดส่ง, ผจก. |
 | PUT | `/inventory/{bookId}/reorder-point` | U5 | คลังสินค้า |
 | GET | `/requisitions` · `/requisitions/{id}` | U6, U7 | คลัง, ผจก. |
 | POST | `/requisitions` · PUT `/requisitions/{id}` · POST `/requisitions/{id}/submit` | U6 | คลังสินค้า |
@@ -273,6 +282,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
     (ขั้นแพ็กตัดสต็อกเป็น `SALE_OUT` ในทรานแซกชันเดียวกัน)
 13. **แนบสลิป / ตรวจสลิป** — ล็อกทั้งแถว `customer_order` และ `payment` แล้วเขียนพร้อมกัน
     การชำระเงินจึงไม่มีทางไม่ตรงกับสถานะของคำสั่งซื้อ
+14. **บันทึกการจัดส่ง** — เปลี่ยนใบเป็น SHIPPED + เปิดแถว `shipment` + ประวัติสองแถว (PREPARING → SHIPPED)
+15. **ยืนยันรับสินค้า** — ปิดใบเป็น DELIVERED + ปิดพัสดุ + เขียนประวัติ ในทรานแซกชันเดียว
+16. **อัปเดตสถานะพัสดุ** — ล็อกหัวพัสดุ + เขียนสถานะกับประวัติ + แจ้งฝ่ายขายถ้าส่งไม่สำเร็จ
 
 ---
 
@@ -356,7 +368,16 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
     กับ frontend ตัวหลังเป็นค่าจริงของระบบย่อยนี้ เขียนพร้อมกันในทรานแซกชันเดียว) ·
     `PaymentReport` เก็บ **ผลลัพธ์** ลงเป็นแถว ไม่ได้คำนวณสดตอนเปิดดู (`generatedDate` ใน diagram)
     และนับจาก `verified_date` เพราะตอบคำถามว่า "รอบนี้ร้านรับเงินเข้ามาเท่าไร" ·
-    **`Shipment` ยังไม่ได้ทำ** — เดินสถานะ SHIPPED/DELIVERED โดยยังไม่มีเลขติดตามพัสดุ เป็นงานของเฟสถัดไป
+    (ทำครบแล้วใน P5)
+
+21. **การเปิดพัสดุไม่มี endpoint ของตัวเอง เช่นเดียวกัน** — `POST /orders/{id}/ship` เปิดแถว `shipment`
+    ในทรานแซกชันเดียวกับการเปลี่ยนสถานะ ตรงกับหน้าจอที่ส่ง `updateStatus(orderId,'SHIPPED',{tracking,carrier})`
+    · พัสดุเดินสองก้าว PREPARING → SHIPPED ตอนบันทึก เพื่อให้ `record()` ของ class diagram
+    (ที่กำหนดให้เริ่มที่ PREPARING) ยังเป็นจริง และประวัติเล่าเรื่องครบตั้งแต่เปิดรายการ ·
+    **`DELIVERED` อัปเดตผ่าน `/shipments/{id}/tracking` ไม่ได้** (422 `DELIVER_VIA_ORDER`)
+    เพราะต้องเขียนคู่กับ `customer_order` เสมอ · เส้นทาง tracking รับเฉพาะ `IN_TRANSIT` กับ `FAILED`
+    ซึ่งเป็นสถานะที่คำสั่งซื้อไม่มีคู่ให้ตรงกัน (ใบที่พัสดุ `FAILED` ยังเป็น SHIPPED
+    เพราะ OrderStatus ตาม diagram ไม่มีค่าสำหรับกรณีนี้)
 
 20. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
     แต่หน้าสมัครสมาชิกมีขั้นยืนยัน OTP จึงต้องมีสถานะระหว่างทาง · รหัส OTP โหมดพัฒนาเป็นค่าคงที่
@@ -399,7 +420,8 @@ SELECT status, count(*) FROM purchase_order GROUP BY status;
 ให้แก้ที่ frontend แล้วสั่ง `python tools/gen_seed.py` สร้างใหม่
 
 `seed_inventory.go` (การเคลื่อนไหวสต็อก) · `seed_person.go` (พนักงาน + ลูกค้า) · `seed_order.go`
-(คำสั่งซื้อพร้อมแถวการชำระเงิน) · `seed_payment.go` (บัญชีธนาคาร 3 แห่ง) **เขียนด้วยมือ**
+(คำสั่งซื้อพร้อมแถวการชำระเงินและพัสดุ) · `seed_payment.go` (บัญชีธนาคาร 3 แห่ง) ·
+`seed_delivery.go` (บริษัทขนส่ง 5 แห่ง) **เขียนด้วยมือ**
 เพราะ frontend ไม่มีข้อมูลตั้งต้นให้ · `seed_data_test.go` ตรวจว่าไฟล์ที่สคริปต์สร้างยังครบและ FK ชี้ถูกที่
 
 การใส่พนักงานต้องสร้างแถว `person` ให้เองก่อนแล้วผูก `person_id` (`seedEmployeeRows`) เพราะคอลัมน์นั้น
@@ -414,7 +436,7 @@ SELECT status, count(*) FROM purchase_order GROUP BY status;
 
 ## นอกขอบเขต
 
-- ระบบย่อยของเพื่อนร่วมทีมที่ยังไม่ถึงคิว (จัดส่ง · รีวิว · สมาชิก/แต้มสะสม)
+- ระบบย่อยของเพื่อนร่วมทีมที่ยังไม่ถึงคิว (รีวิว · สมาชิก/แต้มสะสม)
   — ดูลำดับเฟสที่ [`PROGRESS.md`](PROGRESS.md)
 - การส่งอีเมลจริง — บันทึกลงตาราง `notification` ช่อง `email` ไว้ให้ SCR-27 แสดงเส้นทางเอกสาร
   แต่ไม่ได้ส่งออกไปจริง (เหมือนที่ frontend ทำ)

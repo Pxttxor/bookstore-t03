@@ -8,6 +8,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ type OrderService struct {
 	inventory     *repository.InventoryRepository
 	people        *repository.PersonRepository
 	payments      *repository.PaymentRepository
+	deliveries    *repository.DeliveryRepository
 	notifications *repository.NotificationRepository
 }
 
@@ -37,11 +39,13 @@ func NewOrderService(
 	inventory *repository.InventoryRepository,
 	people *repository.PersonRepository,
 	payments *repository.PaymentRepository,
+	deliveries *repository.DeliveryRepository,
 	notifications *repository.NotificationRepository,
 ) *OrderService {
 	return &OrderService{
 		db: db, orders: orders, promotions: promotions, books: books,
-		inventory: inventory, people: people, payments: payments, notifications: notifications,
+		inventory: inventory, people: people, payments: payments,
+		deliveries: deliveries, notifications: notifications,
 	}
 }
 
@@ -387,14 +391,105 @@ func (s *OrderService) ReadyToShip(orderID int, by string) (*OrderView, error) {
 		})
 }
 
-// Ship / Deliver — ฝ่ายจัดส่งบันทึกการส่งและการรับของ
-// รายละเอียดการขนส่ง (Shipment · เลขติดตามพัสดุ) เป็นระบบย่อยของดวงกมล ยังไม่ได้ทำในเฟสนี้
-func (s *OrderService) Ship(orderID int, by string) (*OrderView, error) {
-	return s.advance(orderID, model.OrderStatusShipped, by, "ส่งมอบให้ขนส่งแล้ว", nil)
+// Ship — ฝ่ายจัดส่งบันทึกการส่ง พร้อมเปิดรายการพัสดุในทรานแซกชันเดียวกัน
+//
+// พัสดุกับคำสั่งซื้อต้องเกิดพร้อมกันเสมอ ไม่งั้นจะมีใบที่สถานะ SHIPPED แต่ไม่มีเลขติดตามพัสดุ
+// (เหตุผลเดียวกับที่การตรวจสลิปเขียน payment กับ customer_order พร้อมกัน)
+func (s *OrderService) Ship(orderID int, input ShipmentInput, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusShipped, by, "ส่งมอบให้ขนส่งแล้ว",
+		func(tx *gorm.DB, order *model.Order) error {
+			return s.recordShipment(tx, order, input)
+		})
 }
 
+// Deliver — ลูกค้ารับของแล้ว · ปิดพัสดุให้เป็น DELIVERED พร้อมกัน
 func (s *OrderService) Deliver(orderID int, by string) (*OrderView, error) {
-	return s.advance(orderID, model.OrderStatusDelivered, by, "ลูกค้าได้รับสินค้าแล้ว", nil)
+	return s.advance(orderID, model.OrderStatusDelivered, by, "ลูกค้าได้รับสินค้าแล้ว",
+		func(tx *gorm.DB, order *model.Order) error {
+			return s.closeShipment(tx, order.OrderID)
+		})
+}
+
+// recordShipment — เปิดรายการพัสดุของคำสั่งซื้อ (`DeliveryStaff.recordShipment()`)
+//
+// เดินสองก้าว PREPARING → SHIPPED เพื่อให้ประวัติเล่าเรื่องครบตั้งแต่เปิดรายการ
+// ตรงกับ `record()` ใน class diagram ที่กำหนดให้พัสดุเริ่มที่ PREPARING เสมอ
+func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input ShipmentInput) error {
+	tracking := strings.TrimSpace(input.TrackingNumber)
+	if tracking == "" {
+		return model.ErrTrackingRequired
+	}
+
+	exists, err := s.deliveries.ExistsForOrder(tx, order.OrderID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return model.ErrShipmentExists
+	}
+
+	found, err := s.deliveries.CarrierExists(tx, input.CarrierID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return model.ErrCarrierNotFound
+	}
+
+	recipient := strings.TrimSpace(input.RecipientName)
+	if recipient == "" {
+		row, err := s.people.FindCustomer(order.CustomerID)
+		if err != nil {
+			return err
+		}
+		recipient = row.Person.Name()
+	}
+
+	now := time.Now()
+	shipment := model.Shipment{
+		OrderID:        order.OrderID,
+		CarrierID:      input.CarrierID,
+		TrackingNumber: tracking,
+		RecipientName:  recipient,
+		ShippedDate:    model.Today(),
+	}
+	shipment.Record(now)
+	if err := shipment.UpdateStatus(
+		model.ShipmentStatusShipped, "", "ส่งมอบให้ขนส่งแล้ว", now); err != nil {
+		return err
+	}
+	return s.deliveries.Create(tx, &shipment)
+}
+
+// closeShipment — ปิดพัสดุตอนลูกค้ายืนยันรับของ
+//
+// ใบเก่าที่ยังไม่มีแถวพัสดุ (ข้อมูลตั้งต้นก่อนทำระบบย่อยนี้) ให้ผ่านไปได้ ไม่ต้องล้มทั้งรายการ
+func (s *OrderService) closeShipment(tx *gorm.DB, orderID int) error {
+	shipment, err := s.deliveries.FindByOrderForUpdate(tx, orderID)
+	if errors.Is(err, model.ErrShipmentNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if shipment.Status == model.ShipmentStatusDelivered {
+		return nil
+	}
+
+	before := len(shipment.Tracking)
+	if err := shipment.UpdateStatus(
+		model.ShipmentStatusDelivered, "", "ผู้รับเซ็นรับพัสดุแล้ว", time.Now()); err != nil {
+		return err
+	}
+	if err := s.deliveries.Save(tx, shipment); err != nil {
+		return err
+	}
+
+	fresh := shipment.Tracking[before:]
+	for i := range fresh {
+		fresh[i].ShipmentID = shipment.ShipmentID
+	}
+	return s.deliveries.AddTracking(tx, fresh)
 }
 
 // Cancel — ยกเลิกคำสั่งซื้อ ต้องมีเหตุผลเสมอ

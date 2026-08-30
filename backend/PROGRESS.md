@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P5 เสร็จแล้ว** |
-| **ทำต่อที่** | **P6** — Shipment · ShipmentTracking · ShippingCompany · DeliverySummary |
+| **เฟส** | **P0–P6 เสร็จแล้ว** |
+| **ทำต่อที่** | **P7** — MembershipTier · Member · PointTransaction · Reward · Redemption |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 66/66 ✅** · migrate+seed บนฐานใหม่ ✅ · **smoke 191/191 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 74/74 ✅** · migrate+seed บนฐานใหม่ ✅ · **smoke 217/217 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -65,7 +65,7 @@ git add -A && git commit
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ✅ | (ดู git log) | 47/47 | ✅ | 129/129 |
 | P4 | Order · OrderItem · History · Promotion | ✅ | (ดู git log) | 59/59 | ✅ | 171/171 |
 | P5 | Payment · Bank · PaymentReport | ✅ | (ดู git log) | 66/66 | ✅ | 191/191 |
-| P6 | Shipment · Tracking · Carrier · Summary | ⬜ | | | | |
+| P6 | Shipment · Tracking · Carrier · Summary | ✅ | (ดู git log) | 74/74 | ✅ | 217/217 |
 | P7 | MembershipTier · Member · Point · Reward | ⬜ | | | | |
 | P8 | Review · Reply · Report · ProfanityFilter | ⬜ | | | | |
 | P9 | เก็บงาน (เอกสาร · permissions.ts · verify รวม) | ⬜ | | | | |
@@ -238,6 +238,32 @@ git add -A && git commit
 | A | **`Seed()` ล้มบนฐานข้อมูลเปล่า** — `seedIfEmpty` ใส่พนักงานทั้งสี่คนด้วย `person_id = 0` แล้วชน unique index `uq_employee_person` ที่ P1 สร้างไว้ · ไม่เคยเจอมาก่อนเพราะฐานเดิมมีพนักงานอยู่ตั้งแต่ก่อน P1 แล้ว `backfillPersons()` จึงเติมให้ทัน (เท่ากับเส้นทาง "ฐานใหม่ทั้งหมด" ไม่เคยถูกทดสอบเลยตั้งแต่ P1) | เขียน `seedEmployeeRows()` ใน `seed_person.go` ให้สร้างแถว `person` ก่อนแล้วผูก `person_id` — รูปแบบเดียวกับ `seedCustomerRows()` |
 | B | คำสั่งซื้อตั้งต้น 3 ใบไม่มีแถว `payment` บนฐานเดิม | `Seed()` ข้ามตารางที่มีข้อมูลแล้ว จึงต้องล้าง volume ถึงจะได้ข้อมูลชุดใหม่ · ผู้ใช้อนุมัติให้ล้าง — ปิดหนี้เล่ม 118 ที่เป็น `ACTIVE` ผิดไปพร้อมกัน (ตรวจแล้วทั้งสองข้อ) |
 
+### P6 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/enums_team.go` + `labels_team.go` — `ShipmentStatus` 5 ค่า + `ShipmentStatuses()` + ป้ายไทยตรง `SHIPMENT_STATUS_LABELS` ของ TS | ✅ |
+| 2 | `model/delivery.go` — `ShippingCompany` · `Shipment` (+ตารางการเปลี่ยนสถานะ · `Record()` · `UpdateStatus()` · `Track()` · `IsClosed()`) · `ShipmentTracking` · `DeliverySummary.Generate()` · `FormatShipmentCode`/`FormatSummaryCode` | ✅ |
+| 3 | `model/errors.go` — 6 ตัว + `ShipmentTransitionRejected()` + `ErrDeliverViaOrder` · `enums.go` เพิ่ม `NotifyShipmentFailed` | ✅ |
+| 4 | `migrate.go` — 4 entity ใหม่ · CHECK 2 · FK 3 เส้น · `backfillCarriers()` · `seed.go` เพิ่ม sequence 4 ตัว | ✅ |
+| 5 | `database/seed_delivery.go` — บริษัทขนส่ง 5 แห่ง (จาก `CARRIERS` ของ frontend) + `seedShipmentFor()` · `seed_order.go` เพิ่มพัสดุของ SO-1003 พร้อมประวัติ 4 แถว | ✅ |
+| 6 | `repository/delivery.go` — CRUD พัสดุ · `FindForUpdate`/`FindByOrderForUpdate` · `AddTracking` · `ShippedOn` · สรุปพัสดุ | ✅ |
+| 7 | `service/delivery.go` — อ่านพัสดุ (กรองตามเจ้าของ) · `UpdateTracking` · `GenerateSummary` | ✅ |
+| 8 | `service/order.go` — `Ship(orderID, ShipmentInput, by)` เปิดพัสดุในทรานแซกชันเดียวกัน · `Deliver` ปิดพัสดุด้วย | ✅ |
+| 9 | `handler/delivery.go` + `dto_delivery.go` + 7 เส้นทาง + `roleDeliveryAdmin` + `Deps.Deliveries` | ✅ |
+| 10 | `model/delivery_test.go` 8 เคส (test 66 → 74) + `handler_test.go` เพิ่ม 7 path | ✅ |
+| 11 | `cmd/smoke/flow_delivery.go` 26 เคส (smoke 191 → 217) + แก้ `flow_order.go` ให้ส่ง body ตอน ship | ✅ |
+
+### P6 — บันทึกระหว่างทำ
+
+| # | เรื่อง | รายละเอียด |
+|---|---|---|
+| A | **`POST /api/orders/{id}/ship` เปลี่ยนสัญญา** — เดิมไม่มี body ตอนนี้ต้องส่ง `{carrierId, trackingNumber, recipientName?}` | พัสดุกับใบต้องเกิดพร้อมกัน ไม่งั้นมีใบ SHIPPED ที่ไม่มีเลขติดตามพัสดุ · `recipientName` เว้นได้ ระบบเติมชื่อลูกค้าให้ (ตรงกับ `OrderContext.tsx` ฝั่งหน้าจอ) |
+| B | พัสดุเดินสองก้าวตอนบันทึก PREPARING → SHIPPED | `record()` ใน diagram กำหนดให้เริ่มที่ PREPARING · เดินสองก้าวจึงได้ทั้งความจริงตาม diagram และประวัติที่เล่าเรื่องครบ |
+| C | **`DELIVERED` อัปเดตผ่านเส้นทาง tracking ไม่ได้** (422 `DELIVER_VIA_ORDER`) | ต้องเขียนคู่กับ `customer_order` เสมอ · เส้นทาง tracking รับเฉพาะ `IN_TRANSIT`/`FAILED` ซึ่งคำสั่งซื้อไม่มีสถานะคู่ให้ตรงกัน (ใบที่พัสดุ FAILED ยังเป็น SHIPPED เพราะ OrderStatus ตาม diagram ไม่มีค่าสำหรับกรณีนี้) |
+| D | ป้ายไทยของ `ShipmentStatus` ในไฟล์ของเพื่อน (`SourceCode/`) ไม่ตรงกับ frontend | ยึดฝั่ง frontend ตามกติกาโปรเจกต์ (`PREPARING` = "กำลังเตรียม" ไม่ใช่ "กำลังเตรียมพัสดุ") · มีเทสต์คุมไว้ |
+| E | `Seed()` ข้ามตารางที่มีข้อมูลแล้ว พัสดุของ SO-1003 จึงไม่ถูกสร้างบนฐานที่มีคำสั่งซื้ออยู่ก่อน | ล้าง volume แล้ว seed ใหม่ (รอบที่สองของเซสชันนี้) · เป็นข้อจำกัดเดิมของ `seedIfEmpty` ที่ต้องระวังทุกครั้งที่เพิ่มข้อมูลตั้งต้นให้ตารางที่ seed ไปแล้ว |
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -268,7 +294,7 @@ git add -A && git commit
 | Promotion | Promotion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Payment | Payment · PaymentReport · Bank | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Membership | MembershipTier · PointTransaction · Reward · Redemption | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Review | Review · ReviewReply · ReviewReport · ProfanityFilter | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | ทั่วไป | Notification (ส่วนขยายนอก diagram) | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 

@@ -93,3 +93,15 @@ var PaymentStatusLabels = map[PaymentStatus]string{
 }
 
 func (s PaymentStatus) Label() string { return lookup(PaymentStatusLabels, s) }
+
+// ShipmentStatusLabels — ตรงกับ SHIPMENT_STATUS_LABELS ใน frontend/src/admin/orders/orders.ts
+// (ป้ายที่ผู้ใช้เห็นจริงอยู่ฝั่งหน้าจอ จึงยึดข้อความชุดนั้น ไม่ใช่ชุดใน SourceCode/)
+var ShipmentStatusLabels = map[ShipmentStatus]string{
+	ShipmentStatusPreparing: "กำลังเตรียม",
+	ShipmentStatusShipped:   "จัดส่งแล้ว",
+	ShipmentStatusInTransit: "ระหว่างขนส่ง",
+	ShipmentStatusDelivered: "ส่งถึงแล้ว",
+	ShipmentStatusFailed:    "จัดส่งไม่สำเร็จ",
+}
+
+func (s ShipmentStatus) Label() string { return lookup(ShipmentStatusLabels, s) }

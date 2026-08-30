@@ -219,6 +219,7 @@ const (
 	NotifyOrderPlaced      NotificationKind = "ORDER_PLACED"
 	NotifyOrderPaid        NotificationKind = "ORDER_PAID"
 	NotifyOrderReadyToShip NotificationKind = "ORDER_READY_TO_SHIP"
+	NotifyShipmentFailed   NotificationKind = "SHIPMENT_FAILED"
 )
 
 type NotificationChannel string

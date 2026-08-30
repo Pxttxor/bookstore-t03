@@ -342,8 +342,10 @@ func runOrderFlow(e *env) {
 	check("ฝ่ายขายบันทึกการจัดส่งแทนไม่ได้ → 403", func() error {
 		return expectStatus("POST", fmt.Sprintf("/api/orders/%d/ship", orderID), sales, nil, 403)
 	})
+	// การบันทึกจัดส่งพกเลขติดตามพัสดุมาด้วยตั้งแต่ P6 (เปิดแถว shipment ในทรานแซกชันเดียวกัน)
 	check("ฝ่ายจัดส่งบันทึกส่งมอบให้ขนส่ง → SHIPPED", func() error {
-		body, err := post(delivery, fmt.Sprintf("/api/orders/%d/ship", orderID), nil, 200)
+		body, err := post(delivery, fmt.Sprintf("/api/orders/%d/ship", orderID),
+			map[string]any{"carrierId": 1, "trackingNumber": fmt.Sprintf("TH-ORDER-%d", orderID)}, 200)
 		if err != nil {
 			return err
 		}

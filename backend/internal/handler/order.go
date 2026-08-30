@@ -25,7 +25,7 @@ func (h *Handler) registerOrderRoutes(register registrar) {
 	register("POST /api/orders/{id}/reject-payment", roleSales, h.rejectPayment)    //
 	register("POST /api/orders/{id}/pack", roleWarehouse, h.packOrder)              // can.packOrder
 	register("POST /api/orders/{id}/ready", roleWarehouse, h.readyToShip)           //
-	register("POST /api/orders/{id}/ship", roleDelivery, h.shipOrder)               // can.shipOrder
+	register("POST /api/orders/{id}/ship", roleDelivery, h.shipOrder)               // can.shipOrder + เปิดพัสดุ
 	register("POST /api/orders/{id}/deliver", roleDelivery, h.deliverOrder)         // can.confirmDelivery
 	register("POST /api/orders/{id}/cancel", roleOrderAdmin, h.cancelCustomerOrder) // can.cancelOrder
 }
@@ -148,9 +148,15 @@ func (h *Handler) readyToShip(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// shipOrder — บันทึกการจัดส่ง · body พกเลขติดตามพัสดุกับบริษัทขนส่งมาด้วย
+// (เปิดแถว shipment ในทรานแซกชันเดียวกับการเปลี่ยนสถานะ ดู OrderService.Ship)
 func (h *Handler) shipOrder(w http.ResponseWriter, r *http.Request) {
-	h.advanceOrder(w, r, func(id int, by string, _ *http.Request) (*service.OrderView, error) {
-		return h.orders.Ship(id, by)
+	h.advanceOrder(w, r, func(id int, by string, r *http.Request) (*service.OrderView, error) {
+		var body service.ShipmentInput
+		if err := httpx.Decode(r, &body); err != nil {
+			return nil, err
+		}
+		return h.orders.Ship(id, body, by)
 	})
 }
 

@@ -64,6 +64,7 @@ func main() {
 	orderRepo := repository.NewOrderRepository(db)
 	promotionRepo := repository.NewPromotionRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
+	deliveryRepo := repository.NewDeliveryRepository(db)
 
 	authService := service.NewAuthService(db, personRepo, cfg.JWTSecret, cfg.TokenTTL)
 	personService := service.NewPersonService(db, personRepo)
@@ -71,9 +72,10 @@ func main() {
 	bookService := service.NewBookService(db, bookRepo, inventoryRepo)
 	inventoryService := service.NewInventoryService(db, inventoryRepo, bookRepo, notificationRepo)
 	promotionService := service.NewPromotionService(db, promotionRepo)
-	orderService := service.NewOrderService(
-		db, orderRepo, promotionRepo, bookRepo, inventoryRepo, personRepo, paymentRepo, notificationRepo)
+	orderService := service.NewOrderService(db, orderRepo, promotionRepo, bookRepo,
+		inventoryRepo, personRepo, paymentRepo, deliveryRepo, notificationRepo)
 	paymentService := service.NewPaymentService(db, paymentRepo, orderRepo)
+	deliveryService := service.NewDeliveryService(db, deliveryRepo, orderRepo, notificationRepo)
 	purchasingService := service.NewPurchasingService(
 		db, purchasingRepo, supplierRepo, inventoryRepo, bookRepo, notificationRepo)
 
@@ -86,6 +88,7 @@ func main() {
 		Orders:        orderService,
 		Promotions:    promotionService,
 		Payments:      paymentService,
+		Deliveries:    deliveryService,
 		Purchasing:    purchasingService,
 		Inventory:     inventoryRepo,
 		Notifications: notificationRepo,

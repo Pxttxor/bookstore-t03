@@ -46,6 +46,7 @@ func main() {
 	runInventoryFlow(e)
 	runOrderFlow(e)
 	runPaymentFlow(e)
+	runDeliveryFlow(e)
 	runSupplierFlow(e)
 	runPurchasingFlow(e)
 
