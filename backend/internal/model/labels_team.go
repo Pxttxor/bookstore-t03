@@ -123,3 +123,23 @@ var RewardTypeLabels = map[RewardType]string{
 
 func (t PointTxnType) Label() string { return lookup(PointTxnTypeLabels, t) }
 func (t RewardType) Label() string   { return lookup(RewardTypeLabels, t) }
+
+// ReviewStatusLabels — ตรงกับ REVIEW_STATUS_LABELS ใน frontend/src/admin/reviews/reviews.ts
+// ระบบย่อยนี้มีหน้าจอจริง (SCR ไม่มี แต่มีหน้า /admin/reviews) จึงยึดฝั่งหน้าจอ
+// แบบเดียวกับ ShipmentStatus ไม่ใช่แบบ PointTxnType ที่ไม่มีหน้าจอให้ยึด
+var ReviewStatusLabels = map[ReviewStatus]string{
+	ReviewStatusPending:   "รอตรวจสอบ",
+	ReviewStatusPublished: "ตรวจสอบสำเร็จ",
+	ReviewStatusHidden:    "ซ่อนไว้",
+	ReviewStatusRemoved:   "รีวิวที่ถูกลบ",
+}
+
+// ModerateActionLabels — ตรงกับ MODERATE_ACTION_LABELS ของ TS (ข้อความบนปุ่ม)
+var ModerateActionLabels = map[ModerateAction]string{
+	ModerateActionPublish: "อนุมัติ",
+	ModerateActionHide:    "ซ่อนถาวร",
+	ModerateActionRemove:  "ลบรีวิว",
+}
+
+func (s ReviewStatus) Label() string   { return lookup(ReviewStatusLabels, s) }
+func (a ModerateAction) Label() string { return lookup(ModerateActionLabels, a) }

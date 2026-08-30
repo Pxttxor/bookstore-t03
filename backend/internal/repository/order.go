@@ -110,6 +110,23 @@ func (r *OrderRepository) AddHistory(tx *gorm.DB, rows []model.OrderStatusHistor
 	return tx.Create(&rows).Error
 }
 
+// DeliveredOrderForBook — ใบที่ "ส่งถึงแล้ว" ใบล่าสุดของลูกค้ารายนี้ที่มีหนังสือเล่มนี้อยู่
+//
+// ใช้ตรวจสิทธิ์เขียนรีวิว (Review "*" --> "0..1" Order : verified buy)
+// คืน 0 ถ้าลูกค้าคนนี้ยังไม่เคยได้รับหนังสือเล่มนี้
+func (r *OrderRepository) DeliveredOrderForBook(db *gorm.DB, customerID, bookID int) (int, error) {
+	var orderID int
+	err := db.Model(&model.Order{}).
+		Select("customer_order.order_id").
+		Joins("JOIN customer_order_item item ON item.order_id = customer_order.order_id").
+		Where("customer_order.customer_id = ? AND item.book_id = ? AND customer_order.status = ?",
+			customerID, bookID, model.OrderStatusDelivered).
+		Order("customer_order.order_id DESC").
+		Limit(1).
+		Scan(&orderID).Error
+	return orderID, err
+}
+
 // ── โปรโมชั่น ───────────────────────────────────────────────────────────
 
 type PromotionRepository struct{ db *gorm.DB }

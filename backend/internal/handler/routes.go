@@ -39,6 +39,13 @@ var (
 	// roleOrderIntake — ลูกค้าสั่งเอง หรือฝ่ายขายรับออร์เดอร์ทางโทรศัพท์/ข้อความแทน
 	roleOrderIntake = []model.Role{model.RoleCustomer, model.RoleSales}
 
+	// roleReviewStaff — ฝ่ายขายเป็นเจ้าของงานตรวจสอบรีวิว ผู้จัดการทำแทนได้
+	// (can.moderateReview) · ค่าเท่ากับ roleCatalogue แต่คนละเหตุผล เปลี่ยนแยกกันได้
+	roleReviewStaff = []model.Role{model.RoleSales, model.RoleManager}
+
+	// roleReviewAudience — คนที่เปิดดูรีวิวได้ · ลูกค้าเห็นเฉพาะของตัวเอง (service กรองให้)
+	roleReviewAudience = []model.Role{model.RoleSales, model.RoleManager, model.RoleCustomer}
+
 	// roleOrderAdmin — ยกเลิกคำสั่งซื้อได้ทั้งฝ่ายขายและผู้จัดการ
 	roleOrderAdmin = []model.Role{model.RoleSales, model.RoleManager}
 	roleCustomer   = []model.Role{model.RoleCustomer}
@@ -82,6 +89,7 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerPaymentRoutes(register)      // ตรวจสอบการชำระเงิน + รายงานรับชำระ
 	h.registerDeliveryRoutes(register)     // พัสดุ · ติดตามสถานะ · สรุปบัญชีพัสดุ
 	h.registerMembershipRoutes(register)   // ระดับสมาชิก · แต้มสะสม · ของรางวัล
+	h.registerReviewRoutes(register)       // รีวิวลูกค้า · คำตอบกลับ · รายงานรีวิว
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 

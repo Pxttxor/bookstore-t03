@@ -58,6 +58,9 @@ var entities = []any{
 	&model.PointTransaction{},
 	&model.Reward{},
 	&model.Redemption{},
+	&model.Review{},
+	&model.ReviewReply{},
+	&model.ReviewReport{},
 	&model.Notification{},
 }
 
@@ -235,6 +238,11 @@ var foreignKeys = []foreignKey{
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
+	{"review", "customer_id", "customer", "customer_id"},
+	{"review", "book_id", "book", "book_id"},
+	{"review", "order_id", "customer_order", "order_id"},
+	{"review_reply", "review_id", "review", "review_id"},
+	{"review_report", "review_id", "review", "review_id"},
 }
 
 // applyForeignKeys — เพิ่ม FK แบบรันซ้ำได้
@@ -304,6 +312,9 @@ func checks() []enumCheck {
 		{"shipment_tracking", "status", values(model.ShipmentStatuses()...)},
 		{"point_transaction", "type", values(model.PointTxnTypes()...)},
 		{"reward", "type", values(model.RewardTypes()...)},
+		{"review", "status", values(model.ReviewStatuses()...)},
+		{"review_report", "status", values(
+			model.ApprovalStatusPending, model.ApprovalStatusApproved, model.ApprovalStatusRejected)},
 		{"notification", "channel", values(model.ChannelInApp, model.ChannelEmail)},
 	}
 }
@@ -362,6 +373,10 @@ func applyChecks(db *gorm.DB) error {
 		`ALTER TABLE purchase_requisition_item DROP CONSTRAINT IF EXISTS chk_purchase_requisition_item_qty`,
 		`ALTER TABLE purchase_requisition_item ADD CONSTRAINT chk_purchase_requisition_item_qty
 		 CHECK (quantity > 0)`,
+		// คะแนนรีวิวเป็น 1–5 ดาว — เป็นช่วงตัวเลข ไม่ใช่ enum จึงตรวจแยกจาก checks()
+		`ALTER TABLE review DROP CONSTRAINT IF EXISTS chk_review_rating`,
+		`ALTER TABLE review ADD CONSTRAINT chk_review_rating
+		 CHECK (rating BETWEEN 1 AND 5)`,
 	}
 	for _, statement := range guards {
 		if err := db.Exec(statement).Error; err != nil {
@@ -391,6 +406,11 @@ func applyIndexes(db *gorm.DB) error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_membership_tier_name
 		 ON membership_tier (lower(btrim(name)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_redemption_coupon_code ON redemption (coupon_code)`,
+		// ลูกค้าหนึ่งคนรีวิวหนังสือเล่มหนึ่งได้ครั้งเดียวต่อคำสั่งซื้อหนึ่งใบ
+		// Postgres นับ NULL เป็นค่าไม่ซ้ำกัน แถวเก่าที่ไม่มีใบสั่งซื้อ (0..1 ใน diagram)
+		// จึงไม่ติด constraint นี้ — ตรงกับที่ต้องการพอดี
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_review_customer_book_order
+		 ON review (customer_id, book_id, order_id)`,
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement).Error; err != nil {

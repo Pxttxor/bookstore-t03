@@ -125,7 +125,7 @@ func (r *StockDiscrepancyReport) Decide(status ApprovalStatus, note, by string, 
 		return ErrReportAlreadyDecided
 	}
 	if status != ApprovalStatusApproved && status != ApprovalStatusRejected {
-		return Validation("INVALID_APPROVAL_STATUS", "ผลการตัดสินไม่ถูกต้อง")
+		return ErrInvalidApprovalStatus
 	}
 	stamp := at.UTC()
 	r.ApprovalStatus = status

@@ -78,6 +78,9 @@ var sequences = []struct{ table, column string }{
 	{"point_transaction", "point_txn_id"},
 	{"reward", "reward_id"},
 	{"redemption", "redemption_id"},
+	{"review", "review_id"},
+	{"review_reply", "reply_id"},
+	{"review_report", "report_id"},
 	{"notification", "id"},
 }
 
@@ -219,6 +222,12 @@ func Seed(db *gorm.DB) error {
 			return err
 		}
 		inserted["สมาชิก"] = n
+
+		// รีวิวต้องมาหลังคำสั่งซื้อ เพราะแถวที่เป็น "ซื้อสินค้าจริง" อ้าง order_id
+		if n, err = seedReviewRows(tx); err != nil {
+			return err
+		}
+		inserted["รีวิว"] = n
 		return nil
 	})
 	if err != nil {
@@ -232,7 +241,7 @@ func Seed(db *gorm.DB) error {
 	// เพิ่มระบบย่อยใหม่ = เติมป้ายเข้าลิสต์นี้ ไม่ต้องแก้ format string
 	order := []string{"พนักงาน", "ลูกค้า", "หมวดหมู่", "หนังสือ", "ประวัติหนังสือ",
 		"ผู้จัดจำหน่าย", "สินค้าคงคลัง", "เคลื่อนไหวสต็อก", "PR", "PO", "GR", "โปรโมชั่น", "ธนาคาร",
-		"บริษัทขนส่ง", "คำสั่งซื้อ", "ระดับสมาชิก", "ของรางวัล", "สมาชิก"}
+		"บริษัทขนส่ง", "คำสั่งซื้อ", "ระดับสมาชิก", "ของรางวัล", "สมาชิก", "รีวิว"}
 	parts := make([]string, 0, len(order))
 	for _, label := range order {
 		parts = append(parts, fmt.Sprintf("%s %d", label, inserted[label]))

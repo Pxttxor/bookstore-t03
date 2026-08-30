@@ -18,9 +18,11 @@ const (
 )
 
 // deliveredOrder — สั่งซื้อหนึ่งใบแล้วเดินจนลูกค้ารับของแล้ว คืนรหัสใบและยอดสุทธิ
-func deliveredOrder(customer, sales, warehouse, delivery string) (int, float64, error) {
-	body, err := post(customer, "/api/orders",
-		orderBody([]any{orderLine(membershipBookID, membershipQty)}, 0), 201)
+//
+// ใช้ร่วมกันระหว่าง flow สมาชิก (ต้องมีใบที่ส่งถึงแล้วถึงจะได้แต้ม) กับ flow รีวิว
+// (ต้องมีใบที่ส่งถึงแล้วถึงจะเขียนรีวิวได้) · ผู้เรียกเป็นคนคืนยอดสต็อกเองตอนจบ
+func deliveredOrder(customer, sales, warehouse, delivery string, lines []any) (int, float64, error) {
+	body, err := post(customer, "/api/orders", orderBody(lines, 0), 201)
 	if err != nil {
 		return 0, 0, fmt.Errorf("สั่งซื้อไม่สำเร็จ: %w", err)
 	}
@@ -205,7 +207,8 @@ func runMembershipFlow(e *env) {
 	section("สะสมแต้มตอนลูกค้ารับสินค้า (Member.earnPoints)")
 
 	check("เดินคำสั่งซื้อใบใหม่จนส่งถึงลูกค้า", func() error {
-		orderID, net, err := deliveredOrder(customer, sales, warehouse, delivery)
+		orderID, net, err := deliveredOrder(customer, sales, warehouse, delivery,
+			[]any{orderLine(membershipBookID, membershipQty)})
 		if err != nil {
 			return err
 		}

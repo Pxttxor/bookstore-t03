@@ -263,3 +263,72 @@ func (t RewardType) IsValid() bool {
 func RewardTypes() []RewardType {
 	return []RewardType{RewardTypeDiscount, RewardTypeGift}
 }
+
+// ── ระบบย่อยรีวิวลูกค้า (เจ้าของคลาส: ดวงกมล กองพันธ์) ──────────────────
+
+// ReviewStatus — สถานะรีวิวของลูกค้า
+//
+// PENDING = ส่งแล้วรอพนักงานตรวจ · PUBLISHED = ขึ้นหน้าร้าน
+// HIDDEN = ซ่อนจากหน้าร้านแต่ยังเก็บไว้ · REMOVED = ลบออกจากระบบ (ปลายทาง)
+type ReviewStatus string
+
+const (
+	ReviewStatusPending   ReviewStatus = "PENDING"
+	ReviewStatusPublished ReviewStatus = "PUBLISHED"
+	ReviewStatusHidden    ReviewStatus = "HIDDEN"
+	ReviewStatusRemoved   ReviewStatus = "REMOVED"
+)
+
+func (s ReviewStatus) IsValid() bool {
+	switch s {
+	case ReviewStatusPending, ReviewStatusPublished, ReviewStatusHidden, ReviewStatusRemoved:
+		return true
+	}
+	return false
+}
+
+// ReviewStatuses — ค่าทั้งหมดเรียงตาม class diagram (ใช้สร้าง CHECK ใน migrate)
+func ReviewStatuses() []ReviewStatus {
+	return []ReviewStatus{
+		ReviewStatusPending, ReviewStatusPublished, ReviewStatusHidden, ReviewStatusRemoved,
+	}
+}
+
+// ModerateAction — คำสั่งตรวจสอบรีวิวที่พนักงานกด (`Review.moderate(action)` ใน diagram)
+//
+// เป็นคนละชุดกับ ReviewStatus โดยตั้งใจ — หน้าจอส่ง "สิ่งที่จะทำ" มา ไม่ใช่ "สถานะปลายทาง"
+// ตรงกับ ModerateAction ใน frontend/src/admin/reviews/reviews.ts
+type ModerateAction string
+
+const (
+	ModerateActionPublish ModerateAction = "PUBLISH"
+	ModerateActionHide    ModerateAction = "HIDE"
+	ModerateActionRemove  ModerateAction = "REMOVE"
+)
+
+func (a ModerateAction) IsValid() bool {
+	switch a {
+	case ModerateActionPublish, ModerateActionHide, ModerateActionRemove:
+		return true
+	}
+	return false
+}
+
+// ModerateActions — ค่าทั้งหมด (ใช้ในเทสต์และเอกสาร)
+func ModerateActions() []ModerateAction {
+	return []ModerateAction{ModerateActionPublish, ModerateActionHide, ModerateActionRemove}
+}
+
+// ResultStatus — สถานะที่รีวิวจะกลายเป็นหลังทำคำสั่งนี้
+// ตรงกับ MODERATE_ACTION_STATUS ของ TS ทีละคู่
+func (a ModerateAction) ResultStatus() ReviewStatus {
+	switch a {
+	case ModerateActionPublish:
+		return ReviewStatusPublished
+	case ModerateActionHide:
+		return ReviewStatusHidden
+	case ModerateActionRemove:
+		return ReviewStatusRemoved
+	}
+	return ""
+}

@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P7 เสร็จแล้ว** |
-| **ทำต่อที่** | **P8** — Review · ReviewReply · ReviewReport · ProfanityFilter |
+| **เฟส** | **P0–P8 เสร็จแล้ว** |
+| **ทำต่อที่** | **P9** — เก็บงาน (permissions.ts · เอกสาร · verify รวม) |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 84/84 ✅** · migrate+seed **บนฐานใหม่** ✅ · **smoke 261/261 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 96/96 ✅** · migrate+seed ✅ · **smoke 300/300 ✅ (รันซ้ำสามรอบได้ผลเท่าเดิม)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -67,7 +67,7 @@ git add -A && git commit
 | P5 | Payment · Bank · PaymentReport | ✅ | (ดู git log) | 66/66 | ✅ | 191/191 |
 | P6 | Shipment · Tracking · Carrier · Summary | ✅ | (ดู git log) | 74/74 | ✅ | 217/217 |
 | P7 | MembershipTier · Member · Point · Reward | ✅ | (ดู git log) | 84/84 | ✅ | 261/261 |
-| P8 | Review · Reply · Report · ProfanityFilter | ⬜ | | | | |
+| P8 | Review · Reply · Report · ProfanityFilter | ✅ | (ดู git log) | 96/96 | ✅ | 300/300 |
 | P9 | เก็บงาน (เอกสาร · permissions.ts · verify รวม) | ⬜ | | | | |
 
 ### P0 — รายการย่อย
@@ -293,6 +293,35 @@ git add -A && git commit
 | F | `membership_tier.point_rate` ต้องเป็น `numeric(12,4)` | `(12,2)` ปัด 0.015 เป็น 0.02 ทำให้ระดับ Gold ให้แต้มเท่า Platinum |
 | G | `seedMemberRows()` ไม่ทำงานบนฐานเดิม | `backfillMembers()` ใน migrate เปิดแถวสมาชิกให้ลูกค้าเดิมไปก่อนแล้ว ตาราง `member` จึงไม่ว่างตอน `Seed()` · ข้อจำกัดเดิมของ `seedIfEmpty` ที่เจอมาแล้วทั้ง P5 และ P6 · **ปิดแล้ว** — ผู้ใช้อนุมัติให้ล้าง volume แล้ว seed ใหม่ ตรวจแล้วว่าเส้นทาง "ฐานเปล่าทั้งหมด" ใช้ได้จริง (สมาชิก 3 · ณภัทร Gold 68 แต้ม · กัญญา Silver 0 · สมศักดิ์ Platinum 145) และ smoke 261/261 ผ่านสองรอบติดบนฐานใหม่ |
 
+### P8 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/enums_team.go` + `labels_team.go` — `ReviewStatus` 4 ค่า · `ModerateAction` 3 ค่า + `ResultStatus()` + ป้ายไทยตรง `REVIEW_STATUS_LABELS`/`MODERATE_ACTION_LABELS` ของ TS | ✅ |
+| 2 | `model/review.go` — `Review` (+`Submit`/`Moderate`/`AddReply`/`IsVerifiedPurchase`) · `ReviewReply` (composition ◆) · `ReviewReport` (+`Decide`) · `ProfanityFilter` + `DefaultProfanityFilter()` · `FormatReviewCode` | ✅ |
+| 3 | `model/errors.go` — 12 ตัว + ยก `ErrInvalidApprovalStatus` ออกมาใช้ร่วมกับ P3 · `enums.go` เพิ่ม `NotifyReviewReported` | ✅ |
+| 4 | `migrate.go` — 3 entity ใหม่ · CHECK 3 (สถานะรีวิว · สถานะรายงาน · คะแนน 1–5) · FK 5 เส้น · unique index `(customer_id, book_id, order_id)` | ✅ |
+| 5 | `database/seed_review.go` (เขียนมือ) — รีวิว 5 ชิ้นครบสี่สถานะ + คำตอบกลับ + รายงาน · `seed.go` เพิ่ม sequence 3 ตัว | ✅ |
+| 6 | `repository/review.go` — `ReviewFilter` · `ReviewRow`/`ReportRow` (join ชื่อลูกค้า/หนังสือ/รายงาน ไม่ N+1) · `FindForUpdate` · `ExistsFor` · CRUD รายงาน | ✅ |
+| 7 | `repository/order.go` — `DeliveredOrderForBook()` ใช้ตรวจสิทธิ์เขียนรีวิว | ✅ |
+| 8 | `service/review.go` — `Submit` (ต้องเคยซื้อ + กันซ้ำ) · `List`/`Get` (ลูกค้าเห็นเฉพาะของตัวเอง) · `ForBook` · `Moderate` (ปิดรายงานในทรานแซกชันเดียว) · `Reply` · `Report` (+แจ้งผู้จัดการ) · `Reports` | ✅ |
+| 9 | `handler/review.go` + `dto_review.go` + **9 เส้นทาง** + `roleReviewStaff`/`roleReviewAudience` + `Deps.Reviews` + ต่อสายใน `cmd/api` | ✅ |
+| 10 | `model/review_test.go` 12 เคส (test 84 → 96) + `handler_test.go` เพิ่ม 9 path | ✅ |
+| 11 | `cmd/smoke/flow_review.go` 39 เคส (smoke 261 → 300) + แก้ `deliveredOrder` ให้รับรายการสินค้าเข้ามา | ✅ |
+| 12 | README (schema · enum · API · ทรานแซกชัน · deviation 25–27) · PROGRESS · `backend/CLAUDE.md` | ✅ |
+
+### P8 — บันทึกระหว่างทำ
+
+| # | เรื่อง | รายละเอียด |
+|---|---|---|
+| A | **คำหยาบ = ติดธง ไม่ใช่ปฏิเสธ** (ผู้ใช้เลือก) | `SourceCode/` ของเพื่อนให้ `Submit()` คืน error แต่หน้าจอเก็บรีวิวไว้แล้วตั้ง `flagged` · เลือกตามหน้าจอ เพราะคิว "ตรวจสอบรีวิว" มีไว้สำหรับกรณีนี้โดยเฉพาะ ถ้าปฏิเสธตั้งแต่ต้นคิวจะไม่มีของ |
+| B | **เขียนรีวิวได้เฉพาะเล่มที่ได้รับของแล้ว** (ผู้ใช้เลือก) | ต้องมีใบ `DELIVERED` ที่มีเล่มนั้น ระบบผูก `order_id` ให้เอง = ป้าย "ซื้อสินค้าจริง" · คอลัมน์ยัง nullable ตาม 0..1 ใน diagram เพราะรีวิวตั้งต้นที่นำเข้ามาไม่มีใบ |
+| C | `ReviewContext.tsx` ขัดกับ `SEED_REVIEWS` ของตัวเอง | context ตั้ง `managerStatus = APPROVED` ตอน **อนุมัติรีวิว** แต่ seed ให้รีวิวที่ **ถูกซ่อน/ลบ** เป็น APPROVED → ยึด seed: APPROVED = รายงานเป็นผล · REJECTED = รายงานไม่เป็นผล · บันทึกไว้ใน README ข้อ 26 |
+| D | การตัดสินรายงานไม่มี endpoint ของตัวเอง | เกิดพร้อม `POST /reviews/{id}/moderate` ในทรานแซกชันเดียว — กติกาเดียวกับการตรวจสลิปของ P5 ที่ไม่แยกปุ่ม ไม่งั้นสถานะรีวิวกับผลรายงานมีโอกาสไม่ตรงกัน |
+| E | `deliveredOrder()` ถูกใช้ร่วมสอง flow | เดิมฝัง `bookID`/`qty` ไว้ในตัว · เปลี่ยนเป็นรับ `[]any` ของรายการสินค้า เพื่อให้ flow รีวิวสั่งสองเล่มในใบเดียว (เล่มหนึ่งรีวิวสุภาพ อีกเล่มรีวิวที่มีคำต้องห้าม) |
+| F | รีวิวสะสมทุกรอบที่รัน smoke | เหมือนคำสั่งซื้อ/พัสดุ/แจ้งเตือน — ลบไม่ได้เพราะไม่มี endpoint ลบ · ไม่กระทบความ idempotent เพราะทุกรอบเปิดใบใหม่ `order_id` จึงไม่ซ้ำ (ตรวจแล้วรันติดกันสามรอบได้ 300/300 เท่ากัน) |
+| G | ไม่ต้องล้าง volume รอบนี้ | ทั้งสามตารางเป็นตารางใหม่ `seedIfEmpty` จึงใส่ข้อมูลให้บนฐานเดิมได้เลย (ต่างจาก P5–P7 ที่ไปเพิ่มข้อมูลให้ตารางที่ seed ไปแล้ว) |
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -324,7 +353,7 @@ git add -A && git commit
 | Payment | Payment · PaymentReport · Bank | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Membership | MembershipTier · PointTransaction · Reward · Redemption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Review | Review · ReviewReply · ReviewReport · ProfanityFilter | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Review | Review · ReviewReply · ReviewReport · ProfanityFilter | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ทั่วไป | Notification (ส่วนขยายนอก diagram) | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 
 ---

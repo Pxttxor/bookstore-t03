@@ -244,3 +244,33 @@ var (
 	ErrInvalidMinPurchase   = Validation("INVALID_MIN_PURCHASE", "ยอดสะสมขั้นต่ำต้องไม่ติดลบ")
 	ErrInvalidDiscountValue = Validation("INVALID_DISCOUNT_VALUE", "มูลค่าส่วนลดต้องมากกว่าศูนย์")
 )
+
+// ── ระบบย่อยรีวิวลูกค้า (ระบบย่อยของดวงกมล) ─────────────────────────────
+//
+// ข้อความคัดจากหน้าจอ /admin/reviews และหน้าเขียนรีวิวของหน้าร้าน
+var (
+	ErrReviewNotFound       = NotFound("REVIEW_NOT_FOUND", "ไม่พบรีวิวที่ต้องการ")
+	ErrReviewReportNotFound = NotFound("REVIEW_REPORT_NOT_FOUND", "ไม่พบรายงานรีวิวที่ต้องการ")
+
+	// ยึดตามที่ผู้ใช้เลือก: รีวิวได้เฉพาะเล่มที่สั่งซื้อและได้รับของแล้วเท่านั้น
+	ErrReviewNotPurchased = Validation("REVIEW_NOT_PURCHASED",
+		"รีวิวได้เฉพาะหนังสือที่สั่งซื้อและได้รับสินค้าแล้ว")
+
+	ErrReviewDuplicated = Conflict("REVIEW_DUPLICATED", "คุณรีวิวหนังสือเล่มนี้จากคำสั่งซื้อนี้ไปแล้ว")
+
+	// REMOVED เป็นปลายทาง — รีวิวที่ลบแล้วแก้ต่อไม่ได้ ต้องให้ลูกค้าเขียนใหม่
+	ErrReviewRemoved = Conflict("REVIEW_REMOVED", "รีวิวนี้ถูกลบไปแล้ว ทำรายการต่อไม่ได้")
+
+	ErrReviewReported = Conflict("REVIEW_REPORTED", "รีวิวนี้ถูกรายงานให้ผู้จัดการพิจารณาอยู่แล้ว")
+
+	ErrInvalidRating         = Validation("INVALID_RATING", "กรุณาให้คะแนนระหว่าง 1 ถึง 5 ดาว")
+	ErrEmptyReviewComment    = Validation("EMPTY_REVIEW_COMMENT", "กรุณากรอกข้อความรีวิว")
+	ErrEmptyReplyText        = Validation("EMPTY_REPLY_TEXT", "กรุณากรอกข้อความตอบกลับ")
+	ErrEmptyReportReason     = Validation("EMPTY_REPORT_REASON", "กรุณาระบุเหตุผลที่รายงาน")
+	ErrInvalidModerateAction = Validation("INVALID_MODERATE_ACTION", "คำสั่งตรวจสอบรีวิวไม่ถูกต้อง")
+	ErrInvalidReviewStatus   = Validation("INVALID_REVIEW_STATUS", "สถานะรีวิวไม่ถูกต้อง")
+)
+
+// ErrInvalidApprovalStatus — ผลการตัดสินต้องเป็น APPROVED หรือ REJECTED เท่านั้น
+// ใช้ร่วมกันทั้งรายงานผลต่างสต็อก (P3) และรายงานรีวิว (P8)
+var ErrInvalidApprovalStatus = Validation("INVALID_APPROVAL_STATUS", "ผลการตัดสินไม่ถูกต้อง")
