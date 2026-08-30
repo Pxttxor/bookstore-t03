@@ -35,7 +35,7 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 | **เฟส** | **P0–P7 เสร็จแล้ว** |
 | **ทำต่อที่** | **P8** — Review · ReviewReply · ReviewReport · ProfanityFilter |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 84/84 ✅** · migrate+seed ✅ · **smoke 261/261 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 84/84 ✅** · migrate+seed **บนฐานใหม่** ✅ · **smoke 261/261 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -291,7 +291,7 @@ git add -A && git commit
 | D | `service` ไม่เรียก `service` | `OrderService` รับ `*repository.MembershipRepository` เข้ามาตรง ๆ แล้วเขียนเอง — รูปแบบเดียวกับ `decidePayment` (P5) และ `closeShipment` (P6) |
 | E | `point_transaction.note` เป็น deviation | การหักแต้มด้วยมือไม่มีเอกสารต้นทาง ต้องเก็บเหตุผลไว้ · บันทึกไว้ใน README ข้อ 24 แล้ว |
 | F | `membership_tier.point_rate` ต้องเป็น `numeric(12,4)` | `(12,2)` ปัด 0.015 เป็น 0.02 ทำให้ระดับ Gold ให้แต้มเท่า Platinum |
-| G | `seedMemberRows()` ยัง**ไม่เคยถูกรันจริง** | `backfillMembers()` ใน migrate เปิดแถวสมาชิกให้ลูกค้าเดิมไปก่อนแล้ว ตาราง `member` จึงไม่ว่างตอน `Seed()` · ยอดแต้มตัวอย่างของลูกค้าตั้งต้นจะขึ้นก็ต่อเมื่อ seed บนฐานเปล่า — ข้อจำกัดเดิมของ `seedIfEmpty` ที่เจอมาแล้วทั้ง P5 และ P6 |
+| G | `seedMemberRows()` ไม่ทำงานบนฐานเดิม | `backfillMembers()` ใน migrate เปิดแถวสมาชิกให้ลูกค้าเดิมไปก่อนแล้ว ตาราง `member` จึงไม่ว่างตอน `Seed()` · ข้อจำกัดเดิมของ `seedIfEmpty` ที่เจอมาแล้วทั้ง P5 และ P6 · **ปิดแล้ว** — ผู้ใช้อนุมัติให้ล้าง volume แล้ว seed ใหม่ ตรวจแล้วว่าเส้นทาง "ฐานเปล่าทั้งหมด" ใช้ได้จริง (สมาชิก 3 · ณภัทร Gold 68 แต้ม · กัญญา Silver 0 · สมศักดิ์ Platinum 145) และ smoke 261/261 ผ่านสองรอบติดบนฐานใหม่ |
 
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
