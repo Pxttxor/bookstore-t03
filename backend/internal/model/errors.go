@@ -152,3 +152,33 @@ var (
 
 	ErrReportAlreadyDecided = Conflict("REPORT_ALREADY_DECIDED", "รายงานนี้ถูกตัดสินไปแล้ว")
 )
+
+// ── คำสั่งซื้อลูกค้าและโปรโมชั่น (ระบบย่อยของจิรพนธ์) ───────────────────
+var (
+	ErrCustomerOrderNotFound = NotFound("CUSTOMER_ORDER_NOT_FOUND", "ไม่พบคำสั่งซื้อ")
+	ErrPromotionNotFound     = NotFound("PROMOTION_NOT_FOUND", "ไม่พบโปรโมชั่น")
+
+	ErrInvalidOrderStatus  = Validation("INVALID_ORDER_STATUS", "สถานะคำสั่งซื้อไม่ถูกต้อง")
+	ErrInvalidOrderChannel = Validation("INVALID_ORDER_CHANNEL", "ช่องทางการสั่งซื้อไม่ถูกต้อง")
+	ErrNoOrderItems        = Validation("NO_ORDER_ITEMS", "ต้องมีสินค้าอย่างน้อยหนึ่งรายการ")
+	ErrAddressRequired     = Validation("ADDRESS_REQUIRED", "กรุณาระบุที่อยู่จัดส่ง")
+	ErrSlipRequired        = Validation("SLIP_REQUIRED", "กรุณาแนบหลักฐานการชำระเงิน")
+
+	// หนังสือที่ปิดการขายแล้วสั่งซื้อไม่ได้ (Book.status = INACTIVE)
+	ErrBookNotForSale = Validation("BOOK_NOT_FOR_SALE", "หนังสือเล่มนี้ปิดการขายแล้ว")
+
+	// SCR สต็อกไม่พอตอนฝ่ายขายยืนยันคำสั่งซื้อ
+	ErrInsufficientStock = Conflict("INSUFFICIENT_STOCK", "สินค้าคงคลังไม่พอสำหรับคำสั่งซื้อนี้")
+
+	ErrPromotionNotApplicable = Validation("PROMOTION_NOT_APPLICABLE",
+		"คำสั่งซื้อนี้ไม่เข้าเงื่อนไขของโปรโมชั่นที่เลือก")
+	ErrPromotionDateRange = Validation("PROMOTION_DATE_RANGE",
+		"วันเริ่มต้นต้องไม่หลังวันสิ้นสุด")
+)
+
+// OrderTransitionRejected — เปลี่ยนสถานะข้ามขั้นตอน
+// บอกทั้งสถานะปัจจุบันและปลายทางเป็นภาษาไทย เพราะหน้าจอเอาไปแสดงตรง ๆ
+func OrderTransitionRejected(from, to OrderStatus) *DomainError {
+	return Conflict("ORDER_TRANSITION_REJECTED",
+		"เปลี่ยนสถานะจาก \""+from.Label()+"\" เป็น \""+to.Label()+"\" ไม่ได้")
+}

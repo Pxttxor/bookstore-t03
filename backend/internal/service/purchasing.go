@@ -353,7 +353,7 @@ func (s *PurchasingService) assertSupplierActive(supplierID int) error {
 
 // Budget — งบประมาณและยอดผูกพันปัจจุบัน (แถบบน SCR-23)
 func (s *PurchasingService) Budget() (*BudgetSummary, error) {
-	orders, err := s.purchasing.ListOrders(repository.OrderFilter{})
+	orders, err := s.purchasing.ListOrders(repository.PurchaseOrderFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +383,7 @@ func (s *PurchasingService) ApproveRequisition(prID int, input ApproveInput, by 
 			return err
 		}
 
-		orders, err := s.purchasing.ListOrders(repository.OrderFilter{})
+		orders, err := s.purchasing.ListOrders(repository.PurchaseOrderFilter{})
 		if err != nil {
 			return err
 		}
@@ -465,7 +465,7 @@ func (s *PurchasingService) RejectRequisition(prID int, input RejectInput) (*mod
 
 // ── U8 ส่งใบสั่งซื้อให้ผู้จัดจำหน่าย ─────────────────────────────────────
 
-func (s *PurchasingService) ListOrders(filter repository.OrderFilter) ([]model.PurchaseOrder, error) {
+func (s *PurchasingService) ListOrders(filter repository.PurchaseOrderFilter) ([]model.PurchaseOrder, error) {
 	return s.purchasing.ListOrders(filter)
 }
 

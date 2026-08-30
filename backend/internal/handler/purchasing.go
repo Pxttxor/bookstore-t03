@@ -31,8 +31,8 @@ func (h *Handler) registerPurchasingRoutes(register registrar) {
 
 	// ใบสั่งซื้อ U8 · รับสินค้า U9 · ส่งคืน U10
 	// ใช้ /api/purchase-orders ไม่ใช่ /api/orders เพราะ Order ของลูกค้าเป็นคนละคลาสใน class diagram
-	register("GET /api/purchase-orders", rolePurchasing, h.listOrders)
-	register("GET /api/purchase-orders/{id}", rolePurchasing, h.getOrder)
+	register("GET /api/purchase-orders", rolePurchasing, h.listPurchaseOrders)
+	register("GET /api/purchase-orders/{id}", rolePurchasing, h.getPurchaseOrder)
 	register("POST /api/purchase-orders/{id}/send", roleWarehouse, h.sendOrder)       // U8 · can.sendOrder
 	register("POST /api/purchase-orders/{id}/confirm", roleWarehouse, h.confirmOrder) // U8
 	register("GET /api/purchase-orders/{id}/receipts", rolePurchasing, h.listOrderReceipts)
@@ -214,7 +214,7 @@ func (h *Handler) approveRequisition(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.Created(w, toOrderDTO(*order))
+	httpx.Created(w, toPurchaseOrderDTO(*order))
 }
 
 func (h *Handler) rejectRequisition(w http.ResponseWriter, r *http.Request) {
@@ -247,8 +247,8 @@ func (h *Handler) budget(w http.ResponseWriter, _ *http.Request) {
 
 // ── ใบสั่งซื้อ (U8) ─────────────────────────────────────────────────────
 
-func (h *Handler) listOrders(w http.ResponseWriter, r *http.Request) {
-	filter := repository.OrderFilter{
+func (h *Handler) listPurchaseOrders(w http.ResponseWriter, r *http.Request) {
+	filter := repository.PurchaseOrderFilter{
 		Status:     model.POStatus(r.URL.Query().Get("status")),
 		SupplierID: httpx.QueryInt(r, "supplierId", 0),
 	}
@@ -262,10 +262,10 @@ func (h *Handler) listOrders(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTOs(orders))
+	httpx.OK(w, toPurchaseOrderDTOs(orders))
 }
 
-func (h *Handler) getOrder(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	poID, err := httpx.PathInt(r, "id")
 	if err != nil {
 		httpx.Error(w, err)
@@ -276,7 +276,7 @@ func (h *Handler) getOrder(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTO(*order))
+	httpx.OK(w, toPurchaseOrderDTO(*order))
 }
 
 func (h *Handler) sendOrder(w http.ResponseWriter, r *http.Request) {
@@ -290,7 +290,7 @@ func (h *Handler) sendOrder(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTO(*order))
+	httpx.OK(w, toPurchaseOrderDTO(*order))
 }
 
 func (h *Handler) confirmOrder(w http.ResponseWriter, r *http.Request) {
@@ -309,7 +309,7 @@ func (h *Handler) confirmOrder(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTO(*order))
+	httpx.OK(w, toPurchaseOrderDTO(*order))
 }
 
 // ── รับสินค้าเข้าคลัง (U9) ──────────────────────────────────────────────

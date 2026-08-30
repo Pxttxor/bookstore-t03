@@ -110,12 +110,12 @@ func (r *PurchasingRepository) SaveRequisition(tx *gorm.DB, pr *model.PurchaseRe
 
 // ── ใบสั่งซื้อ ──────────────────────────────────────────────────────────
 
-type OrderFilter struct {
+type PurchaseOrderFilter struct {
 	Status     model.POStatus
 	SupplierID int
 }
 
-func (r *PurchasingRepository) ListOrders(filter OrderFilter) ([]model.PurchaseOrder, error) {
+func (r *PurchasingRepository) ListOrders(filter PurchaseOrderFilter) ([]model.PurchaseOrder, error) {
 	query := r.db.Model(&model.PurchaseOrder{}).
 		Preload("Items", func(q *gorm.DB) *gorm.DB { return q.Order("book_id") }).
 		Order("po_id")

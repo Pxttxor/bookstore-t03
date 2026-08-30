@@ -67,7 +67,7 @@ func (s *SupplierService) OrdersFor(supplierID int) ([]model.PurchaseOrder, erro
 	if _, err := s.suppliers.FindByID(supplierID); err != nil {
 		return nil, err
 	}
-	return s.purchasing.ListOrders(repository.OrderFilter{SupplierID: supplierID})
+	return s.purchasing.ListOrders(repository.PurchaseOrderFilter{SupplierID: supplierID})
 }
 
 // Create — U1 เพิ่มข้อมูลผู้จัดจำหน่าย

@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P3 เสร็จแล้ว** (30 ส.ค. 2569) |
-| **ทำต่อที่** | **P4** — Order · OrderItem · OrderStatusHistory · Promotion |
+| **เฟส** | **P0–P4 เสร็จแล้ว** (30 ส.ค. 2569) |
+| **ทำต่อที่** | **P5** — Payment · PaymentReport · Bank |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 47/47 ✅** · migrate+seed ✅ · **smoke 129/129 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 59/59 ✅** · migrate+seed ✅ · **smoke 171/171 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -63,7 +63,7 @@ git add -A && git commit
 | P1 | Person · Customer · UserAccount | ✅ | (ดู git log) | 32/32 | ✅ | 79/79 |
 | P2 | Category · Book CRUD · BookChangeLog | ✅ | (ดู git log) | 41/41 | ✅ | 103/103 |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ✅ | (ดู git log) | 47/47 | ✅ | 129/129 |
-| P4 | Order · OrderItem · History · Promotion | ⬜ | | | | |
+| P4 | Order · OrderItem · History · Promotion | ✅ | (ดู git log) | 59/59 | ✅ | 171/171 |
 | P5 | Payment · Bank · PaymentReport | ⬜ | | | | |
 | P6 | Shipment · Tracking · Carrier · Summary | ⬜ | | | | |
 | P7 | MembershipTier · Member · Point · Reward | ⬜ | | | | |
@@ -172,6 +172,34 @@ git add -A && git commit
 | C | อนุมัติผลต่าง = **ตั้งยอดเท่าที่นับได้** ไม่ใช่บวก `variance` | ระหว่างรอผู้จัดการตัดสิน หนังสืออาจเคลื่อนไหวไปแล้ว `variance` ที่เก็บไว้จึงล้าสมัย (พฤติกรรมเดียวกับ `decide()` ฝั่งหน้าจอ) |
 | D | `stock_count_item` ต้องเขียนหลัง `stock_discrepancy_report` | เพราะถือ `report_id` เป็น FK · ลำดับในทรานแซกชันคือ หัวเอกสาร → รายงาน → รายการที่นับ |
 
+### P4 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/enums_team.go` + `labels_team.go` — `OrderChannel` · `OrderStatus` (11 ค่า) · `PromotionType` · `PromotionStatus` + ป้ายไทยตรงกับ TS | ✅ |
+| 2 | `model/order.go` — `Order` · `OrderItem` (PK ผสม) · `OrderStatusHistory` · ตารางการเปลี่ยนสถานะ + `UpdateStatus()`/`AddItem()`/`CalcTotal()` | ✅ |
+| 3 | `model/promotion.go` — `IsApplicable()` · `CalcDiscount()` · `Overlaps()` · `DisplayStatus()` | ✅ |
+| 4 | `model/errors.go` — 12 ตัว + `OrderTransitionRejected()` ที่บอกสถานะต้นทาง/ปลายทางเป็นไทย | ✅ |
+| 5 | `migrate.go` — 4 entity ใหม่ · CHECK 5 ตัว · FK 3 เส้น · `seed.go` เพิ่ม sequence 3 ตัว | ✅ |
+| 6 | `tools/gen_seed.py` — อ่าน `SEED_PROMOTIONS` เพิ่ม (โปรโมชั่น 6 ใบ) | ✅ |
+| 7 | `database/seed_order.go` (เขียนมือ) — คำสั่งซื้อตั้งต้น 3 ใบ แปลง slug/ดอลลาร์ของหน้าร้านเป็น `book_id`/บาท · ผูกลูกค้าด้วยอีเมล | ✅ |
+| 8 | `repository/order.go` — `OrderRepository` + `PromotionRepository` (ล็อกหัวเอกสารแยกจาก Preload) | ✅ |
+| 9 | `service/order.go` — สั่งซื้อ · 10 การเปลี่ยนสถานะผ่าน `advance()` · ตรวจสต็อก · ตัด `SALE_OUT` ตอนแพ็ก · แจ้งเตือน 3 จุด | ✅ |
+| 10 | `service/promotion.go` — CRUD + guard EXPIRED + ห้ามลบใบที่ถูกใช้แล้ว | ✅ |
+| 11 | `handler/order.go` + `dto_order.go` + 19 เส้นทาง + 4 ชุดบทบาทใหม่ | ✅ |
+| 12 | `model/order_test.go` (7) + `promotion_test.go` (5) — test 47 → 59 | ✅ |
+| 13 | `cmd/smoke/flow_order.go` — 42 เคส (smoke 129 → 171) | ✅ |
+
+### P4 — บันทึกระหว่างทำ
+
+| # | เรื่อง | รายละเอียด |
+|---|---|---|
+| A | ตารางคำสั่งซื้อชื่อ `customer_order` ไม่ใช่ `order` | `ORDER` เป็นคำสงวนของ SQL · ตารางลูกใช้คำนำหน้าเดียวกัน ส่วนชื่อคลาสใน Go ยังเป็น `Order` ตาม diagram |
+| B | ชื่อชนกับระบบจัดซื้อ 5 จุด | `OrderFilter`/`orderDTO`/`toOrderDTO(s)`/`listOrders`/`getOrder` เป็นของใบสั่งซื้อผู้จัดจำหน่ายอยู่ก่อน → เปลี่ยนเป็น `PurchaseOrderFilter`/`purchaseOrderDTO`/`toPurchaseOrderDTO(s)`/`listPurchaseOrders`/`getPurchaseOrder` ต่อเนื่องจากการ rename `/api/orders`→`/api/purchase-orders` ใน P0 |
+| C | `OrderItem.bookId` เป็นตัวเลข ไม่ใช่ slug | ฝั่งหน้าจอเก็บ slug เพราะ storefront ไม่มีตารางหนังสือจริง · ฝั่งนี้ยึด class diagram · `seed_order.go` แปลงข้อมูลให้ |
+| D | สต็อกถูกตัดตอน "แพ็ก" ไม่ใช่ "ยืนยันสต็อก" | ขั้นยืนยันสต็อกเป็นการตรวจว่ามีของพอ · ของออกจากคลังจริงตอนแพ็ก · ยกเลิกใบที่แพ็กแล้วไม่ได้ จึงไม่ต้องมีเส้นทางคืนสต็อก |
+| E | smoke ตัดสต็อกจริงทุกรอบ | รอบแรกคืนยอดแค่เล่มเดียวทั้งที่ใบมีสองเล่ม อีกเล่มจึงลดลงทีละหนึ่งจนหมดและ smoke ล้ม → เปลี่ยนไปใช้เล่มที่มีของเยอะ (113/116) และคืนยอด **ทุกเล่มในใบ** |
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -198,8 +226,8 @@ git add -A && git commit
 | Book | Category · Book · BookChangeLog | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | InventoryItem · StockTransaction | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | StockCount(+Item) · StockDiscrepancyReport | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
-| Order | Order · OrderItem · OrderStatusHistory | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Promotion | Promotion | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Order | Order · OrderItem · OrderStatusHistory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Promotion | Promotion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Payment | Payment · PaymentReport · Bank | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Membership | MembershipTier · PointTransaction · Reward · Redemption | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

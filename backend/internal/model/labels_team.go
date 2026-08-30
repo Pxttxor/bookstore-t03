@@ -45,3 +45,40 @@ var StockLevelLabels = map[StockLevel]string{
 func (s StockCountStatus) Label() string { return lookup(StockCountStatusLabels, s) }
 func (s ApprovalStatus) Label() string   { return lookup(ApprovalStatusLabels, s) }
 func (l StockLevel) Label() string       { return lookup(StockLevelLabels, l) }
+
+var OrderStatusLabels = map[OrderStatus]string{
+	OrderStatusPendingConfirm:   "รอยืนยันคำสั่งซื้อ",
+	OrderStatusStockConfirmed:   "ยืนยันสต็อกแล้ว",
+	OrderStatusWaitingPayment:   "รอชำระเงิน",
+	OrderStatusVerifyingPayment: "กำลังตรวจสอบการชำระเงิน",
+	OrderStatusPaid:             "ชำระเงินแล้ว",
+	OrderStatusPacking:          "กำลังแพ็กสินค้า",
+	OrderStatusReadyToShip:      "พร้อมจัดส่ง",
+	OrderStatusShipped:          "จัดส่งแล้ว",
+	OrderStatusDelivered:        "ส่งถึงแล้ว",
+	OrderStatusCancelled:        "ยกเลิก",
+	OrderStatusRejected:         "ปฏิเสธ",
+}
+
+var OrderChannelLabels = map[OrderChannel]string{
+	OrderChannelWebsite: "เว็บไซต์",
+	OrderChannelMessage: "ข้อความ",
+	OrderChannelPhone:   "โทรศัพท์",
+}
+
+var PromotionTypeLabels = map[PromotionType]string{
+	PromotionTypeFestival: "ส่วนลดเทศกาล",
+	PromotionTypeCoupon:   "คูปองส่วนลด",
+	PromotionTypeBuyXQty:  "ซื้อครบจำนวน",
+}
+
+var PromotionStatusLabels = map[PromotionStatus]string{
+	PromotionStatusActive:   "ใช้งาน",
+	PromotionStatusInactive: "ปิดใช้งาน",
+	PromotionStatusExpired:  "หมดอายุ",
+}
+
+func (s OrderStatus) Label() string     { return lookup(OrderStatusLabels, s) }
+func (c OrderChannel) Label() string    { return lookup(OrderChannelLabels, c) }
+func (t PromotionType) Label() string   { return lookup(PromotionTypeLabels, t) }
+func (s PromotionStatus) Label() string { return lookup(PromotionStatusLabels, s) }

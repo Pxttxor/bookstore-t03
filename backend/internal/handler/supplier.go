@@ -101,7 +101,7 @@ func (h *Handler) supplierOrders(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTOs(orders))
+	httpx.OK(w, toPurchaseOrderDTOs(orders))
 }
 
 // ── U1 เพิ่ม / U2 แก้ไข / U3 ปิดใช้งาน ───────────────────────────────────

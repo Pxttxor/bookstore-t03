@@ -5,8 +5,9 @@ REST API เขียนด้วย **Go + GORM + PostgreSQL** ของโค�
 แกนหลักคือสองระบบย่อยของอาชัน สง่าศรี — **จัดการผู้จัดจำหน่าย (U1–U4)** และ **จัดซื้อ (U5–U10)**
 ตอนนี้กำลังขยายให้ครบทั้ง 46 คลาสของ class diagram (ระบบย่อยของเพื่อนร่วมทีมอีก 8 ระบบ)
 ทำเป็นเฟส ดูสถานะที่ [`PROGRESS.md`](PROGRESS.md) — ที่เสร็จแล้วคือ **บุคคล/ลูกค้า/บัญชีผู้ใช้** ·
-**ข้อมูลหนังสือ (หมวดหมู่ · หนังสือ · ประวัติการแก้ไข)** และ
-**สินค้าคงคลังเต็มรูป (ปรับยอดด้วยมือ · ตรวจนับ · รายงานผลต่าง)**
+**ข้อมูลหนังสือ (หมวดหมู่ · หนังสือ · ประวัติการแก้ไข)** ·
+**สินค้าคงคลังเต็มรูป (ปรับยอดด้วยมือ · ตรวจนับ · รายงานผลต่าง)** และ
+**คำสั่งซื้อลูกค้ากับโปรโมชั่น**
 
 ตาราง คลาส และชื่อฟิลด์ทั้งหมดยึดตาม class diagram ระดับ Analysis
 (`Sub1-Supplier-Management.md`, `Sub2-Purchasing.md` และของเจ้าของคลาสในระบบย่อยอื่น)
@@ -127,8 +128,12 @@ internal/
 | `stock_count` | count_id | — |
 | `stock_count_item` | count_id, book_id | → stock_count, book, stock_discrepancy_report (nullable) |
 | `stock_discrepancy_report` | report_id | count_id → stock_count · book_id → book |
+| `promotion` | promotion_id | — |
+| `customer_order` | order_id | customer_id → customer · promotion_id → promotion (nullable) |
+| `customer_order_item` | order_id, book_id | → customer_order, book |
+| `customer_order_status_history` | history_id | order_id → customer_order |
 
-ตารางลูกทั้งหกใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
+ตารางลูกทั้งเจ็ดใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
 ซ้ำในเอกสารฉบับเดียวไม่ได้ — service ตรวจให้ก่อนแล้วคืนข้อความไทย
 
 ### ตารางส่วนขยาย
@@ -155,6 +160,10 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | `AccountStatus` | UNVERIFIED, ACTIVE, SUSPENDED |
 | `StockCountStatus` | DRAFT, DONE |
 | `ApprovalStatus` | PENDING, APPROVED, REJECTED |
+| `OrderChannel` | WEBSITE, MESSAGE, PHONE |
+| `OrderStatus` | PENDING_CONFIRM, STOCK_CONFIRMED, WAITING_PAYMENT, VERIFYING_PAYMENT, PAID, PACKING, READY_TO_SHIP, SHIPPED, DELIVERED, CANCELLED, REJECTED |
+| `PromotionType` | FESTIVAL_DISCOUNT, COUPON, BUY_X_QTY |
+| `PromotionStatus` | ACTIVE, INACTIVE, EXPIRED |
 
 ---
 
@@ -189,6 +198,13 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | GET | `/stock-counts` · `/stock-counts/{id}` · `/discrepancies` | — | คลัง, ผจก. |
 | POST | `/stock-counts` | — | คลังสินค้า |
 | POST | `/discrepancies/{id}/approve` · `/discrepancies/{id}/reject` | — | ผู้จัดการร้าน |
+| GET | `/orders` · `/orders/{id}` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะใบตัวเอง) |
+| POST | `/orders` · `/orders/{id}/payment` | — | ลูกค้า, ฝ่ายขาย |
+| POST | `/orders/{id}/confirm-stock` · `/await-payment` · `/verify-payment` · `/reject-payment` | — | ฝ่ายขาย |
+| POST | `/orders/{id}/pack` · `/orders/{id}/ready` | — | คลังสินค้า |
+| POST | `/orders/{id}/ship` · `/orders/{id}/deliver` | — | ฝ่ายจัดส่ง |
+| POST | `/orders/{id}/cancel` | — | ฝ่ายขาย, ผจก. |
+| GET/POST/PUT/DELETE | `/promotions` · `/promotions/{id}` · `/promotions/{id}/status` | — | ผู้จัดการร้าน |
 | PUT | `/inventory/{bookId}/reorder-point` | U5 | คลังสินค้า |
 | GET | `/requisitions` · `/requisitions/{id}` | U6, U7 | คลัง, ผจก. |
 | POST | `/requisitions` · PUT `/requisitions/{id}` · POST `/requisitions/{id}/submit` | U6 | คลังสินค้า |
@@ -225,6 +241,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | ปรับยอด | ต้องมีเหตุผล · จำนวนที่ปรับไม่เป็นศูนย์ · **ยอดรวมหลังปรับของทุกเล่มต้องไม่ติดลบ (ตรวจให้ครบก่อนเขียน)** | 422 |
 | ตรวจนับ | ห้ามหนังสือซ้ำในรอบเดียว · จำนวนที่นับได้ไม่ติดลบ · แถวที่ไม่ตรงเปิดรายงานให้ผู้จัดการอัตโนมัติ | 422 |
 | ผลต่าง | ตัดสินได้ครั้งเดียว · ปฏิเสธต้องมีเหตุผล · **อนุมัติแล้วตั้งยอดเท่าที่นับได้ ไม่ใช่บวก variance** | 409 · 422 |
+| สั่งซื้อ | ต้องมีสินค้าอย่างน้อยหนึ่งรายการ · ห้ามหนังสือซ้ำ · หนังสือที่ปิดการขายสั่งไม่ได้ · โปรโมชั่นต้องเข้าเงื่อนไข | 422 |
+| สถานะคำสั่งซื้อ | เดินตามตารางการเปลี่ยนสถานะเท่านั้น ข้ามขั้นไม่ได้ · ยกเลิก/ปฏิเสธต้องมีเหตุผล · **สต็อกไม่พอ = ยืนยันสต็อกและแพ็กไม่ได้** | 409 · 422 |
+| โปรโมชั่น | ชื่อบังคับ · ส่วนลด > 0 และเปอร์เซ็นต์ไม่เกิน 100 · วันเริ่มไม่หลังวันสิ้นสุด · **ตั้งสถานะ EXPIRED เองไม่ได้** · ใบที่ถูกใช้แล้วลบไม่ได้ | 422 · 409 |
 
 ### ทรานแซกชัน
 
@@ -241,6 +260,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 8. **ปรับยอดด้วยมือ** — ล็อกแถวสินค้าคงคลัง + ตรวจยอดติดลบทุกเล่ม + ออกรายการเคลื่อนไหว
 9. **บันทึกรอบตรวจนับ** — ล็อกยอดคงเหลือ + ออกรอบ + เปิดรายงานผลต่าง + รายการที่นับ + แจ้งเตือน
 10. **ตัดสินผลต่าง** — ล็อกรายงาน + บันทึกผล + ปรับยอดให้เท่าที่นับได้ถ้าอนุมัติ
+11. **สั่งซื้อ** — ออกใบ + รายการ + timeline แถวแรก + แจ้งฝ่ายขาย
+12. **เปลี่ยนสถานะคำสั่งซื้อ** — ล็อกหัวเอกสาร + ตรวจสต็อก + เขียนสถานะกับ timeline + แจ้งเตือน
+    (ขั้นแพ็กตัดสต็อกเป็น `SALE_OUT` ในทรานแซกชันเดียวกัน)
 
 ---
 
@@ -301,7 +323,27 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
     "หนังสือใกล้หมด" ที่มาจาก activity diagram ของเจ้าของคลาส · **คนละเรื่องกับ `isBelowReorder()`**
     ซึ่งใช้จุดสั่งซื้อรายเล่มของ U5 · สองอันนี้ตอบคนละคำถาม ห้ามยุบรวมกัน
 
-15. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
+15. **ตารางคำสั่งซื้อลูกค้าชื่อ `customer_order` ไม่ใช่ `order`** — `ORDER` เป็นคำสงวนของ SQL
+    ต้องใส่เครื่องหมายคำพูดทุกครั้งที่เขียน query ซึ่งพลาดง่ายมาก · ตารางลูกใช้คำนำหน้าเดียวกัน
+    (`customer_order_item`, `customer_order_status_history`) · ชื่อคลาสใน Go ยังเป็น `Order` ตาม diagram
+
+16. **`customer_order_item.book_id` เป็นตัวเลข ไม่ใช่ slug ของหน้าร้าน** — ฝั่ง frontend เก็บ slug
+    เพราะ storefront ไม่มีตารางหนังสือจริง (deviation ที่บันทึกไว้ใน `frontend/CLAUDE.md`)
+    ฝั่งนี้มีตาราง `book` จึงยึด `OrderItem "*" --> "1" Book` ตาม class diagram ตรง ๆ
+    ข้อมูลตั้งต้นใน `seed_order.go` แปลง slug กับราคาดอลลาร์ของหน้าร้านเป็น `book_id` และบาท
+
+17. **สต็อกถูกตัดตอน "แพ็กสินค้า" ไม่ใช่ตอน "ยืนยันสต็อก"** — diagram บอกแค่
+    `Order ..> StockTransaction : SALE_OUT` ไม่ได้ระบุจังหวะ · ขั้นยืนยันสต็อกจึงเป็นการ**ตรวจ**ว่ามีของพอ
+    ส่วนของออกจากคลังจริงตอนแพ็ก · ตารางการเปลี่ยนสถานะไม่ให้ยกเลิกใบที่แพ็กแล้ว
+    จึงไม่มีเส้นทางที่ต้องคืนสต็อกกลับ
+
+18. **โปรโมชั่นต้องระบุ `promotionId` มาเอง ระบบไม่เลือกให้อัตโนมัติ** — diagram ไม่ได้บอกว่าใครเลือก
+    ใบที่ไม่เข้าเงื่อนไขจะได้ 422 ตรง ๆ แทนที่จะเงียบแล้วไม่ลดให้
+
+19. **`Payment` กับ `Shipment` ยังไม่ได้ทำ** — คำสั่งซื้อจึงเก็บหลักฐานการชำระเงินเป็นชื่อไฟล์
+    (`slip_file_name`) และเดินสถานะ SHIPPED/DELIVERED โดยยังไม่มีเลขติดตามพัสดุ · เป็นงานของเฟสถัดไป
+
+20. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
     แต่หน้าสมัครสมาชิกมีขั้นยืนยัน OTP จึงต้องมีสถานะระหว่างทาง · รหัส OTP โหมดพัฒนาเป็นค่าคงที่
     `model.DevOtpCode` เช่นเดียวกับที่การส่งอีเมลเป็นการจำลอง
 

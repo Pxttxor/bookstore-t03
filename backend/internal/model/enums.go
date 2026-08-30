@@ -216,6 +216,9 @@ const (
 	NotifyGRRecorded       NotificationKind = "GR_RECORDED"
 	NotifyReturnEscalated  NotificationKind = "RETURN_ESCALATED"
 	NotifyStockDiscrepancy NotificationKind = "STOCK_DISCREPANCY"
+	NotifyOrderPlaced      NotificationKind = "ORDER_PLACED"
+	NotifyOrderPaid        NotificationKind = "ORDER_PAID"
+	NotifyOrderReadyToShip NotificationKind = "ORDER_READY_TO_SHIP"
 )
 
 type NotificationChannel string

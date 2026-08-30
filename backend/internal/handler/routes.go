@@ -27,8 +27,18 @@ var (
 
 	// roleStock — คลังสินค้าเป็นเจ้าของงานสต็อก ผู้จัดการเป็นผู้ตัดสินผลต่าง
 	// ค่าเท่ากับ rolePurchasing แต่แยกชื่อไว้เพราะเป็นคนละเหตุผล เปลี่ยนแยกกันได้
-	roleStock    = []model.Role{model.RoleWarehouse, model.RoleManager}
-	roleCustomer = []model.Role{model.RoleCustomer}
+	roleStock = []model.Role{model.RoleWarehouse, model.RoleManager}
+
+	// คำสั่งซื้อลูกค้าแบ่งหน้าที่ตามบทบาทชัดเจน จึงมีชุดของตัวเอง
+	roleSales    = []model.Role{model.RoleSales}
+	roleDelivery = []model.Role{model.RoleDelivery}
+
+	// roleOrderIntake — ลูกค้าสั่งเอง หรือฝ่ายขายรับออร์เดอร์ทางโทรศัพท์/ข้อความแทน
+	roleOrderIntake = []model.Role{model.RoleCustomer, model.RoleSales}
+
+	// roleOrderAdmin — ยกเลิกคำสั่งซื้อได้ทั้งฝ่ายขายและผู้จัดการ
+	roleOrderAdmin = []model.Role{model.RoleSales, model.RoleManager}
+	roleCustomer   = []model.Role{model.RoleCustomer}
 
 	// roleAnyUser — ทุกคนที่ล็อกอินแล้ว รวมลูกค้า
 	// ใช้เฉพาะเส้นทางที่ service กรองข้อมูลตามเจ้าของให้อีกชั้น
@@ -64,6 +74,8 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerBookRoutes(register)         // หมวดหมู่ + หนังสือ + ประวัติการแก้ไข
 	h.registerCatalogueRoutes(register)    // สินค้าคงคลัง (รองรับ U5)
 	h.registerStockRoutes(register)        // ปรับยอด · ตรวจนับ · รายงานผลต่าง
+	h.registerOrderRoutes(register)        // คำสั่งซื้อลูกค้า
+	h.registerPromotionRoutes(register)    // โปรโมชั่นและส่วนลด
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 

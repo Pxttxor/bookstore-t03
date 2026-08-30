@@ -1,0 +1,441 @@
+// order.go — คำสั่งซื้อของลูกค้า (คลาสของจิรพนธ์ อยู่หลาย)
+//
+// class diagram: Customer "1" --> "*" Order · Order "1" *-- "*" OrderItem
+// Order "1" *-- "*" OrderStatusHistory · Order "*" --> "0..1" Promotion · Order ..> StockTransaction
+//
+// การเปลี่ยนสถานะทุกครั้งเดินผ่าน Order.UpdateStatus ซึ่งเป็นตัวคุมตารางการเปลี่ยนสถานะ
+// ที่นี่รับผิดชอบเฉพาะสิ่งที่ต้องอ่านหลายตาราง — สต็อกพอไหม โปรโมชั่นใช้ได้ไหม ใครต้องรู้เรื่องต่อ
+package service
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
+
+	"bookstore-t03/internal/model"
+	"bookstore-t03/internal/repository"
+)
+
+type OrderService struct {
+	db            *gorm.DB
+	orders        *repository.OrderRepository
+	promotions    *repository.PromotionRepository
+	books         *repository.BookRepository
+	inventory     *repository.InventoryRepository
+	people        *repository.PersonRepository
+	notifications *repository.NotificationRepository
+}
+
+func NewOrderService(
+	db *gorm.DB,
+	orders *repository.OrderRepository,
+	promotions *repository.PromotionRepository,
+	books *repository.BookRepository,
+	inventory *repository.InventoryRepository,
+	people *repository.PersonRepository,
+	notifications *repository.NotificationRepository,
+) *OrderService {
+	return &OrderService{
+		db: db, orders: orders, promotions: promotions, books: books,
+		inventory: inventory, people: people, notifications: notifications,
+	}
+}
+
+// ── DTO ที่หน้าจอส่งเข้ามา ───────────────────────────────────────────────
+
+type OrderLineInput struct {
+	BookID   int `json:"bookId"`
+	Quantity int `json:"quantity"`
+}
+
+// PlaceOrderInput — ฟอร์มสั่งซื้อ
+//
+// ลูกค้าที่ล็อกอินอยู่ไม่ต้องส่ง customerId และ channel มา (ระบบเติมให้เป็นตัวเองกับ WEBSITE)
+// ฝ่ายขายที่รับออร์เดอร์ทางโทรศัพท์หรือข้อความต้องระบุทั้งสองอย่าง
+type PlaceOrderInput struct {
+	CustomerID      int                `json:"customerId"`
+	Channel         model.OrderChannel `json:"channel"`
+	ShippingAddress string             `json:"shippingAddress"`
+	PromotionID     *int               `json:"promotionId,omitempty"`
+	SlipFileName    string             `json:"slipFileName"`
+	Items           []OrderLineInput   `json:"items"`
+}
+
+type PaymentSlipInput struct {
+	SlipFileName string `json:"slipFileName"`
+}
+
+// OrderNoteInput — เหตุผลที่แนบมากับการยกเลิกหรือปฏิเสธ
+type OrderNoteInput struct {
+	Note string `json:"note"`
+}
+
+// OrderView — คำสั่งซื้อพร้อมชื่อลูกค้า ชื่อหนังสือ และโปรโมชั่นที่ใช้
+type OrderView struct {
+	Order        model.Order
+	CustomerName string
+	Books        map[int]model.Book
+	Promotion    *model.Promotion
+}
+
+// ── อ่าน ────────────────────────────────────────────────────────────────
+
+// List — รายการคำสั่งซื้อ · ลูกค้าเห็นเฉพาะของตัวเองเสมอ ไม่ว่าจะส่งตัวกรองอะไรมา
+func (s *OrderService) List(current Identity, status model.OrderStatus) ([]OrderView, error) {
+	if status != "" && !status.IsValid() {
+		return nil, model.ErrInvalidOrderStatus
+	}
+
+	filter := repository.OrderFilter{Status: status}
+	if current.IsCustomer() {
+		filter.CustomerID = current.CustomerID
+	}
+
+	orders, err := s.orders.List(filter)
+	if err != nil {
+		return nil, err
+	}
+	return s.views(orders)
+}
+
+// Get — คำสั่งซื้อหนึ่งใบ · ลูกค้าเปิดของคนอื่นไม่ได้
+func (s *OrderService) Get(current Identity, orderID int) (*OrderView, error) {
+	order, err := s.orders.Find(s.db, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if current.IsCustomer() && order.CustomerID != current.CustomerID {
+		return nil, model.ErrForbidden
+	}
+	return s.view(*order)
+}
+
+// ── สั่งซื้อ ────────────────────────────────────────────────────────────
+
+// Place — ลูกค้าสั่งซื้อ (`Customer.placeOrder()` ใน class diagram)
+//
+// ยังไม่ตัดสต็อกตอนนี้ — ฝ่ายขายต้องยืนยันสต็อกก่อน แล้วของจะออกจากคลังจริงตอนแพ็ก
+func (s *OrderService) Place(input PlaceOrderInput, current Identity) (*OrderView, error) {
+	order, err := s.buildOrder(input, current)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if err := s.orders.Create(tx, order); err != nil {
+			return err
+		}
+		body := fmt.Sprintf("%s · %s · ฿%.2f · %d เล่ม",
+			model.FormatOrderCode(order.OrderID), order.Channel.Label(),
+			order.NetAmount, order.ItemCount())
+		return pushBothChannels(tx, s.notifications, model.RoleSales,
+			model.NotifyOrderPlaced, "มีคำสั่งซื้อใหม่รอยืนยัน", body,
+			fmt.Sprintf("/admin/orders/%d", order.OrderID))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.view(*order)
+}
+
+// buildOrder — ตรวจฟอร์มแล้วประกอบเป็นคำสั่งซื้อที่พร้อมเขียนลงฐานข้อมูล
+func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*model.Order, error) {
+	customerID, channel := input.CustomerID, input.Channel
+	if current.IsCustomer() {
+		// ลูกค้าสั่งให้ตัวเองเท่านั้น ส่ง customerId ของคนอื่นมาก็ไม่มีผล
+		customerID, channel = current.CustomerID, model.OrderChannelWebsite
+	}
+	if !channel.IsValid() {
+		return nil, model.ErrInvalidOrderChannel
+	}
+
+	customer, err := s.people.FindCustomer(customerID)
+	if err != nil {
+		return nil, err
+	}
+
+	address := strings.TrimSpace(input.ShippingAddress)
+	if address == "" {
+		address = customer.Customer.Address // ใช้ที่อยู่ในโปรไฟล์ถ้าไม่ได้กรอกมาใหม่
+	}
+	if address == "" {
+		return nil, model.ErrAddressRequired
+	}
+	if len(input.Items) == 0 {
+		return nil, model.ErrNoOrderItems
+	}
+
+	now := time.Now().UTC()
+	order := &model.Order{
+		CustomerID:      customerID,
+		Channel:         channel,
+		OrderDate:       now,
+		ShippingAddress: address,
+		Status:          model.OrderStatusPendingConfirm,
+		SlipFileName:    strings.TrimSpace(input.SlipFileName),
+	}
+
+	for _, line := range input.Items {
+		book, err := s.books.Find(s.db, line.BookID)
+		if err != nil {
+			return nil, err
+		}
+		if book.Status != model.BookStatusActive {
+			return nil, model.ErrBookNotForSale
+		}
+		if err := order.AddItem(*book, line.Quantity); err != nil {
+			return nil, err
+		}
+	}
+	order.CalcTotal()
+
+	if err := s.applyPromotion(order, input.PromotionID); err != nil {
+		return nil, err
+	}
+	order.Timeline = []model.OrderStatusHistory{{
+		Status: order.Status, ChangedDate: now, ChangedBy: current.Name,
+		Note: "รับคำสั่งซื้อ",
+	}}
+	return order, nil
+}
+
+// applyPromotion — ผูกโปรโมชั่นที่ลูกค้าเลือกแล้วคำนวณส่วนลดใหม่
+func (s *OrderService) applyPromotion(order *model.Order, promotionID *int) error {
+	if promotionID == nil || *promotionID == 0 {
+		return nil
+	}
+
+	promotion, err := s.promotions.Find(s.db, *promotionID)
+	if err != nil {
+		return err
+	}
+	if !promotion.IsApplicable(*order, model.Today()) {
+		return model.ErrPromotionNotApplicable
+	}
+
+	order.PromotionID = promotionID
+	order.DiscountAmount = promotion.CalcDiscount(*order)
+	order.CalcTotal()
+	return nil
+}
+
+// ── เปลี่ยนสถานะ ────────────────────────────────────────────────────────
+
+// ConfirmStock — ฝ่ายขายยืนยันว่ามีของพอ (PENDING_CONFIRM → STOCK_CONFIRMED)
+func (s *OrderService) ConfirmStock(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusStockConfirmed, by, "ยืนยันสต็อกแล้ว",
+		func(tx *gorm.DB, order *model.Order) error {
+			return s.assertStockAvailable(tx, order)
+		})
+}
+
+// AwaitPayment — ออร์เดอร์ทางโทรศัพท์/ข้อความที่ยังไม่ได้ชำระ (STOCK_CONFIRMED → WAITING_PAYMENT)
+func (s *OrderService) AwaitPayment(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusWaitingPayment, by, "รอลูกค้าชำระเงิน", nil)
+}
+
+// SubmitPayment — แนบหลักฐานการชำระเงิน (→ VERIFYING_PAYMENT)
+//
+// ลูกค้าแนบเองได้เฉพาะใบของตัวเอง · ฝ่ายขายแนบแทนได้ทุกใบ (รับสลิปทางแชทหรือโทรศัพท์)
+func (s *OrderService) SubmitPayment(
+	current Identity, orderID int, input PaymentSlipInput,
+) (*OrderView, error) {
+	slip := strings.TrimSpace(input.SlipFileName)
+	if slip == "" {
+		return nil, model.ErrSlipRequired
+	}
+
+	return s.advance(orderID, model.OrderStatusVerifyingPayment, current.Name, "แนบหลักฐานการชำระเงิน",
+		func(_ *gorm.DB, order *model.Order) error {
+			if current.IsCustomer() && order.CustomerID != current.CustomerID {
+				return model.ErrForbidden
+			}
+			order.SlipFileName = slip
+			return nil
+		})
+}
+
+// VerifyPayment — ฝ่ายขายตรวจสลิปแล้วผ่าน (`SalesStaff.verifyPayment()`) → แจ้งคลังให้แพ็ก
+func (s *OrderService) VerifyPayment(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusPaid, by, "ตรวจสอบการชำระเงินแล้ว",
+		func(tx *gorm.DB, order *model.Order) error {
+			body := fmt.Sprintf("%s · ฿%.2f · %d เล่ม",
+				model.FormatOrderCode(order.OrderID), order.NetAmount, order.ItemCount())
+			return pushBothChannels(tx, s.notifications, model.RoleWarehouse,
+				model.NotifyOrderPaid, "คำสั่งซื้อชำระเงินแล้ว รอแพ็กสินค้า", body,
+				fmt.Sprintf("/admin/orders/%d", order.OrderID))
+		})
+}
+
+// RejectPayment — สลิปไม่ผ่าน ต้องบอกเหตุผลให้ลูกค้ารู้
+func (s *OrderService) RejectPayment(orderID int, input OrderNoteInput, by string) (*OrderView, error) {
+	note := strings.TrimSpace(input.Note)
+	if note == "" {
+		return nil, model.ErrReasonRequired
+	}
+	return s.advance(orderID, model.OrderStatusRejected, by, note, nil)
+}
+
+// Pack — คลังแพ็กสินค้า (PAID → PACKING) แล้ว**ตัดสต็อกจริงตอนนี้**
+//
+// ตัดตอนแพ็กไม่ใช่ตอนยืนยันสต็อก เพราะของออกจากคลังจริงที่ขั้นนี้ · และตารางการเปลี่ยนสถานะ
+// ไม่ให้ยกเลิกใบที่แพ็กแล้ว จึงไม่มีเส้นทางที่ต้องคืนสต็อกกลับ
+func (s *OrderService) Pack(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusPacking, by, "กำลังแพ็กสินค้า",
+		func(tx *gorm.DB, order *model.Order) error {
+			if err := s.assertStockAvailable(tx, order); err != nil {
+				return err
+			}
+
+			txns := make([]model.StockTransaction, len(order.Items))
+			now := time.Now().UTC()
+			for i, item := range order.Items {
+				txns[i] = model.StockTransaction{
+					BookID:         item.BookID,
+					Type:           model.StockTxnTypeSaleOut,
+					QuantityChange: -item.Quantity,
+					Reason:         "ตัดขายตามคำสั่งซื้อ",
+					ReferenceDoc:   model.FormatOrderCode(order.OrderID),
+					TxnDate:        now,
+				}
+			}
+			return s.inventory.ApplyStrictStockChanges(tx, txns)
+		})
+}
+
+// ReadyToShip — แพ็กเสร็จ พร้อมให้ฝ่ายจัดส่งมารับ → แจ้งฝ่ายจัดส่ง
+func (s *OrderService) ReadyToShip(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusReadyToShip, by, "พร้อมจัดส่ง",
+		func(tx *gorm.DB, order *model.Order) error {
+			body := fmt.Sprintf("%s · %s", model.FormatOrderCode(order.OrderID), order.ShippingAddress)
+			return pushBothChannels(tx, s.notifications, model.RoleDelivery,
+				model.NotifyOrderReadyToShip, "มีพัสดุรอจัดส่ง", body,
+				fmt.Sprintf("/admin/orders/%d", order.OrderID))
+		})
+}
+
+// Ship / Deliver — ฝ่ายจัดส่งบันทึกการส่งและการรับของ
+// รายละเอียดการขนส่ง (Shipment · เลขติดตามพัสดุ) เป็นระบบย่อยของดวงกมล ยังไม่ได้ทำในเฟสนี้
+func (s *OrderService) Ship(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusShipped, by, "ส่งมอบให้ขนส่งแล้ว", nil)
+}
+
+func (s *OrderService) Deliver(orderID int, by string) (*OrderView, error) {
+	return s.advance(orderID, model.OrderStatusDelivered, by, "ลูกค้าได้รับสินค้าแล้ว", nil)
+}
+
+// Cancel — ยกเลิกคำสั่งซื้อ ต้องมีเหตุผลเสมอ
+func (s *OrderService) Cancel(orderID int, input OrderNoteInput, by string) (*OrderView, error) {
+	note := strings.TrimSpace(input.Note)
+	if note == "" {
+		return nil, model.ErrReasonRequired
+	}
+	return s.advance(orderID, model.OrderStatusCancelled, by, note, nil)
+}
+
+// advance — โครงร่วมของทุกการเปลี่ยนสถานะ
+//
+// ล็อกหัวเอกสาร → ให้ hook ตรวจ/ทำงานเพิ่ม → ให้ model ตัดสินว่าเปลี่ยนสถานะได้ไหม
+// → บันทึกหัวเอกสารกับแถว timeline ที่เพิ่งเกิด
+func (s *OrderService) advance(
+	orderID int, next model.OrderStatus, by, note string,
+	hook func(tx *gorm.DB, order *model.Order) error,
+) (*OrderView, error) {
+	var order *model.Order
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		found, err := s.orders.FindForUpdate(tx, orderID)
+		if err != nil {
+			return err
+		}
+		order = found
+
+		if hook != nil {
+			if err := hook(tx, order); err != nil {
+				return err
+			}
+		}
+
+		before := len(order.Timeline)
+		if err := order.UpdateStatus(next, by, note, time.Now()); err != nil {
+			return err
+		}
+		if err := s.orders.Save(tx, order); err != nil {
+			return err
+		}
+		return s.orders.AddHistory(tx, order.Timeline[before:])
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.view(*order)
+}
+
+// assertStockAvailable — สต็อกพอสำหรับทุกเล่มในใบนี้ไหม (ล็อกแถวไว้ระหว่างตรวจ)
+func (s *OrderService) assertStockAvailable(tx *gorm.DB, order *model.Order) error {
+	bookIDs := make([]int, len(order.Items))
+	for i, item := range order.Items {
+		bookIDs[i] = item.BookID
+	}
+
+	items, err := s.inventory.LockItemsByBook(tx, bookIDs)
+	if err != nil {
+		return err
+	}
+	for _, line := range order.Items {
+		item, ok := items[line.BookID]
+		if !ok || item.QuantityOnHand < line.Quantity {
+			return model.ErrInsufficientStock
+		}
+	}
+	return nil
+}
+
+// ── ตัวช่วยประกอบ view ──────────────────────────────────────────────────
+
+func (s *OrderService) view(order model.Order) (*OrderView, error) {
+	views, err := s.views([]model.Order{order})
+	if err != nil {
+		return nil, err
+	}
+	return &views[0], nil
+}
+
+func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
+	views := make([]OrderView, len(orders))
+	if len(orders) == 0 {
+		return views, nil
+	}
+
+	books, err := s.books.BooksByID()
+	if err != nil {
+		return nil, err
+	}
+	customers, err := s.people.ListCustomers(repository.CustomerFilter{})
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[int]string, len(customers))
+	for _, row := range customers {
+		names[row.Customer.CustomerID] = row.Person.Name()
+	}
+	promotions, err := s.promotions.List()
+	if err != nil {
+		return nil, err
+	}
+	byPromotion := make(map[int]model.Promotion, len(promotions))
+	for _, promotion := range promotions {
+		byPromotion[promotion.PromotionID] = promotion
+	}
+
+	for i, order := range orders {
+		views[i] = OrderView{Order: order, CustomerName: names[order.CustomerID], Books: books}
+		if order.PromotionID != nil {
+			if promotion, ok := byPromotion[*order.PromotionID]; ok {
+				views[i].Promotion = &promotion
+			}
+		}
+	}
+	return views, nil
+}

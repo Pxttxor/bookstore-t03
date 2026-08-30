@@ -44,6 +44,28 @@ var seedBooks = []model.Book{
 	{BookID: 123, ISBN: "978-616-0012-02", Title: "ผจญภัยในป่าใหญ่", Author: "กานต์ พิมพ์ทอง", Publisher: "ต้นกล้า", Price: 225.0, Description: "การผจญภัยของเด็ก ๆ กับผองเพื่อนสัตว์ป่า สอนเรื่องการอนุรักษ์", CategoryID: 6, Status: model.BookStatusActive},
 }
 
+// seedPromotions — โปรโมชั่นตั้งต้น · EXPIRED คำนวณจากวันสิ้นสุด ไม่ได้เก็บในคอลัมน์ status
+var seedPromotions = []model.Promotion{
+	{PromotionID: 1, Name: "ลดรับสงกรานต์", Type: model.PromotionType("FESTIVAL_DISCOUNT"), ConditionDetail: "ลดทั้งร้านช่วงเทศกาลสงกรานต์",
+		DiscountValue: 15.0, IsPercent: true, MinQty: 0, MinAmount: 0.0,
+		StartDate: mustDate("2026-04-10"), EndDate: mustDate("2026-04-20"), Status: model.PromotionStatus("ACTIVE")},
+	{PromotionID: 2, Name: "มหกรรมหนังสือกลางปี", Type: model.PromotionType("FESTIVAL_DISCOUNT"), ConditionDetail: "ลดหนังสือหมวดนิยายและพัฒนาตนเอง",
+		DiscountValue: 20.0, IsPercent: true, MinQty: 0, MinAmount: 300.0,
+		StartDate: mustDate("2026-06-01"), EndDate: mustDate("2026-06-30"), Status: model.PromotionStatus("ACTIVE")},
+	{PromotionID: 3, Name: "ต้อนรับเปิดเทอม", Type: model.PromotionType("FESTIVAL_DISCOUNT"), ConditionDetail: "ลดหนังสือทุกเล่มช่วงเปิดภาคเรียน",
+		DiscountValue: 12.0, IsPercent: true, MinQty: 0, MinAmount: 0.0,
+		StartDate: mustDate("2026-08-01"), EndDate: mustDate("2026-08-31"), Status: model.PromotionStatus("ACTIVE")},
+	{PromotionID: 4, Name: "คูปองต้อนรับสมาชิกใหม่", Type: model.PromotionType("COUPON"), ConditionDetail: "ใช้โค้ด WELCOME50 เมื่อซื้อครบ 500 บาท",
+		DiscountValue: 50.0, IsPercent: false, MinQty: 0, MinAmount: 500.0,
+		StartDate: mustDate("2026-07-01"), EndDate: mustDate("2026-12-31"), Status: model.PromotionStatus("ACTIVE")},
+	{PromotionID: 5, Name: "ซื้อครบ 3 เล่มลดเพิ่ม", Type: model.PromotionType("BUY_X_QTY"), ConditionDetail: "ซื้อหนังสือครบ 3 เล่มขึ้นไป รับส่วนลดเพิ่ม 10%",
+		DiscountValue: 10.0, IsPercent: true, MinQty: 3, MinAmount: 0.0,
+		StartDate: mustDate("2026-08-01"), EndDate: mustDate("2026-09-30"), Status: model.PromotionStatus("ACTIVE")},
+	{PromotionID: 6, Name: "คูปองสมาชิกวีไอพี (พักการใช้งาน)", Type: model.PromotionType("COUPON"), ConditionDetail: "ส่วนลด 100 บาทสำหรับสมาชิกวีไอพี",
+		DiscountValue: 100.0, IsPercent: false, MinQty: 0, MinAmount: 800.0,
+		StartDate: mustDate("2026-08-01"), EndDate: mustDate("2026-10-31"), Status: model.PromotionStatus("INACTIVE")},
+}
+
 // seedBookChangeLogs — ประวัติการแก้ไขตั้งต้น ให้แท็บประวัติมีข้อมูลให้ดูตั้งแต่เปิดครั้งแรก
 var seedBookChangeLogs = []model.BookChangeLog{
 	{LogID: 1, BookID: 101, ChangedField: "price", OldValue: "459", NewValue: "438", ChangedDate: mustTime("2026-07-02T04:15:00.000Z"), ChangedBy: "ณัฐวุฒิ แสงจันทร์"},

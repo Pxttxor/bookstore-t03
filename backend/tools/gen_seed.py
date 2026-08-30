@@ -24,6 +24,7 @@ books_ts = read(os.path.join(FE, "books", "books.ts"))
 sup_ts = read(os.path.join(FE, "suppliers", "suppliers.ts"))
 inv_ts = read(os.path.join(FE, "inventory", "inventory.ts"))
 pur_ts = read(os.path.join(FE, "purchasing", "purchasing.ts"))
+promo_ts = read(os.path.join(FE, "promotions", "promotions.ts"))
 
 # ── หมวดหมู่ ─────────────────────────────────────────────────────────────
 cat_re = re.compile(r"\{ categoryId: (\d+), name: " + STR + r", description: " + STR + r" \}")
@@ -152,6 +153,24 @@ def obj_blocks(source, marker):
 def items_of(block, fn):
     return re.findall(fn, block)
 
+# ── โปรโมชั่น ────────────────────────────────────────────────────────────
+promotions = []
+for b in obj_blocks(promo_ts, "SEED_PROMOTIONS"):
+    promotions.append(dict(
+        id=int(re.search(r"promotionId: (\d+)", b).group(1)),
+        name=unq(re.search(r"name: " + STR, b).group(1)),
+        type=re.search(r"type: '(\w+)'", b).group(1),
+        detail=unq(re.search(r"conditionDetail: " + STR, b).group(1)),
+        value=float(re.search(r"discountValue: " + NUM, b).group(1)),
+        percent=re.search(r"isPercent: (true|false)", b).group(1) == "true",
+        minQty=int(re.search(r"minQty: (\d+)", b).group(1)),
+        minAmount=float(re.search(r"minAmount: " + NUM, b).group(1)),
+        start=re.search(r"startDate: " + STR, b).group(1),
+        end=re.search(r"endDate: " + STR, b).group(1),
+        status=re.search(r"status: '(\w+)'", b).group(1)))
+assert len(promotions) >= 4, len(promotions)
+
+# ── เอกสารจัดซื้อ (ต่อ) ──────────────────────────────────────────────────
 requisitions = []
 for b in obj_blocks(pur_ts, "SEED_REQUISITIONS"):
     requisitions.append(dict(
@@ -223,6 +242,18 @@ for b in books:
       % (b["id"], q(b["isbn"]), q(b["title"]), q(b["author"]), q(b["publisher"]),
          repr(b["price"]), q(b["description"]), b["category"],
          "Active" if b["status"] == "ACTIVE" else "Inactive"))
+w("}")
+w("")
+
+w("// seedPromotions — โปรโมชั่นตั้งต้น · EXPIRED คำนวณจากวันสิ้นสุด ไม่ได้เก็บในคอลัมน์ status")
+w("var seedPromotions = []model.Promotion{")
+for p in promotions:
+    w("\t{PromotionID: %d, Name: %s, Type: model.PromotionType(%s), ConditionDetail: %s,"
+      % (p["id"], q(p["name"]), q(p["type"]), q(p["detail"])))
+    w("\t\tDiscountValue: %s, IsPercent: %s, MinQty: %d, MinAmount: %s,"
+      % (repr(p["value"]), "true" if p["percent"] else "false", p["minQty"], repr(p["minAmount"])))
+    w("\t\tStartDate: mustDate(%s), EndDate: mustDate(%s), Status: model.PromotionStatus(%s)},"
+      % (q(p["start"]), q(p["end"]), q(p["status"])))
 w("}")
 w("")
 
@@ -352,9 +383,9 @@ assert "seedStockTransactions" not in "\n".join(L), \
 io.open(OUT, "w", encoding="utf-8", newline="\n").write("\n".join(L) + "\n")
 subprocess.run(["gofmt", "-w", OUT], check=True)  # ให้ผ่าน `gofmt -l .` ตั้งแต่สร้างเสร็จ
 print("wrote", OUT)
-print("categories=%d books=%d changeLogs=%d suppliers=%d inventory=%d PR=%d PO=%d GR=%d"
-      % (len(categories), len(books), sum(len(b["logs"]) for b in books), len(suppliers),
-         len(inventory), len(requisitions), len(orders), len(receipts)))
+print("categories=%d books=%d changeLogs=%d promotions=%d suppliers=%d inventory=%d PR=%d PO=%d GR=%d"
+      % (len(categories), len(books), sum(len(b["logs"]) for b in books), len(promotions),
+         len(suppliers), len(inventory), len(requisitions), len(orders), len(receipts)))
 print("offers/supplier:", [len(s["offers"]) for s in suppliers])
 print("deactivated:", [s["id"] for s in suppliers if s["deact"]])
 print("PO items:", [len(o["items"]) for o in orders])

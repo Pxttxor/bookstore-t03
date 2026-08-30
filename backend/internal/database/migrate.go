@@ -42,6 +42,10 @@ var entities = []any{
 	&model.StockCount{},
 	&model.StockDiscrepancyReport{},
 	&model.StockCountItem{},
+	&model.Promotion{},
+	&model.Order{},
+	&model.OrderItem{},
+	&model.OrderStatusHistory{},
 	&model.Notification{},
 }
 
@@ -193,6 +197,9 @@ var foreignKeys = []foreignKey{
 	{"stock_count_item", "report_id", "stock_discrepancy_report", "report_id"},
 	{"stock_discrepancy_report", "count_id", "stock_count", "count_id"},
 	{"stock_discrepancy_report", "book_id", "book", "book_id"},
+	{"customer_order", "customer_id", "customer", "customer_id"},
+	{"customer_order", "promotion_id", "promotion", "promotion_id"},
+	{"customer_order_item", "book_id", "book", "book_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
@@ -250,6 +257,14 @@ func checks() []enumCheck {
 			model.StockCountStatusDraft, model.StockCountStatusDone)},
 		{"stock_discrepancy_report", "approval_status", values(
 			model.ApprovalStatusPending, model.ApprovalStatusApproved, model.ApprovalStatusRejected)},
+		{"customer_order", "channel", values(
+			model.OrderChannelWebsite, model.OrderChannelMessage, model.OrderChannelPhone)},
+		{"customer_order", "status", values(model.OrderStatuses()...)},
+		{"customer_order_status_history", "status", values(model.OrderStatuses()...)},
+		{"promotion", "type", values(
+			model.PromotionTypeFestival, model.PromotionTypeCoupon, model.PromotionTypeBuyXQty)},
+		{"promotion", "status", values(
+			model.PromotionStatusActive, model.PromotionStatusInactive, model.PromotionStatusExpired)},
 		{"notification", "channel", values(model.ChannelInApp, model.ChannelEmail)},
 	}
 }

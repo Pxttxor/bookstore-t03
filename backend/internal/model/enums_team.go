@@ -73,3 +73,90 @@ const (
 
 // LowStockThreshold — เกณฑ์ "เหลือน้อย" ของรายงาน (ตรงกับ LOW_STOCK_THRESHOLD ฝั่งหน้าจอ)
 const LowStockThreshold = 10
+
+// ── คำสั่งซื้อลูกค้า (เจ้าของคลาส: จิรพนธ์ อยู่หลาย) ─────────────────────
+
+// OrderChannel — ช่องทางที่ลูกค้าสั่งซื้อ
+type OrderChannel string
+
+const (
+	OrderChannelWebsite OrderChannel = "WEBSITE"
+	OrderChannelMessage OrderChannel = "MESSAGE"
+	OrderChannelPhone   OrderChannel = "PHONE"
+)
+
+func (c OrderChannel) IsValid() bool {
+	switch c {
+	case OrderChannelWebsite, OrderChannelMessage, OrderChannelPhone:
+		return true
+	}
+	return false
+}
+
+// OrderStatus — สถานะคำสั่งซื้อ 11 ค่าตาม class diagram
+type OrderStatus string
+
+const (
+	OrderStatusPendingConfirm   OrderStatus = "PENDING_CONFIRM"
+	OrderStatusStockConfirmed   OrderStatus = "STOCK_CONFIRMED"
+	OrderStatusWaitingPayment   OrderStatus = "WAITING_PAYMENT"
+	OrderStatusVerifyingPayment OrderStatus = "VERIFYING_PAYMENT"
+	OrderStatusPaid             OrderStatus = "PAID"
+	OrderStatusPacking          OrderStatus = "PACKING"
+	OrderStatusReadyToShip      OrderStatus = "READY_TO_SHIP"
+	OrderStatusShipped          OrderStatus = "SHIPPED"
+	OrderStatusDelivered        OrderStatus = "DELIVERED"
+	OrderStatusCancelled        OrderStatus = "CANCELLED"
+	OrderStatusRejected         OrderStatus = "REJECTED"
+)
+
+// OrderStatuses — ทุกค่าเรียงตามลำดับใน class diagram (ใช้ตอนสร้าง CHECK constraint)
+func OrderStatuses() []OrderStatus {
+	return []OrderStatus{
+		OrderStatusPendingConfirm, OrderStatusStockConfirmed, OrderStatusWaitingPayment,
+		OrderStatusVerifyingPayment, OrderStatusPaid, OrderStatusPacking,
+		OrderStatusReadyToShip, OrderStatusShipped, OrderStatusDelivered,
+		OrderStatusCancelled, OrderStatusRejected,
+	}
+}
+
+func (s OrderStatus) IsValid() bool {
+	_, ok := orderTransitions[s]
+	return ok
+}
+
+// ── โปรโมชั่น (เจ้าของคลาส: จิรพนธ์ อยู่หลาย) ───────────────────────────
+
+// PromotionType — ชนิดของโปรโมชั่น
+type PromotionType string
+
+const (
+	PromotionTypeFestival PromotionType = "FESTIVAL_DISCOUNT"
+	PromotionTypeCoupon   PromotionType = "COUPON"
+	PromotionTypeBuyXQty  PromotionType = "BUY_X_QTY"
+)
+
+func (t PromotionType) IsValid() bool {
+	switch t {
+	case PromotionTypeFestival, PromotionTypeCoupon, PromotionTypeBuyXQty:
+		return true
+	}
+	return false
+}
+
+// PromotionStatus — EXPIRED คำนวณจากวันหมดอายุ ไม่ได้ตั้งเอง (ดู Promotion.DisplayStatus)
+type PromotionStatus string
+
+const (
+	PromotionStatusActive   PromotionStatus = "ACTIVE"
+	PromotionStatusInactive PromotionStatus = "INACTIVE"
+	PromotionStatusExpired  PromotionStatus = "EXPIRED"
+)
+
+func (s PromotionStatus) IsValid() bool {
+	switch s {
+	case PromotionStatusActive, PromotionStatusInactive, PromotionStatusExpired:
+		return true
+	}
+	return false
+}
