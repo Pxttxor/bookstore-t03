@@ -95,3 +95,35 @@ func seedCustomerRows(tx *gorm.DB, passwordHash string) (int, error) {
 	}
 	return len(seedCustomers), nil
 }
+
+// seedEmployeeRows — พนักงานตั้งต้น พร้อมแถว person ของแต่ละคน
+//
+// ต้องสร้าง person ให้ก่อนแล้วผูก person_id เอง เพราะ `employee.person_id` เป็น NOT NULL
+// และมี unique index (`uq_employee_person`) ตั้งแต่ P1 · ปล่อยให้เป็น 0 ทั้งสี่แถวไม่ได้
+// (`backfillPersons()` ช่วยได้เฉพาะฐานที่มีพนักงานอยู่ก่อนแล้ว ไม่ใช่ฐานเปล่า)
+func seedEmployeeRows(tx *gorm.DB, passwordHash string) (int, error) {
+	empty, err := tableEmpty[model.Employee](tx, "พนักงาน")
+	if err != nil || !empty {
+		return 0, err
+	}
+
+	for _, row := range seedEmployees {
+		person := model.Person{
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
+			Phone:     row.Phone,
+			Email:     row.Email,
+		}
+		if err := tx.Create(&person).Error; err != nil {
+			return 0, fmt.Errorf("ใส่ข้อมูลบุคคล %s ไม่สำเร็จ: %w", person.Email, err)
+		}
+
+		employee := row
+		employee.PersonID = person.PersonID
+		employee.PasswordHash = passwordHash
+		if err := tx.Create(&employee).Error; err != nil {
+			return 0, fmt.Errorf("ใส่ข้อมูลพนักงาน %s ไม่สำเร็จ: %w", employee.Email, err)
+		}
+	}
+	return len(seedEmployees), nil
+}

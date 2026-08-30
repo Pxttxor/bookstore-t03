@@ -73,7 +73,7 @@ func main() {
 	promotionService := service.NewPromotionService(db, promotionRepo)
 	orderService := service.NewOrderService(
 		db, orderRepo, promotionRepo, bookRepo, inventoryRepo, personRepo, paymentRepo, notificationRepo)
-	paymentService := service.NewPaymentService(db, paymentRepo)
+	paymentService := service.NewPaymentService(db, paymentRepo, orderRepo)
 	purchasingService := service.NewPurchasingService(
 		db, purchasingRepo, supplierRepo, inventoryRepo, bookRepo, notificationRepo)
 

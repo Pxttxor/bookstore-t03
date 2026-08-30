@@ -132,6 +132,9 @@ internal/
 | `customer_order` | order_id | customer_id → customer · promotion_id → promotion (nullable) |
 | `customer_order_item` | order_id, book_id | → customer_order, book |
 | `customer_order_status_history` | history_id | order_id → customer_order |
+| `bank` | bank_id | — |
+| `payment` | payment_id | order_id → customer_order (unique) · bank_id → bank (nullable) |
+| `payment_report` | report_id | — |
 
 ตารางลูกทั้งเจ็ดใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
 ซ้ำในเอกสารฉบับเดียวไม่ได้ — service ตรวจให้ก่อนแล้วคืนข้อความไทย
@@ -164,6 +167,7 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | `OrderStatus` | PENDING_CONFIRM, STOCK_CONFIRMED, WAITING_PAYMENT, VERIFYING_PAYMENT, PAID, PACKING, READY_TO_SHIP, SHIPPED, DELIVERED, CANCELLED, REJECTED |
 | `PromotionType` | FESTIVAL_DISCOUNT, COUPON, BUY_X_QTY |
 | `PromotionStatus` | ACTIVE, INACTIVE, EXPIRED |
+| `PaymentStatus` | WAITING, VERIFYING, SUCCESS, REJECTED |
 
 ---
 
@@ -205,6 +209,10 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | POST | `/orders/{id}/ship` · `/orders/{id}/deliver` | — | ฝ่ายจัดส่ง |
 | POST | `/orders/{id}/cancel` | — | ฝ่ายขาย, ผจก. |
 | GET/POST/PUT/DELETE | `/promotions` · `/promotions/{id}` · `/promotions/{id}/status` | — | ผู้จัดการร้าน |
+| GET | `/banks` | — | ทุกคนที่ล็อกอินแล้ว (ลูกค้าต้องรู้ว่าจะโอนเข้าบัญชีไหน) |
+| GET | `/payments` · `/payments/{id}` | — | ฝ่ายขาย, ผจก. |
+| GET | `/orders/{id}/payment` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะใบตัวเอง) |
+| GET/POST | `/payment-reports` | — | ผู้จัดการร้าน |
 | PUT | `/inventory/{bookId}/reorder-point` | U5 | คลังสินค้า |
 | GET | `/requisitions` · `/requisitions/{id}` | U6, U7 | คลัง, ผจก. |
 | POST | `/requisitions` · PUT `/requisitions/{id}` · POST `/requisitions/{id}/submit` | U6 | คลังสินค้า |
@@ -263,6 +271,8 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 11. **สั่งซื้อ** — ออกใบ + รายการ + timeline แถวแรก + แจ้งฝ่ายขาย
 12. **เปลี่ยนสถานะคำสั่งซื้อ** — ล็อกหัวเอกสาร + ตรวจสต็อก + เขียนสถานะกับ timeline + แจ้งเตือน
     (ขั้นแพ็กตัดสต็อกเป็น `SALE_OUT` ในทรานแซกชันเดียวกัน)
+13. **แนบสลิป / ตรวจสลิป** — ล็อกทั้งแถว `customer_order` และ `payment` แล้วเขียนพร้อมกัน
+    การชำระเงินจึงไม่มีทางไม่ตรงกับสถานะของคำสั่งซื้อ
 
 ---
 
@@ -340,8 +350,13 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 18. **โปรโมชั่นต้องระบุ `promotionId` มาเอง ระบบไม่เลือกให้อัตโนมัติ** — diagram ไม่ได้บอกว่าใครเลือก
     ใบที่ไม่เข้าเงื่อนไขจะได้ 422 ตรง ๆ แทนที่จะเงียบแล้วไม่ลดให้
 
-19. **`Payment` กับ `Shipment` ยังไม่ได้ทำ** — คำสั่งซื้อจึงเก็บหลักฐานการชำระเงินเป็นชื่อไฟล์
-    (`slip_file_name`) และเดินสถานะ SHIPPED/DELIVERED โดยยังไม่มีเลขติดตามพัสดุ · เป็นงานของเฟสถัดไป
+19. **การตรวจสลิปไม่มี endpoint ของตัวเอง** — ใช้ `/orders/{id}/verify-payment` กับ `/reject-payment`
+    ที่มีอยู่แล้ว เพราะเป็นเหตุการณ์เดียวกับการเปลี่ยนสถานะคำสั่งซื้อ · `order.slip_file_name` กับ
+    `payment.slip_image_url` เก็บค่าเดียวกันโดยตั้งใจ (ตัวแรกเป็นสำเนาสำหรับหน้าจอตามสัญญาเดิม
+    กับ frontend ตัวหลังเป็นค่าจริงของระบบย่อยนี้ เขียนพร้อมกันในทรานแซกชันเดียว) ·
+    `PaymentReport` เก็บ **ผลลัพธ์** ลงเป็นแถว ไม่ได้คำนวณสดตอนเปิดดู (`generatedDate` ใน diagram)
+    และนับจาก `verified_date` เพราะตอบคำถามว่า "รอบนี้ร้านรับเงินเข้ามาเท่าไร" ·
+    **`Shipment` ยังไม่ได้ทำ** — เดินสถานะ SHIPPED/DELIVERED โดยยังไม่มีเลขติดตามพัสดุ เป็นงานของเฟสถัดไป
 
 20. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
     แต่หน้าสมัครสมาชิกมีขั้นยืนยัน OTP จึงต้องมีสถานะระหว่างทาง · รหัส OTP โหมดพัฒนาเป็นค่าคงที่
@@ -383,8 +398,13 @@ SELECT status, count(*) FROM purchase_order GROUP BY status;
 เพื่อให้ backend กับหน้าจอเห็นข้อมูลชุดเดียวกันตอนต่อ API — อย่าแก้ไฟล์นั้นด้วยมือ
 ให้แก้ที่ frontend แล้วสั่ง `python tools/gen_seed.py` สร้างใหม่
 
-`seed_inventory.go` (การเคลื่อนไหวสต็อก) กับ `seed_person.go` (ลูกค้า) **เขียนด้วยมือ** เพราะ frontend
-ไม่มีข้อมูลตั้งต้นให้ · `seed_data_test.go` ตรวจว่าไฟล์ที่สคริปต์สร้างยังครบและ FK ชี้ถูกที่
+`seed_inventory.go` (การเคลื่อนไหวสต็อก) · `seed_person.go` (พนักงาน + ลูกค้า) · `seed_order.go`
+(คำสั่งซื้อพร้อมแถวการชำระเงิน) · `seed_payment.go` (บัญชีธนาคาร 3 แห่ง) **เขียนด้วยมือ**
+เพราะ frontend ไม่มีข้อมูลตั้งต้นให้ · `seed_data_test.go` ตรวจว่าไฟล์ที่สคริปต์สร้างยังครบและ FK ชี้ถูกที่
+
+การใส่พนักงานต้องสร้างแถว `person` ให้เองก่อนแล้วผูก `person_id` (`seedEmployeeRows`) เพราะคอลัมน์นั้น
+เป็น NOT NULL + unique ตั้งแต่ P1 · `backfillPersons()` ใน `migrate.go` ช่วยได้เฉพาะฐานที่มีพนักงาน
+อยู่ก่อนแล้ว ไม่ใช่ฐานเปล่า
 
 `Seed()` ตรวจความว่าง **เป็นรายตาราง** ตารางที่มีข้อมูลแล้วจะถูกข้าม จึงสั่งซ้ำได้เรื่อย ๆ
 อยากได้ข้อมูลใหม่หมดต้อง `docker compose down -v` · ปิดท้ายด้วยการเลื่อน sequence ให้เลขเอกสารใหม่
@@ -394,8 +414,8 @@ SELECT status, count(*) FROM purchase_order GROUP BY status;
 
 ## นอกขอบเขต
 
-- ระบบย่อยของเพื่อนร่วมทีมที่ยังไม่ถึงคิว (คำสั่งซื้อลูกค้า ชำระเงิน จัดส่ง รีวิว โปรโมชั่น สมาชิก
-  และการตรวจนับสต็อก) — ดูลำดับเฟสที่ [`PROGRESS.md`](PROGRESS.md)
+- ระบบย่อยของเพื่อนร่วมทีมที่ยังไม่ถึงคิว (จัดส่ง · รีวิว · สมาชิก/แต้มสะสม)
+  — ดูลำดับเฟสที่ [`PROGRESS.md`](PROGRESS.md)
 - การส่งอีเมลจริง — บันทึกลงตาราง `notification` ช่อง `email` ไว้ให้ SCR-27 แสดงเส้นทางเอกสาร
   แต่ไม่ได้ส่งออกไปจริง (เหมือนที่ frontend ทำ)
 - การเก็บไฟล์แนบ — หลักฐานการส่งคืนเก็บเป็น data URL ในคอลัมน์ `text`

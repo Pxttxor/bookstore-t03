@@ -122,6 +122,12 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodPut, "/api/promotions/1"},
 		{http.MethodPost, "/api/promotions/1/status"},
 		{http.MethodDelete, "/api/promotions/1"},
+		{http.MethodGet, "/api/banks"},
+		{http.MethodGet, "/api/payments"},
+		{http.MethodGet, "/api/payments/1"},
+		{http.MethodGet, "/api/orders/1001/payment"},
+		{http.MethodGet, "/api/payment-reports"},
+		{http.MethodPost, "/api/payment-reports"},
 		{http.MethodGet, "/api/notifications"},
 		{http.MethodPost, "/api/notifications/read-all"},
 	}

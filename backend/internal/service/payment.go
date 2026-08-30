@@ -17,10 +17,17 @@ import (
 type PaymentService struct {
 	db       *gorm.DB
 	payments *repository.PaymentRepository
+	orders   *repository.OrderRepository
 }
 
-func NewPaymentService(db *gorm.DB, payments *repository.PaymentRepository) *PaymentService {
-	return &PaymentService{db: db, payments: payments}
+// NewPaymentService — รับ OrderRepository เข้ามาด้วยเพราะการอ่านการชำระเงินของคำสั่งซื้อ
+// ต้องรู้ว่าใบนั้นเป็นของลูกค้าคนไหน จึงจะกันไม่ให้ลูกค้าเปิดสลิปของคนอื่นได้
+func NewPaymentService(
+	db *gorm.DB,
+	payments *repository.PaymentRepository,
+	orders *repository.OrderRepository,
+) *PaymentService {
+	return &PaymentService{db: db, payments: payments, orders: orders}
 }
 
 // ReportPeriodInput — ช่วงวันที่ที่ผู้จัดการสั่งออกรายงาน
@@ -50,20 +57,30 @@ func (s *PaymentService) List(status model.PaymentStatus) ([]PaymentView, error)
 	return s.views(payments)
 }
 
-// ForOrder — การชำระเงินของคำสั่งซื้อใบหนึ่ง
-func (s *PaymentService) ForOrder(current Identity, orderID int, ownerID int) (*PaymentView, error) {
-	if current.IsCustomer() && ownerID != current.CustomerID {
+// Get — การชำระเงินหนึ่งรายการ (หน้าตรวจสลิปของฝ่ายขาย)
+func (s *PaymentService) Get(paymentID int) (*PaymentView, error) {
+	payment, err := s.payments.Find(s.db, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	return s.single(*payment)
+}
+
+// ForOrder — การชำระเงินของคำสั่งซื้อใบหนึ่ง · ลูกค้าเปิดของคนอื่นไม่ได้
+// (เช็คเจ้าของแบบเดียวกับ OrderService.Get เพื่อให้สองเส้นทางตอบเหมือนกันเสมอ)
+func (s *PaymentService) ForOrder(current Identity, orderID int) (*PaymentView, error) {
+	order, err := s.orders.Find(s.db, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if current.IsCustomer() && order.CustomerID != current.CustomerID {
 		return nil, model.ErrForbidden
 	}
 	payment, err := s.payments.FindByOrder(s.db, orderID)
 	if err != nil {
 		return nil, err
 	}
-	views, err := s.views([]model.Payment{*payment})
-	if err != nil {
-		return nil, err
-	}
-	return &views[0], nil
+	return s.single(*payment)
 }
 
 // ── รายงานการรับชำระ ────────────────────────────────────────────────────
@@ -98,6 +115,15 @@ func (s *PaymentService) GenerateReport(input ReportPeriodInput, by string) (*mo
 		return nil, err
 	}
 	return &report, nil
+}
+
+// single — ห่อ Payment เดี่ยวให้เป็น view (เติมชื่อธนาคาร) ผ่านทางเดียวกับรายการ
+func (s *PaymentService) single(payment model.Payment) (*PaymentView, error) {
+	views, err := s.views([]model.Payment{payment})
+	if err != nil {
+		return nil, err
+	}
+	return &views[0], nil
 }
 
 func (s *PaymentService) views(payments []model.Payment) ([]PaymentView, error) {

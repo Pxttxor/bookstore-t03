@@ -107,13 +107,8 @@ func Seed(db *gorm.DB) error {
 	inserted := map[string]int{}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		// พนักงาน — ต้องใส่ hash ก่อน จึงคัดลอกออกมาแก้แทนการแก้ตัวแปรระดับแพ็กเกจ
-		employees := make([]model.Employee, len(seedEmployees))
-		copy(employees, seedEmployees)
-		for i := range employees {
-			employees[i].PasswordHash = string(hash)
-		}
-		n, err := seedIfEmpty(tx, employees, "พนักงาน")
+		// พนักงาน — สร้างแถว person ให้ด้วยในตัว (ดู seedEmployeeRows)
+		n, err := seedEmployeeRows(tx, string(hash))
 		if err != nil {
 			return err
 		}

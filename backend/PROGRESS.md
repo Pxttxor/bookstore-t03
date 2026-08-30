@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P4 เสร็จแล้ว** · **P5 ทำไปแล้วประมาณ 60%** (ผู้ใช้สั่งพักงาน 30 ส.ค. 09:45) |
-| **ทำต่อที่** | **P5 ข้อ 7** — เขียน `handler/payment.go` + `dto_payment.go` + เส้นทาง แล้วต่อด้วยข้อ 8–10 |
+| **เฟส** | **P0–P5 เสร็จแล้ว** |
+| **ทำต่อที่** | **P6** — Shipment · ShipmentTracking · ShippingCompany · DeliverySummary |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 59/59 ✅** · **migrate+seed ของ P5 ยังไม่ได้รัน** · smoke 171/171 ✅ (ผลของ P4) |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 66/66 ✅** · migrate+seed บนฐานใหม่ ✅ · **smoke 191/191 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -64,7 +64,7 @@ git add -A && git commit
 | P2 | Category · Book CRUD · BookChangeLog | ✅ | (ดู git log) | 41/41 | ✅ | 103/103 |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ✅ | (ดู git log) | 47/47 | ✅ | 129/129 |
 | P4 | Order · OrderItem · History · Promotion | ✅ | (ดู git log) | 59/59 | ✅ | 171/171 |
-| P5 | Payment · Bank · PaymentReport | 🔄 60% | — | 59/59 | ยังไม่รัน | ยังไม่รัน |
+| P5 | Payment · Bank · PaymentReport | ✅ | (ดู git log) | 66/66 | ✅ | 191/191 |
 | P6 | Shipment · Tracking · Carrier · Summary | ⬜ | | | | |
 | P7 | MembershipTier · Member · Point · Reward | ⬜ | | | | |
 | P8 | Review · Reply · Report · ProfanityFilter | ⬜ | | | | |
@@ -143,9 +143,8 @@ git add -A && git commit
 | B | `applyForeignKeys()` สร้าง `book.category_id → category` ไม่ได้ ถ้า `category` ยังว่าง (Migrate รันก่อน Seed เสมอ) | `backfillBookCategories()` ใส่หมวดหมู่ตั้งต้นให้ก่อนถ้าตารางยังว่าง — เหตุผลเดียวกับที่ `backfillPersons()` สร้างแถว `person` ให้พนักงาน |
 | C | คำสั่งของตาราง `book` อยู่ใน `InventoryRepository` (ยืมใช้ตั้งแต่ตอนทำ U5) พอทำ CRUD เต็มจะกลายเป็นสองที่ | ย้ายไป `repository/book.go` ทั้งหมด · `SupplierService`/`PurchasingService` รับ `*BookRepository` แทน |
 
-**ฐานข้อมูลเดิมยังมีเล่ม 118 เป็น `ACTIVE`** — `Seed()` ข้ามตารางที่มีข้อมูลแล้ว ข้อมูลที่ seed ผิดไปก่อนหน้านี้
-จึงไม่ถูกเขียนทับ · จะถูกต้องเมื่อสร้างฐานข้อมูลใหม่ (`docker compose down -v`) ซึ่ง**ยังไม่ได้ทำ เพราะเป็นการลบข้อมูล**
-`seed_data_test.go` เฝ้าฝั่งข้อมูลตั้งต้นไว้แล้ว และ smoke ไม่ผูกกับเล่ม 118 อีกต่อไป
+**ปิดแล้วตอน P5** — ล้าง volume แล้ว seed ใหม่ เล่ม 118 เป็น `INACTIVE` ถูกต้องในฐานข้อมูลจริงแล้ว
+(`seed_data_test.go` ยังเฝ้าฝั่งข้อมูลตั้งต้นไว้เหมือนเดิม และ smoke ไม่ผูกกับเล่ม 118)
 
 ### P3 — รายการย่อย
 
@@ -200,7 +199,7 @@ git add -A && git commit
 | D | สต็อกถูกตัดตอน "แพ็ก" ไม่ใช่ "ยืนยันสต็อก" | ขั้นยืนยันสต็อกเป็นการตรวจว่ามีของพอ · ของออกจากคลังจริงตอนแพ็ก · ยกเลิกใบที่แพ็กแล้วไม่ได้ จึงไม่ต้องมีเส้นทางคืนสต็อก |
 | E | smoke ตัดสต็อกจริงทุกรอบ | รอบแรกคืนยอดแค่เล่มเดียวทั้งที่ใบมีสองเล่ม อีกเล่มจึงลดลงทีละหนึ่งจนหมดและ smoke ล้ม → เปลี่ยนไปใช้เล่มที่มีของเยอะ (113/116) และคืนยอด **ทุกเล่มในใบ** |
 
-### P5 — รายการย่อย (หยุดกลางทาง)
+### P5 — รายการย่อย
 
 | # | งาน | สถานะ |
 |---|---|---|
@@ -211,15 +210,16 @@ git add -A && git commit
 | 5 | `repository/payment.go` — CRUD + `SummarizeSuccess()` สำหรับรายงาน + `PaymentsByOrder()` | ✅ |
 | 6 | `service/payment.go` + ต่อเข้า `service/order.go` (เปิดแถว payment ตอนสั่งซื้อ · `UploadSlip` ตอนแนบสลิป · `Verify`/`Reject` ตอนฝ่ายขายตัดสิน) | ✅ |
 | 6b | `database/seed_payment.go` (ธนาคาร 3 แห่ง) + `seed_order.go` สร้างแถว payment ให้คำสั่งซื้อตั้งต้น | ✅ |
-| 7 | **`handler/payment.go` + `dto_payment.go` + เส้นทาง + `Deps.Payments`** — ยังไม่เขียน (ต่อสาย `Deps`/`cmd/api` ไว้แล้ว) | ⬜ |
-| 8 | **`model/payment_test.go`** — เคส `UploadSlip`/`Verify`/`Reject` และ guard สถานะ | ⬜ |
-| 9 | **`cmd/smoke/flow_payment.go`** + เพิ่มการตรวจแถว payment ใน `flow_order.go` | ⬜ |
-| 10 | **รัน `-migrate -seed` แล้วรัน smoke ทั้งชุดให้ผ่าน** แล้วปิดเฟส | ⬜ |
+| 7 | `handler/payment.go` + `dto_payment.go` + 6 เส้นทาง + `Deps.Payments` | ✅ |
+| 8 | `model/payment_test.go` — 7 เคส (test 59 → 66) + เพิ่ม 6 path เข้า `handler_test.go` | ✅ |
+| 9 | `cmd/smoke/flow_payment.go` — 20 เคส (smoke 171 → 191) | ✅ |
+| 10 | ล้าง volume + `-migrate -seed` บนฐานใหม่ + smoke ทั้งชุดผ่าน 191/191 รันซ้ำได้ | ✅ |
 
-**ที่ออกแบบไว้แล้ว ทำต่อได้เลย:**
+**สิ่งที่ตัดสินใจไว้และทำตามนั้น:**
 
-- เส้นทางที่ตั้งใจจะเปิด — `GET /api/banks` (พนักงาน) · `GET /api/payments` + `/payments/{id}`
-  (ฝ่ายขาย, ผจก.) · `GET /api/orders/{id}/payment` · `GET`/`POST /api/payment-reports` (ผจก.)
+- เส้นทางที่เปิด — `GET /api/banks` (ทุกคนที่ล็อกอิน รวมลูกค้า เพราะต้องรู้ว่าจะโอนเข้าบัญชีไหน) ·
+  `GET /api/payments` + `/payments/{id}` (ฝ่ายขาย, ผจก.) · `GET /api/orders/{id}/payment`
+  (ลูกค้าเห็นเฉพาะใบตัวเอง) · `GET`/`POST /api/payment-reports` (ผจก.)
 - **การตรวจผ่าน/ปฏิเสธไม่มีเส้นทางของตัวเอง** — ใช้ `/api/orders/{id}/verify-payment`
   กับ `/reject-payment` ที่มีอยู่แล้ว เพราะเป็นเหตุการณ์เดียวกับการเปลี่ยนสถานะคำสั่งซื้อ
   แยกเป็นสองปุ่มเมื่อไรก็มีโอกาสที่ `payment` กับ `customer_order` ไม่ตรงกัน
@@ -228,9 +228,15 @@ git add -A && git commit
   เขียนพร้อมกันในทรานแซกชันเดียว
 - รายงานเก็บ **ผลลัพธ์** ลงเป็นแถว ไม่ได้คำนวณสดตอนเปิดดู (`generatedDate` ใน diagram)
   และนับจาก `verified_date` เพราะตอบคำถามว่า "รอบนี้ร้านรับเงินเข้ามาเท่าไร"
+- `PaymentService` รับ `*repository.OrderRepository` เข้ามาด้วย เพื่อเช็คเจ้าของใบเองใน `ForOrder`
+  (เดิมรับ `ownerID` เป็นพารามิเตอร์ ซึ่งบังคับให้ handler ไปอ่านคำสั่งซื้อมาก่อนโดยไม่จำเป็น)
 
-**หมายเหตุสำคัญ:** ตาราง `bank` / `payment` / `payment_report` **ยังไม่ถูกสร้างในฐานข้อมูล**
-เพราะยังไม่ได้รัน `go run ./cmd/api -migrate` หลังแก้ `migrate.go` · ต้องรันก่อนทดสอบอะไรที่แตะ DB
+### P5 — สิ่งที่เจอเพิ่มระหว่างทำ
+
+| # | เจออะไร | แก้ยังไง |
+|---|---|---|
+| A | **`Seed()` ล้มบนฐานข้อมูลเปล่า** — `seedIfEmpty` ใส่พนักงานทั้งสี่คนด้วย `person_id = 0` แล้วชน unique index `uq_employee_person` ที่ P1 สร้างไว้ · ไม่เคยเจอมาก่อนเพราะฐานเดิมมีพนักงานอยู่ตั้งแต่ก่อน P1 แล้ว `backfillPersons()` จึงเติมให้ทัน (เท่ากับเส้นทาง "ฐานใหม่ทั้งหมด" ไม่เคยถูกทดสอบเลยตั้งแต่ P1) | เขียน `seedEmployeeRows()` ใน `seed_person.go` ให้สร้างแถว `person` ก่อนแล้วผูก `person_id` — รูปแบบเดียวกับ `seedCustomerRows()` |
+| B | คำสั่งซื้อตั้งต้น 3 ใบไม่มีแถว `payment` บนฐานเดิม | `Seed()` ข้ามตารางที่มีข้อมูลแล้ว จึงต้องล้าง volume ถึงจะได้ข้อมูลชุดใหม่ · ผู้ใช้อนุมัติให้ล้าง — ปิดหนี้เล่ม 118 ที่เป็น `ACTIVE` ผิดไปพร้อมกัน (ตรวจแล้วทั้งสองข้อ) |
 
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
@@ -260,7 +266,7 @@ git add -A && git commit
 | Inventory | StockCount(+Item) · StockDiscrepancyReport | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 | Order | Order · OrderItem · OrderStatusHistory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Promotion | Promotion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Payment | Payment · PaymentReport · Bank | ✅ | ✅ | ✅ | ⬜ | ✅ | ✅ | ⬜ |
+| Payment | Payment · PaymentReport · Bank | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Membership | MembershipTier · PointTransaction · Reward · Redemption | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Review | Review · ReviewReply · ReviewReport · ProfanityFilter | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
