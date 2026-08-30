@@ -24,3 +24,24 @@ var BookFieldLabels = map[BookField]string{
 	BookFieldCategoryID:  "หมวดหมู่",
 	BookFieldStatus:      "สถานะ",
 }
+
+var StockCountStatusLabels = map[StockCountStatus]string{
+	StockCountStatusDraft: "ร่าง",
+	StockCountStatusDone:  "ตรวจนับแล้ว",
+}
+
+var ApprovalStatusLabels = map[ApprovalStatus]string{
+	ApprovalStatusPending:  "รออนุมัติ",
+	ApprovalStatusApproved: "อนุมัติแล้ว",
+	ApprovalStatusRejected: "ปฏิเสธ",
+}
+
+var StockLevelLabels = map[StockLevel]string{
+	StockLevelOut: "หมด",
+	StockLevelLow: "เหลือน้อย",
+	StockLevelOK:  "ปกติ",
+}
+
+func (s StockCountStatus) Label() string { return lookup(StockCountStatusLabels, s) }
+func (s ApprovalStatus) Label() string   { return lookup(ApprovalStatusLabels, s) }
+func (l StockLevel) Label() string       { return lookup(StockLevelLabels, l) }

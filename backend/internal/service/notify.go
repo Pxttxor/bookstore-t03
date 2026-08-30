@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"bookstore-t03/internal/model"
+	"bookstore-t03/internal/repository"
 )
 
 // ── การแจ้งเตือน ────────────────────────────────────────────────────────
@@ -30,7 +31,15 @@ func (s *PurchasingService) notifySubmitted(tx *gorm.DB, pr *model.PurchaseRequi
 
 // notify — บันทึกแจ้งเตือนทั้งในระบบและ "อีเมล" (อีเมลเป็นการจำลอง ไม่ได้ส่งจริง)
 func (s *PurchasingService) notify(tx *gorm.DB, to model.Role, kind model.NotificationKind, title, body, link string) error {
-	return s.notifications.Push(tx, []model.Notification{
+	return pushBothChannels(tx, s.notifications, to, kind, title, body, link)
+}
+
+// pushBothChannels — ใช้ร่วมกันระหว่างระบบย่อย เพราะทุกระบบย่อยแจ้งเตือนรูปแบบเดียวกัน
+func pushBothChannels(
+	tx *gorm.DB, notifications *repository.NotificationRepository,
+	to model.Role, kind model.NotificationKind, title, body, link string,
+) error {
+	return notifications.Push(tx, []model.Notification{
 		{To: to, Kind: kind, Title: title, Body: body, Link: link, Channel: model.ChannelInApp},
 		{To: to, Kind: kind, Title: title, Body: body, Link: link, Channel: model.ChannelEmail},
 	})

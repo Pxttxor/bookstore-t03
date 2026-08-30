@@ -43,6 +43,7 @@ func main() {
 	runPermissionFlow(e)
 	runPersonFlow(e)
 	runBookFlow(e)
+	runInventoryFlow(e)
 	runSupplierFlow(e)
 	runPurchasingFlow(e)
 

@@ -4,8 +4,9 @@ REST API เขียนด้วย **Go + GORM + PostgreSQL** ของโค�
 
 แกนหลักคือสองระบบย่อยของอาชัน สง่าศรี — **จัดการผู้จัดจำหน่าย (U1–U4)** และ **จัดซื้อ (U5–U10)**
 ตอนนี้กำลังขยายให้ครบทั้ง 46 คลาสของ class diagram (ระบบย่อยของเพื่อนร่วมทีมอีก 8 ระบบ)
-ทำเป็นเฟส ดูสถานะที่ [`PROGRESS.md`](PROGRESS.md) — ที่เสร็จแล้วคือ **บุคคล/ลูกค้า/บัญชีผู้ใช้**
-และ **ข้อมูลหนังสือ (หมวดหมู่ · หนังสือ · ประวัติการแก้ไข)**
+ทำเป็นเฟส ดูสถานะที่ [`PROGRESS.md`](PROGRESS.md) — ที่เสร็จแล้วคือ **บุคคล/ลูกค้า/บัญชีผู้ใช้** ·
+**ข้อมูลหนังสือ (หมวดหมู่ · หนังสือ · ประวัติการแก้ไข)** และ
+**สินค้าคงคลังเต็มรูป (ปรับยอดด้วยมือ · ตรวจนับ · รายงานผลต่าง)**
 
 ตาราง คลาส และชื่อฟิลด์ทั้งหมดยึดตาม class diagram ระดับ Analysis
 (`Sub1-Supplier-Management.md`, `Sub2-Purchasing.md` และของเจ้าของคลาสในระบบย่อยอื่น)
@@ -77,12 +78,12 @@ sudo ufw allow from 192.168.11.0/24 to any port 5432
 
 ```
 cmd/api        เปิดเซิร์ฟเวอร์ · ประกอบ dependency ทั้งหมดไว้ที่ main.go
-cmd/smoke      สคริปต์เดิน flow U1–U10 ผ่าน API จริง
+cmd/smoke      สคริปต์เดิน flow ของทุกระบบย่อยผ่าน API จริง (flow_*.go หนึ่งไฟล์ต่อระบบย่อย)
 internal/
   model        Entity ตาม class diagram + enum + กฎที่ตัดสินได้จากข้อมูลในตัวเอง
   repository   คำสั่ง GORM ทั้งหมด (รับ *gorm.DB เข้ามาได้ เพื่อทำงานในทรานแซกชันเดียวกับ service)
   service      กฎทางธุรกิจที่ต้องอ่านหลายตาราง + ขอบเขตทรานแซกชัน + การแจ้งเตือน
-  handler      อ่าน request → เรียก service → เขียน response · ตารางเส้นทางอยู่ที่ handler.go
+  handler      อ่าน request → เรียก service → เขียน response · ตารางเส้นทางอยู่ที่ routes.go
   middleware   ยืนยันตัวตน (JWT) · ตรวจสิทธิ์ตามบทบาท · CORS · log · กัน panic
   httpx        ตัวช่วยอ่าน/เขียน JSON และแปลง error เป็น HTTP status
   config       อ่านค่าตั้งต้นจาก .env
@@ -97,8 +98,8 @@ internal/
 
 ## Schema
 
-15 ตารางตามเอกสาร บวกตารางส่วนขยายที่หน้าจอต้องใช้ ชื่อตารางเป็น snake_case เอกพจน์
-เพื่อให้ `\dt` แมปกับเอกสารได้ทีละแถว
+15 ตารางตามเอกสารที่ส่งอาจารย์ บวกตารางของระบบย่อยที่ทำเพิ่มในรอบนี้ และตารางส่วนขยายที่หน้าจอต้องใช้
+ชื่อตารางเป็น snake_case เอกพจน์ เพื่อให้ `\dt` แมปกับเอกสารได้ทีละแถว
 
 ### ตารางตาม class diagram
 
@@ -123,8 +124,11 @@ internal/
 | `purchase_return_item` | return_id, book_id | → purchase_return, book |
 | `inventory_item` | inventory_id | book_id → book |
 | `stock_transaction` | txn_id | book_id → book |
+| `stock_count` | count_id | — |
+| `stock_count_item` | count_id, book_id | → stock_count, book, stock_discrepancy_report (nullable) |
+| `stock_discrepancy_report` | report_id | count_id → stock_count · book_id → book |
 
-ตารางลูกทั้งห้าใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
+ตารางลูกทั้งหกใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
 ซ้ำในเอกสารฉบับเดียวไม่ได้ — service ตรวจให้ก่อนแล้วคืนข้อความไทย
 
 ### ตารางส่วนขยาย
@@ -149,6 +153,8 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | `BookStatus` | ACTIVE, INACTIVE |
 | `StockTxnType` | RECEIVE_IN, SALE_OUT, RETURN, ADJUSTMENT |
 | `AccountStatus` | UNVERIFIED, ACTIVE, SUSPENDED |
+| `StockCountStatus` | DRAFT, DONE |
+| `ApprovalStatus` | PENDING, APPROVED, REJECTED |
 
 ---
 
@@ -178,6 +184,11 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | GET | `/books/{id}/change-logs` | — | ฝ่ายขาย, ผจก. |
 | POST/PUT | `/books` · `/books/{id}` · `/books/{id}/status` | — | ฝ่ายขาย, ผจก. |
 | GET | `/inventory/alerts` | U5 | คลังสินค้า |
+| GET | `/inventory/low-stock` | — | คลัง, ผจก., ฝ่ายขาย |
+| POST | `/inventory/adjust` | — | คลังสินค้า |
+| GET | `/stock-counts` · `/stock-counts/{id}` · `/discrepancies` | — | คลัง, ผจก. |
+| POST | `/stock-counts` | — | คลังสินค้า |
+| POST | `/discrepancies/{id}/approve` · `/discrepancies/{id}/reject` | — | ผู้จัดการร้าน |
 | PUT | `/inventory/{bookId}/reorder-point` | U5 | คลังสินค้า |
 | GET | `/requisitions` · `/requisitions/{id}` | U6, U7 | คลัง, ผจก. |
 | POST | `/requisitions` · PUT `/requisitions/{id}` · POST `/requisitions/{id}/submit` | U6 | คลังสินค้า |
@@ -211,6 +222,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | U10 | คืนได้ไม่เกินจำนวนที่รับจริงหักที่เคยคืนไปแล้ว · คืนครบทุกหน่วย → PO = RETURNED · ปฏิเสธการรับคืน → ส่งต่อผู้จัดการ | 422 · 409 |
 | สมาชิก | อีเมลและชื่อผู้ใช้ห้ามซ้ำ (ไม่สนตัวพิมพ์) · รหัสผ่านอย่างน้อย 8 ตัว · ยังไม่ยืนยัน OTP หรือถูกระงับ = ล็อกอินไม่ได้ | 409 · 422 · 401 |
 | หนังสือ | ฟิลด์บังคับครบ · ISBN ไม่ซ้ำ · หมวดหมู่ที่อ้างถึงต้องมีจริง · **แก้ไขแล้วบันทึกประวัติทีละฟิลด์ที่เปลี่ยนจริง** | 422 · 409 · 404 |
+| ปรับยอด | ต้องมีเหตุผล · จำนวนที่ปรับไม่เป็นศูนย์ · **ยอดรวมหลังปรับของทุกเล่มต้องไม่ติดลบ (ตรวจให้ครบก่อนเขียน)** | 422 |
+| ตรวจนับ | ห้ามหนังสือซ้ำในรอบเดียว · จำนวนที่นับได้ไม่ติดลบ · แถวที่ไม่ตรงเปิดรายงานให้ผู้จัดการอัตโนมัติ | 422 |
+| ผลต่าง | ตัดสินได้ครั้งเดียว · ปฏิเสธต้องมีเหตุผล · **อนุมัติแล้วตั้งยอดเท่าที่นับได้ ไม่ใช่บวก variance** | 409 · 422 |
 
 ### ทรานแซกชัน
 
@@ -224,6 +238,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 5. **สมัครสมาชิก** — สร้าง `person` + `customer` + `user_account` สามแถวพร้อมกัน
 6. **เพิ่มหนังสือ** — สร้าง `book` + `inventory_item` ยอด 0
 7. **แก้ไขหนังสือ** — ล็อกแถวหนังสือ + ตรวจ ISBN ซ้ำ + เขียนประวัติทุกฟิลด์ที่เปลี่ยน
+8. **ปรับยอดด้วยมือ** — ล็อกแถวสินค้าคงคลัง + ตรวจยอดติดลบทุกเล่ม + ออกรายการเคลื่อนไหว
+9. **บันทึกรอบตรวจนับ** — ล็อกยอดคงเหลือ + ออกรอบ + เปิดรายงานผลต่าง + รายการที่นับ + แจ้งเตือน
+10. **ตัดสินผลต่าง** — ล็อกรายงาน + บันทึกผล + ปรับยอดให้เท่าที่นับได้ถ้าอนุมัติ
 
 ---
 
@@ -273,7 +290,18 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 11. **`Category` เป็นข้อมูลอ้างอิงอ่านอย่างเดียว** — diagram ไม่ได้ให้เมธอดจัดการหมวดหมู่ไว้
     และ `BookContext` ฝั่งหน้าจอก็อ่านอย่างเดียว จึงมีแค่ `GET /api/categories`
 
-12. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
+12. **`stock_count_item.report_id` · `stock_discrepancy_report.count_id` และ `.book_id`** —
+    diagram เข้าถึงรายงานผ่าน `StockCountItem.reportId` ทางเดียว การให้รายงานถือรหัสรอบและ
+    รหัสหนังสือไว้ด้วยทำให้หน้าจอ "ยอดหนังสือไม่ตรง" ไม่ต้องไล่ย้อนทุกรอบตรวจนับ
+
+13. **`StockCountStatus` เป็น enum** — diagram พิมพ์ `status` ของ `StockCount` เป็น `string` เฉย ๆ
+    (deviation แบบเดียวกับข้อ 3) · ค่าที่ระบบออกจริงมีแค่ `DRAFT` กับ `DONE`
+
+14. **`StockLevel` กับ `LowStockThreshold` ไม่มีใน diagram** — เป็นเกณฑ์ของรายงาน
+    "หนังสือใกล้หมด" ที่มาจาก activity diagram ของเจ้าของคลาส · **คนละเรื่องกับ `isBelowReorder()`**
+    ซึ่งใช้จุดสั่งซื้อรายเล่มของ U5 · สองอันนี้ตอบคนละคำถาม ห้ามยุบรวมกัน
+
+15. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
     แต่หน้าสมัครสมาชิกมีขั้นยืนยัน OTP จึงต้องมีสถานะระหว่างทาง · รหัส OTP โหมดพัฒนาเป็นค่าคงที่
     `model.DevOtpCode` เช่นเดียวกับที่การส่งอีเมลเป็นการจำลอง
 
@@ -299,7 +327,7 @@ go run ./cmd/smoke                # อีกหน้าต่างหนึ�
 
 ```sql
 \dt                        -- ตารางตามเอกสาร
-\dv                        -- warehouse_staff, store_manager
+\dv                        -- warehouse_staff, store_manager, sales_staff, delivery_staff
 \d purchase_order_item     -- PK ต้องเป็น (po_id, book_id)
 SELECT status, count(*) FROM purchase_order GROUP BY status;
 ```

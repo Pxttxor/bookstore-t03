@@ -138,3 +138,17 @@ var (
 func IsbnTaken(isbn, title string) *DomainError {
 	return Conflict("ISBN_TAKEN", "พบ ISBN ซ้ำ — "+isbn+" เป็นของ "+title)
 }
+
+// ── การตรวจนับสต็อก (ระบบย่อยสินค้าคงคลัง) ──────────────────────────────
+var (
+	ErrStockCountNotFound  = NotFound("STOCK_COUNT_NOT_FOUND", "ไม่พบรอบการตรวจนับ")
+	ErrDiscrepancyNotFound = NotFound("DISCREPANCY_NOT_FOUND", "ไม่พบรายงานผลต่างสต็อก")
+
+	// ข้อความคัดจาก abnormal flow ของหน้าปรับปรุงจำนวนสินค้าคงคลัง
+	ErrNegativeStock = Validation("NEGATIVE_STOCK", "ยอดคงเหลือติดลบ ไม่สามารถบันทึกได้")
+
+	ErrNoStockLines       = Validation("NO_STOCK_LINES", "ต้องเลือกหนังสืออย่างน้อยหนึ่งเล่ม")
+	ErrNegativeCountedQty = Validation("INVALID_COUNTED_QTY", "จำนวนที่นับได้ต้องไม่ติดลบ")
+
+	ErrReportAlreadyDecided = Conflict("REPORT_ALREADY_DECIDED", "รายงานนี้ถูกตัดสินไปแล้ว")
+)

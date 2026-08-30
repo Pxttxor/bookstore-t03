@@ -209,12 +209,13 @@ func (r Role) IsEmployee() bool { return r.IsValid() && r != RoleCustomer }
 type NotificationKind string
 
 const (
-	NotifyReorderAlert    NotificationKind = "REORDER_ALERT"
-	NotifyPRSubmitted     NotificationKind = "PR_SUBMITTED"
-	NotifyPRApproved      NotificationKind = "PR_APPROVED"
-	NotifyPRRejected      NotificationKind = "PR_REJECTED"
-	NotifyGRRecorded      NotificationKind = "GR_RECORDED"
-	NotifyReturnEscalated NotificationKind = "RETURN_ESCALATED"
+	NotifyReorderAlert     NotificationKind = "REORDER_ALERT"
+	NotifyPRSubmitted      NotificationKind = "PR_SUBMITTED"
+	NotifyPRApproved       NotificationKind = "PR_APPROVED"
+	NotifyPRRejected       NotificationKind = "PR_REJECTED"
+	NotifyGRRecorded       NotificationKind = "GR_RECORDED"
+	NotifyReturnEscalated  NotificationKind = "RETURN_ESCALATED"
+	NotifyStockDiscrepancy NotificationKind = "STOCK_DISCREPANCY"
 )
 
 type NotificationChannel string

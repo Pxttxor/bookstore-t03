@@ -39,6 +39,9 @@ var entities = []any{
 	&model.PurchaseReturnItem{},
 	&model.InventoryItem{},
 	&model.StockTransaction{},
+	&model.StockCount{},
+	&model.StockDiscrepancyReport{},
+	&model.StockCountItem{},
 	&model.Notification{},
 }
 
@@ -186,6 +189,10 @@ var foreignKeys = []foreignKey{
 	{"supplier_book", "book_id", "book", "book_id"},
 	{"book", "category_id", "category", "category_id"},
 	{"book_change_log", "book_id", "book", "book_id"},
+	{"stock_count_item", "book_id", "book", "book_id"},
+	{"stock_count_item", "report_id", "stock_discrepancy_report", "report_id"},
+	{"stock_discrepancy_report", "count_id", "stock_count", "count_id"},
+	{"stock_discrepancy_report", "book_id", "book", "book_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
@@ -239,6 +246,10 @@ func checks() []enumCheck {
 		{"stock_transaction", "type", values(
 			model.StockTxnTypeReceiveIn, model.StockTxnTypeSaleOut,
 			model.StockTxnTypeReturn, model.StockTxnTypeAdjustment)},
+		{"stock_count", "status", values(
+			model.StockCountStatusDraft, model.StockCountStatusDone)},
+		{"stock_discrepancy_report", "approval_status", values(
+			model.ApprovalStatusPending, model.ApprovalStatusApproved, model.ApprovalStatusRejected)},
 		{"notification", "channel", values(model.ChannelInApp, model.ChannelEmail)},
 	}
 }

@@ -66,6 +66,7 @@ func main() {
 	personService := service.NewPersonService(db, personRepo)
 	supplierService := service.NewSupplierService(db, supplierRepo, purchasingRepo, bookRepo)
 	bookService := service.NewBookService(db, bookRepo, inventoryRepo)
+	inventoryService := service.NewInventoryService(db, inventoryRepo, bookRepo, notificationRepo)
 	purchasingService := service.NewPurchasingService(
 		db, purchasingRepo, supplierRepo, inventoryRepo, bookRepo, notificationRepo)
 
@@ -74,6 +75,7 @@ func main() {
 		People:        personService,
 		Suppliers:     supplierService,
 		Books:         bookService,
+		Stock:         inventoryService,
 		Purchasing:    purchasingService,
 		Inventory:     inventoryRepo,
 		Notifications: notificationRepo,

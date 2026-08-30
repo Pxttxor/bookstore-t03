@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P2 เสร็จแล้ว** (30 ส.ค. 2569) |
-| **ทำต่อที่** | **P3** — Inventory เต็ม (StockCount · StockCountItem · StockDiscrepancyReport · ปรับยอดด้วยมือ) |
+| **เฟส** | **P0–P3 เสร็จแล้ว** (30 ส.ค. 2569) |
+| **ทำต่อที่** | **P4** — Order · OrderItem · OrderStatusHistory · Promotion |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 41/41 ✅** · migrate+seed ✅ · **smoke 103/103 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 47/47 ✅** · migrate+seed ✅ · **smoke 129/129 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -62,7 +62,7 @@ git add -A && git commit
 | P0 | สะสาง + วางโครง | ✅ | (ดู git log) | 24/24 | ✅ | 51/51 |
 | P1 | Person · Customer · UserAccount | ✅ | (ดู git log) | 32/32 | ✅ | 79/79 |
 | P2 | Category · Book CRUD · BookChangeLog | ✅ | (ดู git log) | 41/41 | ✅ | 103/103 |
-| P3 | Inventory เต็ม (StockCount · Discrepancy) | ⬜ | | | | |
+| P3 | Inventory เต็ม (StockCount · Discrepancy) | ✅ | (ดู git log) | 47/47 | ✅ | 129/129 |
 | P4 | Order · OrderItem · History · Promotion | ⬜ | | | | |
 | P5 | Payment · Bank · PaymentReport | ⬜ | | | | |
 | P6 | Shipment · Tracking · Carrier · Summary | ⬜ | | | | |
@@ -147,6 +147,31 @@ git add -A && git commit
 จึงไม่ถูกเขียนทับ · จะถูกต้องเมื่อสร้างฐานข้อมูลใหม่ (`docker compose down -v`) ซึ่ง**ยังไม่ได้ทำ เพราะเป็นการลบข้อมูล**
 `seed_data_test.go` เฝ้าฝั่งข้อมูลตั้งต้นไว้แล้ว และ smoke ไม่ผูกกับเล่ม 118 อีกต่อไป
 
+### P3 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/enums_team.go` — `StockCountStatus` · `ApprovalStatus` · `StockLevel` · `LowStockThreshold` | ✅ |
+| 2 | `model/labels_team.go` — ป้ายไทยสามชุด (กู้ข้อความจาก `git show` ของ `inventory.ts` ที่ถูก revert ไปแล้ว) | ✅ |
+| 3 | `model/inventory.go` — `StockCount` · `StockCountItem` (PK ผสม) · `StockDiscrepancyReport` · `ComputeVariance()` · `Decide()` · `StockLevelOf()` · `FormatCountCode/ReportCode` | ✅ |
+| 4 | `model/errors.go` — 6 ตัว (`NEGATIVE_STOCK` ข้อความตรงกับ abnormal flow ของหน้าจอ) | ✅ |
+| 5 | `migrate.go` — 3 entity ใหม่ · CHECK 2 ตัว · FK 4 เส้น · `seed.go` เพิ่ม sequence 2 ตัว | ✅ |
+| 6 | `repository/inventory.go` — `ApplyStrictStockChanges` (ไม่ปัดยอดขึ้นศูนย์) · `LockItemsByBook` · CRUD ของรอบตรวจนับและรายงาน | ✅ |
+| 7 | `service/inventory.go` — ปรับยอดด้วยมือ · บันทึกรอบตรวจนับ + เปิดรายงาน + แจ้งผู้จัดการ · ตัดสินผลต่าง · รายงานใกล้หมด | ✅ |
+| 8 | `service/notify.go` — แยก `pushBothChannels` ให้ระบบย่อยอื่นใช้ร่วมได้ | ✅ |
+| 9 | `handler/stock.go` + `dto_stock.go` + 8 เส้นทาง + `roleStock` + `Deps.Stock` | ✅ |
+| 10 | `model/inventory_test.go` 6 เคส (test 41 → 47) + `handler_test.go` เพิ่ม 8 path | ✅ |
+| 11 | `cmd/smoke/flow_inventory.go` — 26 เคส (smoke 103 → 129) | ✅ |
+
+### P3 — บันทึกระหว่างทำ
+
+| # | เรื่อง | รายละเอียด |
+|---|---|---|
+| A | ป้ายไทยของ `StockCountStatus`/`ApprovalStatus`/`StockLevel` หายไปจาก frontend | `inventory.ts` ถูก revert เมื่อ 7 ส.ค. เหลือแค่ `InventoryItem`/`StockTransaction` · กู้ข้อความเดิมด้วย `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts` แล้วคัดมาตรงตัว |
+| B | `ApplyStockChanges` เดิมปัดยอดติดลบขึ้นเป็นศูนย์ | ถูกสำหรับ U9/U10 แต่จะกลืน abnormal flow ของการปรับยอดด้วยมือ → แยกเป็น `ApplyStrictStockChanges` และให้ service ตรวจยอดรวมทุกเล่มก่อนเขียน |
+| C | อนุมัติผลต่าง = **ตั้งยอดเท่าที่นับได้** ไม่ใช่บวก `variance` | ระหว่างรอผู้จัดการตัดสิน หนังสืออาจเคลื่อนไหวไปแล้ว `variance` ที่เก็บไว้จึงล้าสมัย (พฤติกรรมเดียวกับ `decide()` ฝั่งหน้าจอ) |
+| D | `stock_count_item` ต้องเขียนหลัง `stock_discrepancy_report` | เพราะถือ `report_id` เป็น FK · ลำดับในทรานแซกชันคือ หัวเอกสาร → รายงาน → รายการที่นับ |
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -172,7 +197,7 @@ git add -A && git commit
 | People | Employee (+ view ครบ 4 บทบาท) | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Book | Category · Book · BookChangeLog | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | InventoryItem · StockTransaction | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Inventory | StockCount(+Item) · StockDiscrepancyReport | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Inventory | StockCount(+Item) · StockDiscrepancyReport | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 | Order | Order · OrderItem · OrderStatusHistory | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Promotion | Promotion | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Payment | Payment · PaymentReport · Bank | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

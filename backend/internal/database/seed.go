@@ -61,6 +61,8 @@ var sequences = []struct{ table, column string }{
 	{"purchase_return", "return_id"},
 	{"inventory_item", "inventory_id"},
 	{"stock_transaction", "txn_id"},
+	{"stock_count", "count_id"},
+	{"stock_discrepancy_report", "report_id"},
 	{"notification", "id"},
 }
 
