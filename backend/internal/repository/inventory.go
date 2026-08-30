@@ -1,12 +1,13 @@
-// inventory.go — เข้าถึงข้อมูลหนังสือ สินค้าคงคลัง และการแจ้งเตือน
+// inventory.go — เข้าถึงข้อมูลสินค้าคงคลังและการแจ้งเตือน
 //
-// Book / InventoryItem / StockTransaction เป็นคลาสของระบบย่อยอื่น ระบบจัดซื้ออ่านเป็นหลัก
+// InventoryItem / StockTransaction เป็นคลาสของระบบย่อยสินค้าคงคลัง ระบบจัดซื้ออ่านเป็นหลัก
 // และเขียนเฉพาะตอนรับสินค้าเข้าคลัง (U9) กับส่งคืน (U10)
+//
+// คำสั่งของตาราง book ย้ายไป book.go แล้ว
 package repository
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -18,42 +19,6 @@ type InventoryRepository struct{ db *gorm.DB }
 
 func NewInventoryRepository(db *gorm.DB) *InventoryRepository {
 	return &InventoryRepository{db: db}
-}
-
-// ── หนังสือ ─────────────────────────────────────────────────────────────
-
-func (r *InventoryRepository) ListBooks(term string) ([]model.Book, error) {
-	query := r.db.Model(&model.Book{}).Order("book_id")
-	if trimmed := strings.TrimSpace(term); trimmed != "" {
-		like := "%" + strings.ToLower(trimmed) + "%"
-		query = query.Where("lower(title) LIKE ? OR lower(author) LIKE ? OR lower(isbn) LIKE ?",
-			like, like, like)
-	}
-
-	var books []model.Book
-	if err := query.Find(&books).Error; err != nil {
-		return nil, err
-	}
-	return books, nil
-}
-
-// BooksByID — แผนที่ bookId → Book ใช้เติมชื่อเรื่องลงในรายการเอกสาร
-func (r *InventoryRepository) BooksByID() (map[int]model.Book, error) {
-	books, err := r.ListBooks("")
-	if err != nil {
-		return nil, err
-	}
-	index := make(map[int]model.Book, len(books))
-	for _, book := range books {
-		index[book.BookID] = book
-	}
-	return index, nil
-}
-
-func (r *InventoryRepository) BookExists(bookID int) (bool, error) {
-	var count int64
-	err := r.db.Model(&model.Book{}).Where("book_id = ?", bookID).Count(&count).Error
-	return count > 0, err
 }
 
 // ── สินค้าคงคลัง ────────────────────────────────────────────────────────
@@ -90,6 +55,19 @@ func (r *InventoryRepository) SetReorderPoint(bookID int, reorderPoint *int) (*m
 		return nil, model.ErrInventoryNotFound
 	}
 	return r.FindByBookID(r.db, bookID)
+}
+
+// CreateForBook — เปิดแถวสินค้าคงคลังยอด 0 ให้หนังสือเล่มใหม่
+//
+// class diagram ผูก Book "1" *-- "1" InventoryItem เป็น composition หนังสือจึงต้องมีแถวคู่เสมอ
+// ถ้าไม่สร้างให้ตั้งแต่ตอนเพิ่มหนังสือ เล่มใหม่จะไม่โผล่ในหน้ายอดคงเหลือและใน U5 เลย
+// ยังไม่ตั้งจุดสั่งซื้อ (nil) — ให้คลังมาตั้งเองที่ SCR-20
+func (r *InventoryRepository) CreateForBook(tx *gorm.DB, bookID int) error {
+	return tx.Create(&model.InventoryItem{
+		BookID:         bookID,
+		QuantityOnHand: 0,
+		LastUpdated:    time.Now().UTC(),
+	}).Error
 }
 
 // ApplyStockChanges — บันทึกรายการเคลื่อนไหวสต็อกแล้วปรับยอดคงเหลือให้ตรงกัน

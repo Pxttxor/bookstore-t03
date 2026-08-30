@@ -21,6 +21,7 @@ type Deps struct {
 	Auth          *service.AuthService
 	People        *service.PersonService
 	Suppliers     *service.SupplierService
+	Books         *service.BookService
 	Purchasing    *service.PurchasingService
 	Inventory     *repository.InventoryRepository
 	Notifications *repository.NotificationRepository
@@ -30,6 +31,7 @@ type Handler struct {
 	auth          *service.AuthService
 	people        *service.PersonService
 	suppliers     *service.SupplierService
+	books         *service.BookService
 	purchasing    *service.PurchasingService
 	inventory     *repository.InventoryRepository
 	notifications *repository.NotificationRepository
@@ -40,6 +42,7 @@ func New(d Deps) *Handler {
 		auth:          d.Auth,
 		people:        d.People,
 		suppliers:     d.Suppliers,
+		books:         d.Books,
 		purchasing:    d.Purchasing,
 		inventory:     d.Inventory,
 		notifications: d.Notifications,

@@ -11,6 +11,7 @@ package database
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -49,7 +50,9 @@ var sequences = []struct{ table, column string }{
 	{"person", "person_id"},
 	{"customer", "customer_id"},
 	{"user_account", "account_id"},
+	{"category", "category_id"},
 	{"book", "book_id"},
+	{"book_change_log", "log_id"},
 	{"supplier", "supplier_id"},
 	{"supplier_edit_log", "log_id"},
 	{"purchase_requisition", "pr_id"},
@@ -118,10 +121,21 @@ func Seed(db *gorm.DB) error {
 		}
 		inserted["ลูกค้า"] = n
 
+		// หมวดหมู่ต้องมาก่อนหนังสือ เพราะ book.category_id อ้างถึง category
+		if n, err = seedIfEmpty(tx, seedCategories, "หมวดหมู่"); err != nil {
+			return err
+		}
+		inserted["หมวดหมู่"] = n
+
 		if n, err = seedIfEmpty(tx, seedBooks, "หนังสือ"); err != nil {
 			return err
 		}
 		inserted["หนังสือ"] = n
+
+		if n, err = seedIfEmpty(tx, seedBookChangeLogs, "ประวัติการแก้ไขหนังสือ"); err != nil {
+			return err
+		}
+		inserted["ประวัติหนังสือ"] = n
 
 		if n, err = seedSupplierRows(tx); err != nil {
 			return err
@@ -162,9 +176,14 @@ func Seed(db *gorm.DB) error {
 		return err
 	}
 
-	fmt.Printf("[seed] พนักงาน %d · ลูกค้า %d · หนังสือ %d · ผู้จัดจำหน่าย %d · สินค้าคงคลัง %d · เคลื่อนไหวสต็อก %d · PR %d · PO %d · GR %d\n",
-		inserted["พนักงาน"], inserted["ลูกค้า"], inserted["หนังสือ"], inserted["ผู้จัดจำหน่าย"],
-		inserted["สินค้าคงคลัง"], inserted["เคลื่อนไหวสต็อก"], inserted["PR"], inserted["PO"], inserted["GR"])
+	// เพิ่มระบบย่อยใหม่ = เติมป้ายเข้าลิสต์นี้ ไม่ต้องแก้ format string
+	order := []string{"พนักงาน", "ลูกค้า", "หมวดหมู่", "หนังสือ", "ประวัติหนังสือ",
+		"ผู้จัดจำหน่าย", "สินค้าคงคลัง", "เคลื่อนไหวสต็อก", "PR", "PO", "GR"}
+	parts := make([]string, 0, len(order))
+	for _, label := range order {
+		parts = append(parts, fmt.Sprintf("%s %d", label, inserted[label]))
+	}
+	fmt.Println("[seed] " + strings.Join(parts, " · "))
 	return nil
 }
 

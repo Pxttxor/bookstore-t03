@@ -60,16 +60,20 @@ func main() {
 	inventoryRepo := repository.NewInventoryRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
 	personRepo := repository.NewPersonRepository(db)
+	bookRepo := repository.NewBookRepository(db)
 
 	authService := service.NewAuthService(db, personRepo, cfg.JWTSecret, cfg.TokenTTL)
 	personService := service.NewPersonService(db, personRepo)
-	supplierService := service.NewSupplierService(db, supplierRepo, purchasingRepo, inventoryRepo)
-	purchasingService := service.NewPurchasingService(db, purchasingRepo, supplierRepo, inventoryRepo, notificationRepo)
+	supplierService := service.NewSupplierService(db, supplierRepo, purchasingRepo, bookRepo)
+	bookService := service.NewBookService(db, bookRepo, inventoryRepo)
+	purchasingService := service.NewPurchasingService(
+		db, purchasingRepo, supplierRepo, inventoryRepo, bookRepo, notificationRepo)
 
 	api := handler.New(handler.Deps{
 		Auth:          authService,
 		People:        personService,
 		Suppliers:     supplierService,
+		Books:         bookService,
 		Purchasing:    purchasingService,
 		Inventory:     inventoryRepo,
 		Notifications: notificationRepo,

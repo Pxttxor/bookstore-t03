@@ -10,9 +10,9 @@ import (
 	"bookstore-t03/internal/service"
 )
 
-// registerCatalogueRoutes — หนังสือและสินค้าคงคลัง (ตารางประกอบ รองรับ U5)
+// registerCatalogueRoutes — สินค้าคงคลัง (ตารางประกอบ รองรับ U5)
+// เส้นทางของหนังสืออยู่ที่ registerBookRoutes ใน book.go
 func (h *Handler) registerCatalogueRoutes(register registrar) {
-	register("GET /api/books", roleOffice, h.listBooks)
 	register("GET /api/inventory", roleOffice, h.listInventory)                             // can.viewStock
 	register("GET /api/inventory/alerts", roleWarehouse, h.reorderAlerts)                   // U5 · can.viewAlerts
 	register("PUT /api/inventory/{bookId}/reorder-point", roleWarehouse, h.setReorderPoint) // U5 · can.setReorderPoint
@@ -56,16 +56,7 @@ func (h *Handler) registerNotificationRoutes(register registrar) {
 	register("POST /api/notifications/read-all", roleStaff, h.markAllNotificationsRead)
 }
 
-// ── หนังสือและสินค้าคงคลัง (U5) ─────────────────────────────────────────
-
-func (h *Handler) listBooks(w http.ResponseWriter, r *http.Request) {
-	books, err := h.inventory.ListBooks(r.URL.Query().Get("q"))
-	if err != nil {
-		httpx.Error(w, err)
-		return
-	}
-	httpx.OK(w, books)
-}
+// ── สินค้าคงคลัง (U5) ───────────────────────────────────────────────────
 
 func (h *Handler) listInventory(w http.ResponseWriter, _ *http.Request) {
 	items, err := h.inventory.ListInventory()

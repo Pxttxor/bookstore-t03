@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P1 เสร็จแล้ว** (30 ส.ค. 2569) · กำลังเริ่ม **P2** |
-| **ทำต่อที่** | **P2** — Category · Book CRUD · BookChangeLog |
+| **เฟส** | **P0–P2 เสร็จแล้ว** (30 ส.ค. 2569) |
+| **ทำต่อที่** | **P3** — Inventory เต็ม (StockCount · StockCountItem · StockDiscrepancyReport · ปรับยอดด้วยมือ) |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 32/32 ✅** · migrate+seed ✅ · **smoke 79/79 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 41/41 ✅** · migrate+seed ✅ · **smoke 103/103 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -61,7 +61,7 @@ git add -A && git commit
 |---|---|---|---|---|---|---|
 | P0 | สะสาง + วางโครง | ✅ | (ดู git log) | 24/24 | ✅ | 51/51 |
 | P1 | Person · Customer · UserAccount | ✅ | (ดู git log) | 32/32 | ✅ | 79/79 |
-| P2 | Category · Book CRUD · BookChangeLog | ⬜ | | | | |
+| P2 | Category · Book CRUD · BookChangeLog | ✅ | (ดู git log) | 41/41 | ✅ | 103/103 |
 | P3 | Inventory เต็ม (StockCount · Discrepancy) | ⬜ | | | | |
 | P4 | Order · OrderItem · History · Promotion | ⬜ | | | | |
 | P5 | Payment · Bank · PaymentReport | ⬜ | | | | |
@@ -118,6 +118,35 @@ git add -A && git commit
 
 `sequences` ใน `seed.go` เพิ่ม `person` · `customer` · `user_account` แล้ว (ทั้งสามมี id อัตโนมัติ)
 
+### P2 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/book.go` — `Category` · `BookChangeLog` · `Book.CategoryID` · `BookDraft` · `Book.Update()` ที่คืน log ทีละฟิลด์ · `Book.SetStatus()` | ✅ |
+| 2 | `model/labels_team.go` — `BookFieldLabels` ตรงกับ `BOOK_FIELD_LABELS` ของ TS · `BookStatus.Label()` | ✅ |
+| 3 | `model/errors.go` — `IsbnTaken()` · `ErrCategoryNotFound` · `ErrInvalidBookStatus` · `ErrInvalidBookPrice` | ✅ |
+| 4 | `tools/gen_seed.py` — อ่าน categoryId (เดิมจับไว้แต่ทิ้ง) · อ่าน status · `seedCategories` (ข้อ 10b ของ P0) · `seedBookChangeLogs` | ✅ |
+| 5 | `database/seed.go` — หมวดหมู่ก่อนหนังสือ · ประวัติหลังหนังสือ · sequence 2 ตัว · สรุปท้ายวนตามลิสต์ | ✅ |
+| 6 | `database/migrate.go` — 2 entity ใหม่ · `backfillBookCategories()` · FK 2 เส้น · unique index ชื่อหมวดหมู่ | ✅ |
+| 7 | `repository/book.go` — ย้ายคำสั่งของ `book` ออกจาก `InventoryRepository` + CRUD + ประวัติ + หมวดหมู่ | ✅ |
+| 8 | `service/book.go` — ตรวจ ISBN ซ้ำ · หมวดหมู่ต้องมีจริง · เพิ่มหนังสือแล้วเปิดแถวสินค้าคงคลัง | ✅ |
+| 9 | `handler/book.go` + `dto_book.go` + 7 เส้นทาง + `Deps.Books` + ต่อสายใน `cmd/api` | ✅ |
+| 10 | `model/book_test.go` (5 เคส) + `database/seed_data_test.go` (4 เคส) — test 32 → 41 | ✅ |
+| 11 | `handler_test.go` — เพิ่ม 8 path เข้า `TestProtectedRoutesRequireToken` | ✅ |
+| 12 | `cmd/smoke/flow_book.go` — 24 เคส (smoke 79 → 103) | ✅ |
+
+### P2 — สิ่งที่เจอเพิ่มระหว่างทำ
+
+| # | เจออะไร | แก้ยังไง |
+|---|---|---|
+| A | `gen_seed.py` **ไม่เคยอ่าน argument `status`** ของ `book(...)` เลย หนังสือทุกเล่มจึงถูกเขียนเป็น `ACTIVE` ทั้งที่เล่ม 118 (`ดาวเคราะห์สีคราม`) ปิดการขายอยู่ฝั่งหน้าจอ · regex เดียวจับ argument ท้าย ๆ ที่เป็นค่าไม่บังคับไม่ไหว | เพิ่มตัวตัด `book(...)` แบบนับวงเล็บ แล้ว `assert` ว่าต้องมีเล่มที่ปิดการขาย = `[118]` เท่านั้น · เพิ่ม `seed_data_test.go` ให้ `go test` จับได้ตั้งแต่ไม่มีฐานข้อมูล |
+| B | `applyForeignKeys()` สร้าง `book.category_id → category` ไม่ได้ ถ้า `category` ยังว่าง (Migrate รันก่อน Seed เสมอ) | `backfillBookCategories()` ใส่หมวดหมู่ตั้งต้นให้ก่อนถ้าตารางยังว่าง — เหตุผลเดียวกับที่ `backfillPersons()` สร้างแถว `person` ให้พนักงาน |
+| C | คำสั่งของตาราง `book` อยู่ใน `InventoryRepository` (ยืมใช้ตั้งแต่ตอนทำ U5) พอทำ CRUD เต็มจะกลายเป็นสองที่ | ย้ายไป `repository/book.go` ทั้งหมด · `SupplierService`/`PurchasingService` รับ `*BookRepository` แทน |
+
+**ฐานข้อมูลเดิมยังมีเล่ม 118 เป็น `ACTIVE`** — `Seed()` ข้ามตารางที่มีข้อมูลแล้ว ข้อมูลที่ seed ผิดไปก่อนหน้านี้
+จึงไม่ถูกเขียนทับ · จะถูกต้องเมื่อสร้างฐานข้อมูลใหม่ (`docker compose down -v`) ซึ่ง**ยังไม่ได้ทำ เพราะเป็นการลบข้อมูล**
+`seed_data_test.go` เฝ้าฝั่งข้อมูลตั้งต้นไว้แล้ว และ smoke ไม่ผูกกับเล่ม 118 อีกต่อไป
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -141,7 +170,7 @@ git add -A && git commit
 | People | Person · Customer · UserAccount | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | People | Member (รอ MembershipTier) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | People | Employee (+ view ครบ 4 บทบาท) | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Book | Category · Book · BookChangeLog | 🔄 Book อ่านอย่างเดียว | ⬜ | ⬜ | ⬜ | 🔄 | ✅ | ⬜ |
+| Book | Category · Book · BookChangeLog | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | InventoryItem · StockTransaction | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | StockCount(+Item) · StockDiscrepancyReport | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Order | Order · OrderItem · OrderStatusHistory | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

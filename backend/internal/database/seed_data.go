@@ -7,31 +7,46 @@ package database
 
 import "bookstore-t03/internal/model"
 
+// seedCategories — หมวดหมู่หนังสือ · ต้องใส่ก่อน seedBooks เพราะ book.category_id อ้างถึง
+var seedCategories = []model.Category{
+	{CategoryID: 1, Name: "วรรณกรรมและนวนิยาย", Description: "นิยาย เรื่องสั้น และวรรณกรรมแปล"},
+	{CategoryID: 2, Name: "พัฒนาตนเอง", Description: "จิตวิทยา นิสัย และการพัฒนาศักยภาพ"},
+	{CategoryID: 3, Name: "วิทยาศาสตร์และไซไฟ", Description: "วิทยาศาสตร์ทั่วไปและนิยายวิทยาศาสตร์"},
+	{CategoryID: 4, Name: "สารคดีและชีวประวัติ", Description: "เรื่องจริง บันทึก และชีวประวัติ"},
+	{CategoryID: 5, Name: "ตำราและวิชาการ", Description: "ตำราเรียนและหนังสือวิชาการ"},
+	{CategoryID: 6, Name: "วรรณกรรมเยาวชนและนิทาน", Description: "หนังสือเด็กและนิทานก่อนนอน"},
+}
+
 // seedBooks — หนังสือ 23 เล่ม รหัส 101–123
 var seedBooks = []model.Book{
-	{BookID: 101, ISBN: "978-616-0001-01", Title: "Atomic Habits", Author: "James Clear", Publisher: "สำนักพิมพ์ก้าวหน้า", Price: 438.0, Description: "คู่มือสร้างนิสัยเล็ก ๆ ที่ให้ผลลัพธ์ยิ่งใหญ่ ด้วยระบบที่ทำซ้ำได้จริง", Status: model.BookStatusActive},
-	{BookID: 102, ISBN: "978-616-0001-02", Title: "The Alchemist", Author: "Paulo Coelho", Publisher: "สำนักพิมพ์ก้าวหน้า", Price: 369.0, Description: "การเดินทางของเด็กเลี้ยงแกะผู้ออกตามหาขุมทรัพย์และความหมายของชีวิต", Status: model.BookStatusActive},
-	{BookID: 103, ISBN: "978-616-0001-03", Title: "Circe", Author: "Madeline Miller", Publisher: "สำนักพิมพ์ก้าวหน้า", Price: 477.0, Description: "เล่าตำนานกรีกผ่านมุมมองของเซอร์ซี แม่มดผู้ถูกเนรเทศ", Status: model.BookStatusActive},
-	{BookID: 104, ISBN: "978-616-0002-01", Title: "Project Hail Mary", Author: "Andy Weir", Publisher: "สำนักพิมพ์ปัญญาชน", Price: 507.0, Description: "นักวิทยาศาสตร์ตื่นขึ้นกลางอวกาศพร้อมภารกิจกอบกู้โลกที่จำอะไรไม่ได้", Status: model.BookStatusActive},
-	{BookID: 105, ISBN: "978-616-0002-02", Title: "Klara and the Sun", Author: "Kazuo Ishiguro", Publisher: "สำนักพิมพ์ปัญญาชน", Price: 457.0, Description: "หุ่นยนต์เพื่อนเล่นเฝ้ามองความรักและความสูญเสียของมนุษย์", Status: model.BookStatusActive},
-	{BookID: 106, ISBN: "978-616-0003-01", Title: "Dune", Author: "Frank Herbert", Publisher: "บุ๊คเน็ต", Price: 700.0, Description: "มหากาพย์ไซไฟบนดาวทะเลทรายอาร์ราคิส ศูนย์กลางอำนาจของจักรวาล", Status: model.BookStatusActive},
-	{BookID: 107, ISBN: "978-616-0003-02", Title: "A Little Life", Author: "Hanya Yanagihara", Publisher: "บุ๊คเน็ต", Price: 800.0, Description: "เรื่องราวมิตรภาพสี่คนในนิวยอร์กที่ทอดยาวตลอดชีวิต", Status: model.BookStatusActive},
-	{BookID: 108, ISBN: "978-616-0003-03", Title: "Normal People", Author: "Sally Rooney", Publisher: "บุ๊คเน็ต", Price: 442.0, Description: "ความสัมพันธ์ที่ผูกพันและผลักไสกันของคนสองคนตั้งแต่มัธยมถึงมหาวิทยาลัย", Status: model.BookStatusActive},
-	{BookID: 109, ISBN: "978-616-0003-04", Title: "The Midnight Library", Author: "Matt Haig", Publisher: "บุ๊คเน็ต", Price: 483.0, Description: "ห้องสมุดระหว่างความเป็นความตายที่ให้เลือกใช้ชีวิตในเวอร์ชันอื่น", Status: model.BookStatusActive},
-	{BookID: 110, ISBN: "978-616-0004-01", Title: "The Song of Achilles", Author: "Madeline Miller", Publisher: "แสงตะวัน", Price: 404.0, Description: "สงครามกรุงทรอยผ่านสายตาของพาโทรคลัส สหายของอคิลลีส", Status: model.BookStatusActive},
-	{BookID: 111, ISBN: "978-616-0004-02", Title: "Crying in H Mart", Author: "Michelle Zauner", Publisher: "แสงตะวัน", Price: 434.0, Description: "บันทึกความทรงจำเรื่องแม่ อาหารเกาหลี และการยอมรับการจากลา", Status: model.BookStatusActive},
-	{BookID: 112, ISBN: "978-616-0005-01", Title: "Lessons in Chemistry", Author: "Bonnie Garmus", Publisher: "Asia Books", Price: 621.0, Description: "นักเคมีหญิงยุค 60 ที่กลายเป็นพิธีกรรายการทำอาหารโดยไม่ยอมทิ้งวิทยาศาสตร์", Status: model.BookStatusActive},
-	{BookID: 113, ISBN: "978-616-0005-02", Title: "The Seven Husbands of Evelyn Hugo", Author: "Taylor Jenkins Reid", Publisher: "Asia Books", Price: 581.0, Description: "ดาราฮอลลีวูดในตำนานเปิดเผยความจริงเบื้องหลังการแต่งงานทั้งเจ็ดครั้ง", Status: model.BookStatusActive},
-	{BookID: 114, ISBN: "978-616-0005-03", Title: "Where the Crawdads Sing", Author: "Delia Owens", Publisher: "Asia Books", Price: 548.0, Description: "เด็กหญิงผู้เติบโตลำพังในบึงนอร์ทแคโรไลนา กับคดีฆาตกรรมที่สั่นสะเทือนเมือง", Status: model.BookStatusActive},
-	{BookID: 115, ISBN: "978-616-0006-01", Title: "บันทึกใบไม้ผลิ", Author: "ชลธิชา แก้วประเสริฐ", Publisher: "ใบไม้", Price: 250.0, Description: "บันทึกการกลับบ้านเกิดและการเริ่มต้นใหม่ในวัยสามสิบ", Status: model.BookStatusActive},
-	{BookID: 116, ISBN: "978-616-0007-01", Title: "เงาในกระจก", Author: "ปกรณ์ ทองใบ", Publisher: "สยามเปเปอร์แบ็ค", Price: 291.0, Description: "นวนิยายสืบสวนที่ความจริงสะท้อนกลับมาหาผู้สืบสวนเอง", Status: model.BookStatusActive},
-	{BookID: 117, ISBN: "978-616-0007-02", Title: "ทางกลับบ้าน", Author: "สุนิสา วงษ์คำ", Publisher: "สยามเปเปอร์แบ็ค", Price: 313.0, Description: "เรื่องราวครอบครัวชนบทกับการเดินทางกลับไปคืนดีกับอดีต", Status: model.BookStatusActive},
-	{BookID: 118, ISBN: "978-616-0008-01", Title: "ดาวเคราะห์สีคราม", Author: "ภูริช สมบูรณ์", Publisher: "ดวงดาว", Price: 314.0, Description: "นิยายวิทยาศาสตร์ไทยว่าด้วยการตั้งอาณานิคมบนดาวดวงใหม่", Status: model.BookStatusActive},
-	{BookID: 119, ISBN: "978-616-0009-01", Title: "สถิติสำหรับวิศวกร", Author: "ดร.วิชัย พงษ์ศิริ", Publisher: "เลิร์นนิ่งฮับ", Price: 656.0, Description: "ตำราสถิติประยุกต์พร้อมโจทย์ตัวอย่างสำหรับงานวิศวกรรม", Status: model.BookStatusActive},
-	{BookID: 120, ISBN: "978-616-0009-02", Title: "การวิเคราะห์และออกแบบระบบ", Author: "ดร.อรพิน ชูเกียรติ", Publisher: "เลิร์นนิ่งฮับ", Price: 703.0, Description: "ตำราการวิเคราะห์และออกแบบระบบสารสนเทศ ครอบคลุม UML และกรณีศึกษา", Status: model.BookStatusActive},
-	{BookID: 121, ISBN: "978-616-0011-01", Title: "ห้องสมุดเที่ยงคืน", Author: "Matt Haig", Publisher: "เพจเทิร์นเนอร์", Price: 455.0, Description: "ฉบับแปลไทยของ The Midnight Library", Status: model.BookStatusActive},
-	{BookID: 122, ISBN: "978-616-0012-01", Title: "นิทานก่อนนอนของหนูดี", Author: "มณีรัตน์ บุญมี", Publisher: "ต้นกล้า", Price: 204.0, Description: "รวมนิทานสั้นก่อนนอนพร้อมภาพประกอบสี่สีสำหรับเด็กปฐมวัย", Status: model.BookStatusActive},
-	{BookID: 123, ISBN: "978-616-0012-02", Title: "ผจญภัยในป่าใหญ่", Author: "กานต์ พิมพ์ทอง", Publisher: "ต้นกล้า", Price: 225.0, Description: "การผจญภัยของเด็ก ๆ กับผองเพื่อนสัตว์ป่า สอนเรื่องการอนุรักษ์", Status: model.BookStatusActive},
+	{BookID: 101, ISBN: "978-616-0001-01", Title: "Atomic Habits", Author: "James Clear", Publisher: "สำนักพิมพ์ก้าวหน้า", Price: 438.0, Description: "คู่มือสร้างนิสัยเล็ก ๆ ที่ให้ผลลัพธ์ยิ่งใหญ่ ด้วยระบบที่ทำซ้ำได้จริง", CategoryID: 2, Status: model.BookStatusActive},
+	{BookID: 102, ISBN: "978-616-0001-02", Title: "The Alchemist", Author: "Paulo Coelho", Publisher: "สำนักพิมพ์ก้าวหน้า", Price: 369.0, Description: "การเดินทางของเด็กเลี้ยงแกะผู้ออกตามหาขุมทรัพย์และความหมายของชีวิต", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 103, ISBN: "978-616-0001-03", Title: "Circe", Author: "Madeline Miller", Publisher: "สำนักพิมพ์ก้าวหน้า", Price: 477.0, Description: "เล่าตำนานกรีกผ่านมุมมองของเซอร์ซี แม่มดผู้ถูกเนรเทศ", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 104, ISBN: "978-616-0002-01", Title: "Project Hail Mary", Author: "Andy Weir", Publisher: "สำนักพิมพ์ปัญญาชน", Price: 507.0, Description: "นักวิทยาศาสตร์ตื่นขึ้นกลางอวกาศพร้อมภารกิจกอบกู้โลกที่จำอะไรไม่ได้", CategoryID: 3, Status: model.BookStatusActive},
+	{BookID: 105, ISBN: "978-616-0002-02", Title: "Klara and the Sun", Author: "Kazuo Ishiguro", Publisher: "สำนักพิมพ์ปัญญาชน", Price: 457.0, Description: "หุ่นยนต์เพื่อนเล่นเฝ้ามองความรักและความสูญเสียของมนุษย์", CategoryID: 3, Status: model.BookStatusActive},
+	{BookID: 106, ISBN: "978-616-0003-01", Title: "Dune", Author: "Frank Herbert", Publisher: "บุ๊คเน็ต", Price: 700.0, Description: "มหากาพย์ไซไฟบนดาวทะเลทรายอาร์ราคิส ศูนย์กลางอำนาจของจักรวาล", CategoryID: 3, Status: model.BookStatusActive},
+	{BookID: 107, ISBN: "978-616-0003-02", Title: "A Little Life", Author: "Hanya Yanagihara", Publisher: "บุ๊คเน็ต", Price: 800.0, Description: "เรื่องราวมิตรภาพสี่คนในนิวยอร์กที่ทอดยาวตลอดชีวิต", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 108, ISBN: "978-616-0003-03", Title: "Normal People", Author: "Sally Rooney", Publisher: "บุ๊คเน็ต", Price: 442.0, Description: "ความสัมพันธ์ที่ผูกพันและผลักไสกันของคนสองคนตั้งแต่มัธยมถึงมหาวิทยาลัย", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 109, ISBN: "978-616-0003-04", Title: "The Midnight Library", Author: "Matt Haig", Publisher: "บุ๊คเน็ต", Price: 483.0, Description: "ห้องสมุดระหว่างความเป็นความตายที่ให้เลือกใช้ชีวิตในเวอร์ชันอื่น", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 110, ISBN: "978-616-0004-01", Title: "The Song of Achilles", Author: "Madeline Miller", Publisher: "แสงตะวัน", Price: 404.0, Description: "สงครามกรุงทรอยผ่านสายตาของพาโทรคลัส สหายของอคิลลีส", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 111, ISBN: "978-616-0004-02", Title: "Crying in H Mart", Author: "Michelle Zauner", Publisher: "แสงตะวัน", Price: 434.0, Description: "บันทึกความทรงจำเรื่องแม่ อาหารเกาหลี และการยอมรับการจากลา", CategoryID: 4, Status: model.BookStatusActive},
+	{BookID: 112, ISBN: "978-616-0005-01", Title: "Lessons in Chemistry", Author: "Bonnie Garmus", Publisher: "Asia Books", Price: 621.0, Description: "นักเคมีหญิงยุค 60 ที่กลายเป็นพิธีกรรายการทำอาหารโดยไม่ยอมทิ้งวิทยาศาสตร์", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 113, ISBN: "978-616-0005-02", Title: "The Seven Husbands of Evelyn Hugo", Author: "Taylor Jenkins Reid", Publisher: "Asia Books", Price: 581.0, Description: "ดาราฮอลลีวูดในตำนานเปิดเผยความจริงเบื้องหลังการแต่งงานทั้งเจ็ดครั้ง", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 114, ISBN: "978-616-0005-03", Title: "Where the Crawdads Sing", Author: "Delia Owens", Publisher: "Asia Books", Price: 548.0, Description: "เด็กหญิงผู้เติบโตลำพังในบึงนอร์ทแคโรไลนา กับคดีฆาตกรรมที่สั่นสะเทือนเมือง", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 115, ISBN: "978-616-0006-01", Title: "บันทึกใบไม้ผลิ", Author: "ชลธิชา แก้วประเสริฐ", Publisher: "ใบไม้", Price: 250.0, Description: "บันทึกการกลับบ้านเกิดและการเริ่มต้นใหม่ในวัยสามสิบ", CategoryID: 2, Status: model.BookStatusActive},
+	{BookID: 116, ISBN: "978-616-0007-01", Title: "เงาในกระจก", Author: "ปกรณ์ ทองใบ", Publisher: "สยามเปเปอร์แบ็ค", Price: 291.0, Description: "นวนิยายสืบสวนที่ความจริงสะท้อนกลับมาหาผู้สืบสวนเอง", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 117, ISBN: "978-616-0007-02", Title: "ทางกลับบ้าน", Author: "สุนิสา วงษ์คำ", Publisher: "สยามเปเปอร์แบ็ค", Price: 313.0, Description: "เรื่องราวครอบครัวชนบทกับการเดินทางกลับไปคืนดีกับอดีต", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 118, ISBN: "978-616-0008-01", Title: "ดาวเคราะห์สีคราม", Author: "ภูริช สมบูรณ์", Publisher: "ดวงดาว", Price: 314.0, Description: "นิยายวิทยาศาสตร์ไทยว่าด้วยการตั้งอาณานิคมบนดาวดวงใหม่", CategoryID: 3, Status: model.BookStatusInactive},
+	{BookID: 119, ISBN: "978-616-0009-01", Title: "สถิติสำหรับวิศวกร", Author: "ดร.วิชัย พงษ์ศิริ", Publisher: "เลิร์นนิ่งฮับ", Price: 656.0, Description: "ตำราสถิติประยุกต์พร้อมโจทย์ตัวอย่างสำหรับงานวิศวกรรม", CategoryID: 5, Status: model.BookStatusActive},
+	{BookID: 120, ISBN: "978-616-0009-02", Title: "การวิเคราะห์และออกแบบระบบ", Author: "ดร.อรพิน ชูเกียรติ", Publisher: "เลิร์นนิ่งฮับ", Price: 703.0, Description: "ตำราการวิเคราะห์และออกแบบระบบสารสนเทศ ครอบคลุม UML และกรณีศึกษา", CategoryID: 5, Status: model.BookStatusActive},
+	{BookID: 121, ISBN: "978-616-0011-01", Title: "ห้องสมุดเที่ยงคืน", Author: "Matt Haig", Publisher: "เพจเทิร์นเนอร์", Price: 455.0, Description: "ฉบับแปลไทยของ The Midnight Library", CategoryID: 1, Status: model.BookStatusActive},
+	{BookID: 122, ISBN: "978-616-0012-01", Title: "นิทานก่อนนอนของหนูดี", Author: "มณีรัตน์ บุญมี", Publisher: "ต้นกล้า", Price: 204.0, Description: "รวมนิทานสั้นก่อนนอนพร้อมภาพประกอบสี่สีสำหรับเด็กปฐมวัย", CategoryID: 6, Status: model.BookStatusActive},
+	{BookID: 123, ISBN: "978-616-0012-02", Title: "ผจญภัยในป่าใหญ่", Author: "กานต์ พิมพ์ทอง", Publisher: "ต้นกล้า", Price: 225.0, Description: "การผจญภัยของเด็ก ๆ กับผองเพื่อนสัตว์ป่า สอนเรื่องการอนุรักษ์", CategoryID: 6, Status: model.BookStatusActive},
+}
+
+// seedBookChangeLogs — ประวัติการแก้ไขตั้งต้น ให้แท็บประวัติมีข้อมูลให้ดูตั้งแต่เปิดครั้งแรก
+var seedBookChangeLogs = []model.BookChangeLog{
+	{LogID: 1, BookID: 101, ChangedField: "price", OldValue: "459", NewValue: "438", ChangedDate: mustTime("2026-07-02T04:15:00.000Z"), ChangedBy: "ณัฐวุฒิ แสงจันทร์"},
 }
 
 // seedSupplierOffer — หนังสือหนึ่งเล่มที่ผู้จัดจำหน่ายรายหนึ่งเสนอขาย

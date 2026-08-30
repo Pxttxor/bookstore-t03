@@ -19,7 +19,9 @@ import (
 // ตารางแม่ต้องมาก่อนตารางลูกเสมอ เพราะ FK อ้างถึงกัน
 var entities = []any{
 	&model.Person{},
+	&model.Category{},
 	&model.Book{},
+	&model.BookChangeLog{},
 	&model.Employee{},
 	&model.Customer{},
 	&model.UserAccount{},
@@ -46,6 +48,9 @@ func Migrate(db *gorm.DB) error {
 		return fmt.Errorf("สร้างตารางไม่สำเร็จ: %w", err)
 	}
 	if err := backfillPersons(db); err != nil {
+		return err
+	}
+	if err := backfillBookCategories(db); err != nil {
 		return err
 	}
 	if err := applyChecks(db); err != nil {
@@ -109,6 +114,60 @@ func backfillPersons(db *gorm.DB) error {
 	return nil
 }
 
+// backfillBookCategories — เติม book.category_id ให้ข้อมูลเดิม แล้วบังคับ NOT NULL
+//
+// เหตุผลเดียวกับ backfillPersons: คอลัมน์ถูกเพิ่มทีหลังตอนที่ตาราง book มีหนังสือ 23 เล่มอยู่แล้ว
+// จึงประกาศฟิลด์แบบ nullable แล้วมาเติมค่าที่นี่
+//
+// ต่างกันตรงที่คราวนี้ FK ต้องมีปลายทางอยู่ก่อน — applyForeignKeys จะสร้าง
+// book.category_id → category ไม่ผ่านถ้าตาราง category ยังว่าง จึงใส่หมวดหมู่ตั้งต้นให้ด้วย
+// (Seed จะข้ามไปเองเพราะตรวจความว่างเป็นรายตาราง)
+//
+// รันซ้ำได้: แถวที่มีค่าแล้วไม่ถูกแตะ และบังคับ NOT NULL เฉพาะเมื่อไม่เหลือค่าว่าง
+func backfillBookCategories(db *gorm.DB) error {
+	var books int64
+	if err := db.Model(&model.Book{}).Count(&books).Error; err != nil {
+		return fmt.Errorf("นับหนังสือไม่สำเร็จ: %w", err)
+	}
+
+	if books > 0 {
+		var categories int64
+		if err := db.Model(&model.Category{}).Count(&categories).Error; err != nil {
+			return fmt.Errorf("นับหมวดหมู่ไม่สำเร็จ: %w", err)
+		}
+		if categories == 0 {
+			rows := make([]model.Category, len(seedCategories))
+			copy(rows, seedCategories)
+			if err := db.Create(&rows).Error; err != nil {
+				return fmt.Errorf("ใส่หมวดหมู่ตั้งต้นไม่สำเร็จ: %w", err)
+			}
+		}
+
+		// ค่าที่ถูกต้องอยู่ในข้อมูลตั้งต้นอยู่แล้ว (คัดมาจาก SEED_BOOKS ของ frontend)
+		for _, book := range seedBooks {
+			err := db.Model(&model.Book{}).
+				Where("book_id = ? AND (category_id IS NULL OR category_id = 0)", book.BookID).
+				Update("category_id", book.CategoryID).Error
+			if err != nil {
+				return fmt.Errorf("เติมหมวดหมู่ให้หนังสือ %d ไม่สำเร็จ: %w", book.BookID, err)
+			}
+		}
+	}
+
+	var orphans int64
+	if err := db.Model(&model.Book{}).
+		Where("category_id IS NULL OR category_id = 0").Count(&orphans).Error; err != nil {
+		return fmt.Errorf("นับหนังสือที่ยังไม่มีหมวดหมู่ไม่สำเร็จ: %w", err)
+	}
+	if orphans > 0 {
+		return fmt.Errorf("ยังมีหนังสือ %d เล่มที่ไม่มีหมวดหมู่ (ไม่อยู่ในข้อมูลตั้งต้น)", orphans)
+	}
+	if err := db.Exec(`ALTER TABLE book ALTER COLUMN category_id SET NOT NULL`).Error; err != nil {
+		return fmt.Errorf("บังคับความสัมพันธ์ book → category ไม่สำเร็จ: %w", err)
+	}
+	return nil
+}
+
 // foreignKey — คอลัมน์หนึ่งที่ชี้ไปยังคีย์หลักของอีกตาราง
 type foreignKey struct {
 	table, column string
@@ -125,6 +184,8 @@ type foreignKey struct {
 //     (เช่น SupplierBook.Book — ทั้งสอง struct มีฟิลด์ชื่อ BookID เหมือนกัน)
 var foreignKeys = []foreignKey{
 	{"supplier_book", "book_id", "book", "book_id"},
+	{"book", "category_id", "category", "category_id"},
+	{"book_change_log", "book_id", "book", "book_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
@@ -257,6 +318,8 @@ func applyIndexes(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_purchase_requisition_supplier_status
 		 ON purchase_requisition (supplier_id, status)`,
 		// อีเมลกับชื่อผู้ใช้ต้องไม่ซ้ำแบบไม่สนตัวพิมพ์ — เป็นกุญแจที่ใช้ค้นตอนล็อกอิน
+		// ชื่อหมวดหมู่ต้องไม่ซ้ำ กติกาเดียวกับชื่อบริษัทของผู้จัดจำหน่าย
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_category_name ON category (lower(btrim(name)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_person_email ON person (lower(email))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_user_account_username ON user_account (lower(username))`,
 	}

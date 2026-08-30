@@ -124,3 +124,17 @@ var (
 	ErrAccountNotSuspended = Conflict("ACCOUNT_NOT_SUSPENDED",
 		"บัญชีนี้ไม่ได้ถูกระงับอยู่")
 )
+
+// ── ข้อมูลหนังสือ (ระบบย่อยของวุฒิภัทร) ─────────────────────────────────
+var (
+	ErrCategoryNotFound = NotFound("CATEGORY_NOT_FOUND", "ไม่พบหมวดหมู่หนังสือ")
+
+	ErrInvalidBookStatus = Validation("INVALID_BOOK_STATUS", "สถานะหนังสือไม่ถูกต้อง")
+	ErrInvalidBookPrice  = Validation("INVALID_BOOK_PRICE", "ราคาปกต้องมากกว่า 0")
+)
+
+// IsbnTaken — ISBN ซ้ำกับหนังสือเล่มที่มีอยู่แล้ว
+// ข้อความคัดจาก toast ของหน้าฟอร์มหนังสือ ("พบ ISBN ซ้ำ — <isbn> เป็นของ <ชื่อเรื่อง>")
+func IsbnTaken(isbn, title string) *DomainError {
+	return Conflict("ISBN_TAKEN", "พบ ISBN ซ้ำ — "+isbn+" เป็นของ "+title)
+}

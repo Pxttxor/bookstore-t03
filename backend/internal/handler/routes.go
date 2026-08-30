@@ -57,7 +57,8 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerAuthRoutes(register)
 	h.registerCustomerRoutes(register)     // ลูกค้า + บัญชีผู้ใช้
 	h.registerSupplierRoutes(register)     // U1–U4
-	h.registerCatalogueRoutes(register)    // หนังสือ + สินค้าคงคลัง (รองรับ U5)
+	h.registerBookRoutes(register)         // หมวดหมู่ + หนังสือ + ประวัติการแก้ไข
+	h.registerCatalogueRoutes(register)    // สินค้าคงคลัง (รองรับ U5)
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 

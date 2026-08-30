@@ -29,6 +29,7 @@ type PurchasingService struct {
 	purchasing    *repository.PurchasingRepository
 	suppliers     *repository.SupplierRepository
 	inventory     *repository.InventoryRepository
+	books         *repository.BookRepository
 	notifications *repository.NotificationRepository
 }
 
@@ -37,11 +38,12 @@ func NewPurchasingService(
 	purchasing *repository.PurchasingRepository,
 	suppliers *repository.SupplierRepository,
 	inventory *repository.InventoryRepository,
+	books *repository.BookRepository,
 	notifications *repository.NotificationRepository,
 ) *PurchasingService {
 	return &PurchasingService{
 		db: db, purchasing: purchasing, suppliers: suppliers,
-		inventory: inventory, notifications: notifications,
+		inventory: inventory, books: books, notifications: notifications,
 	}
 }
 
@@ -140,7 +142,7 @@ func (s *PurchasingService) ReorderAlerts() ([]ReorderAlert, error) {
 	if err != nil {
 		return nil, err
 	}
-	books, err := s.inventory.BooksByID()
+	books, err := s.books.BooksByID()
 	if err != nil {
 		return nil, err
 	}
