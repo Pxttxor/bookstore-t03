@@ -28,6 +28,7 @@ type OrderService struct {
 	people        *repository.PersonRepository
 	payments      *repository.PaymentRepository
 	deliveries    *repository.DeliveryRepository
+	members       *repository.MembershipRepository
 	notifications *repository.NotificationRepository
 }
 
@@ -40,12 +41,13 @@ func NewOrderService(
 	people *repository.PersonRepository,
 	payments *repository.PaymentRepository,
 	deliveries *repository.DeliveryRepository,
+	members *repository.MembershipRepository,
 	notifications *repository.NotificationRepository,
 ) *OrderService {
 	return &OrderService{
 		db: db, orders: orders, promotions: promotions, books: books,
 		inventory: inventory, people: people, payments: payments,
-		deliveries: deliveries, notifications: notifications,
+		deliveries: deliveries, members: members, notifications: notifications,
 	}
 }
 
@@ -402,12 +404,55 @@ func (s *OrderService) Ship(orderID int, input ShipmentInput, by string) (*Order
 		})
 }
 
-// Deliver — ลูกค้ารับของแล้ว · ปิดพัสดุให้เป็น DELIVERED พร้อมกัน
+// Deliver — ลูกค้ารับของแล้ว · ปิดพัสดุและสะสมแต้มให้พร้อมกัน
+//
+// แต้มเกิดที่ขั้นนี้ขั้นเดียว เพราะ DELIVERED เป็นสถานะปลายทาง (ยกเลิกต่อไม่ได้)
+// จึงไม่ต้องมีเส้นทางคืนแต้มเมื่อคำสั่งซื้อถูกยกเลิกทีหลัง
 func (s *OrderService) Deliver(orderID int, by string) (*OrderView, error) {
 	return s.advance(orderID, model.OrderStatusDelivered, by, "ลูกค้าได้รับสินค้าแล้ว",
 		func(tx *gorm.DB, order *model.Order) error {
-			return s.closeShipment(tx, order.OrderID)
+			if err := s.closeShipment(tx, order.OrderID); err != nil {
+				return err
+			}
+			return s.earnPoints(tx, order)
 		})
+}
+
+// earnPoints — เติมแต้มสะสมให้เจ้าของใบ (`Member.earnPoints()` ของบัญชาการ)
+//
+// อัตราแต้มมาจากระดับปัจจุบันของสมาชิก แล้วเลื่อนระดับใหม่ตามยอดสะสมที่เพิ่งเพิ่ม
+// ลูกค้าที่ยังไม่มีแถวสมาชิก (ข้อมูลก่อน P7) ให้ผ่านไป ไม่ต้องล้มการยืนยันรับสินค้าทั้งรายการ
+// — เหตุผลเดียวกับที่ closeShipment ปล่อยใบเก่าที่ไม่มีพัสดุผ่านไป
+func (s *OrderService) earnPoints(tx *gorm.DB, order *model.Order) error {
+	member, err := s.members.FindMemberByCustomerForUpdate(tx, order.CustomerID)
+	if errors.Is(err, model.ErrMemberNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	tiers, err := s.members.ListTiers(tx)
+	if err != nil {
+		return err
+	}
+	var rate float64
+	for _, tier := range tiers {
+		if tier.TierID == member.TierID {
+			rate = tier.PointRate
+			break
+		}
+	}
+
+	before := len(member.PointTxns)
+	member.EarnPoints(*order, rate, time.Now())
+	if next := model.PickTier(tiers, member.TotalAccumulatedPurchase); next != nil {
+		member.TierID = next.TierID
+	}
+	if err := s.members.SaveMember(tx, member); err != nil {
+		return err
+	}
+	return s.members.AddPointTransactions(tx, member.PointTxns[before:])
 }
 
 // recordShipment — เปิดรายการพัสดุของคำสั่งซื้อ (`DeliveryStaff.recordShipment()`)

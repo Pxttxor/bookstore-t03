@@ -32,10 +32,10 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 
 | | |
 |---|---|
-| **เฟส** | **P0–P6 เสร็จแล้ว** |
-| **ทำต่อที่** | **P7** — MembershipTier · Member · PointTransaction · Reward · Redemption |
+| **เฟส** | **P0–P7 เสร็จแล้ว** |
+| **ทำต่อที่** | **P8** — Review · ReviewReply · ReviewReport · ProfanityFilter |
 | **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 74/74 ✅** · migrate+seed บนฐานใหม่ ✅ · **smoke 217/217 ✅ (รันซ้ำได้)** |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 84/84 ✅** · migrate+seed ✅ · **smoke 261/261 ✅ (รันซ้ำได้)** |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -66,7 +66,7 @@ git add -A && git commit
 | P4 | Order · OrderItem · History · Promotion | ✅ | (ดู git log) | 59/59 | ✅ | 171/171 |
 | P5 | Payment · Bank · PaymentReport | ✅ | (ดู git log) | 66/66 | ✅ | 191/191 |
 | P6 | Shipment · Tracking · Carrier · Summary | ✅ | (ดู git log) | 74/74 | ✅ | 217/217 |
-| P7 | MembershipTier · Member · Point · Reward | ⬜ | | | | |
+| P7 | MembershipTier · Member · Point · Reward | ✅ | (ดู git log) | 84/84 | ✅ | 261/261 |
 | P8 | Review · Reply · Report · ProfanityFilter | ⬜ | | | | |
 | P9 | เก็บงาน (เอกสาร · permissions.ts · verify รวม) | ⬜ | | | | |
 
@@ -264,6 +264,35 @@ git add -A && git commit
 | D | ป้ายไทยของ `ShipmentStatus` ในไฟล์ของเพื่อน (`SourceCode/`) ไม่ตรงกับ frontend | ยึดฝั่ง frontend ตามกติกาโปรเจกต์ (`PREPARING` = "กำลังเตรียม" ไม่ใช่ "กำลังเตรียมพัสดุ") · มีเทสต์คุมไว้ |
 | E | `Seed()` ข้ามตารางที่มีข้อมูลแล้ว พัสดุของ SO-1003 จึงไม่ถูกสร้างบนฐานที่มีคำสั่งซื้ออยู่ก่อน | ล้าง volume แล้ว seed ใหม่ (รอบที่สองของเซสชันนี้) · เป็นข้อจำกัดเดิมของ `seedIfEmpty` ที่ต้องระวังทุกครั้งที่เพิ่มข้อมูลตั้งต้นให้ตารางที่ seed ไปแล้ว |
 
+### P7 — รายการย่อย
+
+| # | งาน | สถานะ |
+|---|---|---|
+| 1 | `model/enums_team.go` + `labels_team.go` — `PointTxnType` 4 ค่า + `RewardType` 2 ค่า + `PointTxnTypes()`/`RewardTypes()` + ป้ายไทย (ยึด `SourceCode/` ของเพื่อน เพราะไม่มีหน้าจอฝั่ง frontend) | ✅ |
+| 2 | `model/membership.go` — `MembershipTier` · `Member` · `PointTransaction` · `Reward` · `Redemption` + `EarnPoints()`/`RedeemPoints()`/`CheckPoints()`/`Adjust()` + `PickTier()`/`PointsFor()` + `FormatMemberCode`/`FormatCouponCode` | ✅ |
+| 3 | `model/errors.go` — 13 ตัว (`INSUFFICIENT_POINTS` · `TIER_IN_USE` · `REWARD_REDEEMED` ฯลฯ) | ✅ |
+| 4 | `migrate.go` — 5 entity ใหม่ · CHECK 2 · FK 6 เส้น · index 2 · `backfillTiers()` + `backfillMembers()` · `seed.go` เพิ่ม sequence 5 ตัว | ✅ |
+| 5 | `database/seed_membership.go` — ระดับ 3 · ของรางวัล 5 · สมาชิกของลูกค้าตั้งต้น 3 ราย (ระดับเลือกด้วย `PickTier` จากยอดสะสม ไม่ได้ระบุตรง ๆ) | ✅ |
+| 6 | `repository/membership.go` — ระดับ/สมาชิก/แต้ม/ของรางวัล/การแลก · `MemberRow` join ครบไม่ N+1 · `FindMemberForUpdate` | ✅ |
+| 7 | `service/membership.go` — CRUD ระดับ + ของรางวัล · อ่านสมาชิก/ประวัติแต้ม (กรองตามเจ้าของ) · `Redeem` · `AdjustPoints` | ✅ |
+| 8 | `service/person.go` — `enroll()` เปิดแถวสมาชิกเป็นแถวที่ 4 ของการสมัคร | ✅ |
+| 9 | `service/order.go` — `earnPoints()` ใน `Deliver()` ทรานแซกชันเดียวกับการปิดพัสดุ | ✅ |
+| 10 | `handler/membership.go` + `dto_membership.go` + **15 เส้นทาง** + `Deps.Members` + ต่อสายใน `cmd/api` | ✅ |
+| 11 | `model/membership_test.go` 10 เคส (test 74 → 84) + `handler_test.go` เพิ่ม 15 path | ✅ |
+| 12 | `cmd/smoke/flow_membership.go` — 44 เคส (smoke 217 → 261) | ✅ |
+
+### P7 — บันทึกระหว่างทำ
+
+| # | เรื่อง | รายละเอียด |
+|---|---|---|
+| A | **ลูกค้าทุกคนเป็นสมาชิกตั้งแต่สมัคร** (ผู้ใช้เลือก) | ระบบนี้สร้างลูกค้าได้ทางเดียวคือการสมัคร และหน้าสมัครเรียกตัวเองว่า "สมัครสมาชิก" อยู่แล้ว · `/api/members/me` จึงใช้ได้เสมอ ไม่ต้องมีเคส "ยังไม่เป็นสมาชิก" · ฐานเดิมตามเก็บด้วย `backfillMembers()` |
+| B | **แต้มเกิดตอน `DELIVERED` เท่านั้น** (ผู้ใช้เลือก) | เป็นสถานะปลายทาง ยกเลิกต่อไม่ได้ จึงไม่ต้องมีเส้นทางคืนแต้ม · ถ้าเปิดให้ยกเลิกใบที่ส่งถึงแล้วเมื่อไร ต้องเขียนการคืนแต้มด้วย (กติกาเดียวกับการคืนสต็อกของ P4) |
+| C | คิดแต้มด้วยอัตราของระดับ **ก่อน** เลื่อนระดับ | ลูกค้าได้แต้มตามสิทธิ์ที่มีตอนซื้อ ระดับใหม่มีผลกับใบถัดไป · ถ้าเลื่อนก่อนคิด ใบที่ทำให้เลื่อนระดับจะได้อัตราใหม่ย้อนหลัง ซึ่งอธิบายให้ลูกค้าฟังยาก |
+| D | `service` ไม่เรียก `service` | `OrderService` รับ `*repository.MembershipRepository` เข้ามาตรง ๆ แล้วเขียนเอง — รูปแบบเดียวกับ `decidePayment` (P5) และ `closeShipment` (P6) |
+| E | `point_transaction.note` เป็น deviation | การหักแต้มด้วยมือไม่มีเอกสารต้นทาง ต้องเก็บเหตุผลไว้ · บันทึกไว้ใน README ข้อ 24 แล้ว |
+| F | `membership_tier.point_rate` ต้องเป็น `numeric(12,4)` | `(12,2)` ปัด 0.015 เป็น 0.02 ทำให้ระดับ Gold ให้แต้มเท่า Platinum |
+| G | `seedMemberRows()` ยัง**ไม่เคยถูกรันจริง** | `backfillMembers()` ใน migrate เปิดแถวสมาชิกให้ลูกค้าเดิมไปก่อนแล้ว ตาราง `member` จึงไม่ว่างตอน `Seed()` · ยอดแต้มตัวอย่างของลูกค้าตั้งต้นจะขึ้นก็ต่อเมื่อ seed บนฐานเปล่า — ข้อจำกัดเดิมของ `seedIfEmpty` ที่เจอมาแล้วทั้ง P5 และ P6 |
+
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
 | # | เจออะไร | แก้ยังไง |
@@ -285,7 +314,7 @@ git add -A && git commit
 | Supplier | Supplier · SupplierBook | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Purchasing | PurchaseRequisition(+Item) · PurchaseOrder(+Item) · GoodsReceipt(+Item) · PurchaseReturn(+Item) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | People | Person · Customer · UserAccount | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| People | Member (รอ MembershipTier) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| People | Member | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | People | Employee (+ view ครบ 4 บทบาท) | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Book | Category · Book · BookChangeLog | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inventory | InventoryItem · StockTransaction | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -293,7 +322,7 @@ git add -A && git commit
 | Order | Order · OrderItem · OrderStatusHistory | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Promotion | Promotion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Payment | Payment · PaymentReport · Bank | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Membership | MembershipTier · PointTransaction · Reward · Redemption | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Membership | MembershipTier · PointTransaction · Reward · Redemption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Delivery | Shipment · ShipmentTracking · ShippingCompany · DeliverySummary | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Review | Review · ReviewReply · ReviewReport · ProfanityFilter | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | ทั่วไป | Notification (ส่วนขยายนอก diagram) | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ |

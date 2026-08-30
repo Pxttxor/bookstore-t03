@@ -81,6 +81,7 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerPromotionRoutes(register)    // โปรโมชั่นและส่วนลด
 	h.registerPaymentRoutes(register)      // ตรวจสอบการชำระเงิน + รายงานรับชำระ
 	h.registerDeliveryRoutes(register)     // พัสดุ · ติดตามสถานะ · สรุปบัญชีพัสดุ
+	h.registerMembershipRoutes(register)   // ระดับสมาชิก · แต้มสะสม · ของรางวัล
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 

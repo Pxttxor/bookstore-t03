@@ -217,3 +217,30 @@ func ShipmentTransitionRejected(from, to ShipmentStatus) *DomainError {
 	return Conflict("SHIPMENT_TRANSITION_REJECTED",
 		"เปลี่ยนสถานะพัสดุจาก \""+from.Label()+"\" เป็น \""+to.Label()+"\" ไม่ได้")
 }
+
+// ── ระบบสมาชิกและแต้มสะสม (ระบบย่อยของบัญชาการ) ────────────────────────
+//
+// ระบบย่อยนี้ไม่มีหน้าจอใน Figma spec ให้คัดข้อความ Abnormal มาตรง ๆ
+// จึงเขียนให้เข้าคู่กับชุดที่มีอยู่แล้ว (สั้น บอกสิ่งที่ผู้ใช้ต้องทำต่อ)
+var (
+	ErrMemberNotFound = NotFound("MEMBER_NOT_FOUND", "ไม่พบข้อมูลสมาชิก")
+	ErrTierNotFound   = NotFound("TIER_NOT_FOUND", "ไม่พบระดับสมาชิก")
+	ErrRewardNotFound = NotFound("REWARD_NOT_FOUND", "ไม่พบของรางวัล")
+
+	ErrInsufficientPoints = Conflict("INSUFFICIENT_POINTS", "แต้มสะสมไม่พอสำหรับรายการนี้")
+	ErrTierNameTaken      = Conflict("TIER_NAME_TAKEN", "มีระดับสมาชิกชื่อนี้อยู่แล้ว")
+
+	// ลบระดับที่ยังมีสมาชิกอยู่ไม่ได้ เพราะ member.tier_id เป็น NOT NULL
+	ErrTierInUse = Conflict("TIER_IN_USE", "ยังมีสมาชิกอยู่ในระดับนี้ ลบไม่ได้")
+
+	// กติกาเดียวกับโปรโมชั่นที่ถูกใช้ไปแล้ว — ประวัติการแลกต้องอ่านย้อนหลังได้
+	ErrRewardRedeemed = Conflict("REWARD_REDEEMED", "ของรางวัลนี้ถูกแลกไปแล้ว ลบไม่ได้")
+
+	ErrInvalidPointTxnType  = Validation("INVALID_POINT_TXN_TYPE", "ประเภทรายการแต้มไม่ถูกต้อง")
+	ErrInvalidRewardType    = Validation("INVALID_REWARD_TYPE", "ประเภทของรางวัลไม่ถูกต้อง")
+	ErrPointsMustBePositive = Validation("POINTS_MUST_BE_POSITIVE", "จำนวนแต้มต้องมากกว่าศูนย์")
+	ErrInvalidPointCost     = Validation("INVALID_POINT_COST", "แต้มที่ใช้แลกต้องมากกว่าศูนย์")
+	ErrInvalidPointRate     = Validation("INVALID_POINT_RATE", "อัตราการให้แต้มต้องมากกว่าศูนย์")
+	ErrInvalidMinPurchase   = Validation("INVALID_MIN_PURCHASE", "ยอดสะสมขั้นต่ำต้องไม่ติดลบ")
+	ErrInvalidDiscountValue = Validation("INVALID_DISCOUNT_VALUE", "มูลค่าส่วนลดต้องมากกว่าศูนย์")
+)

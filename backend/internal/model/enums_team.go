@@ -216,3 +216,50 @@ func ShipmentStatuses() []ShipmentStatus {
 		ShipmentStatusDelivered, ShipmentStatusFailed,
 	}
 }
+
+// ── ระบบสมาชิกและแต้มสะสม (เจ้าของคลาส: บัญชาการ อภัยสอน) ───────────────
+
+// PointTxnType — ประเภทรายการแต้มสะสม
+//
+// EARN มาจากคำสั่งซื้อที่ส่งถึงลูกค้าแล้ว · REDEEM มาจากการแลกของรางวัล
+// EXPIRE กับ REVERSAL เป็นการปรับด้วยมือของผู้จัดการ (ดู Member.Adjust)
+type PointTxnType string
+
+const (
+	PointTxnTypeEarn     PointTxnType = "EARN"
+	PointTxnTypeRedeem   PointTxnType = "REDEEM"
+	PointTxnTypeExpire   PointTxnType = "EXPIRE"
+	PointTxnTypeReversal PointTxnType = "REVERSAL"
+)
+
+func (t PointTxnType) IsValid() bool {
+	switch t {
+	case PointTxnTypeEarn, PointTxnTypeRedeem, PointTxnTypeExpire, PointTxnTypeReversal:
+		return true
+	}
+	return false
+}
+
+// PointTxnTypes — ค่าทั้งหมดเรียงตาม class diagram (ใช้สร้าง CHECK ใน migrate)
+func PointTxnTypes() []PointTxnType {
+	return []PointTxnType{
+		PointTxnTypeEarn, PointTxnTypeRedeem, PointTxnTypeExpire, PointTxnTypeReversal,
+	}
+}
+
+// RewardType — ประเภทของรางวัลที่แลกด้วยแต้ม
+type RewardType string
+
+const (
+	RewardTypeDiscount RewardType = "DISCOUNT"
+	RewardTypeGift     RewardType = "GIFT"
+)
+
+func (t RewardType) IsValid() bool {
+	return t == RewardTypeDiscount || t == RewardTypeGift
+}
+
+// RewardTypes — ค่าทั้งหมด (ใช้สร้าง CHECK ใน migrate)
+func RewardTypes() []RewardType {
+	return []RewardType{RewardTypeDiscount, RewardTypeGift}
+}

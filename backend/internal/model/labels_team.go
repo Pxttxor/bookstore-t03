@@ -105,3 +105,21 @@ var ShipmentStatusLabels = map[ShipmentStatus]string{
 }
 
 func (s ShipmentStatus) Label() string { return lookup(ShipmentStatusLabels, s) }
+
+// PointTxnTypeLabels / RewardTypeLabels — ระบบย่อยนี้ไม่มีหน้าจอฝั่ง frontend ให้ยึด
+// จึงคัดข้อความจากไฟล์ของเจ้าของคลาส (SourceCode/B6730741-banchakan/model/labels.go)
+// ต่างจาก ShipmentStatusLabels ที่มีป้ายฝั่งหน้าจออยู่แล้วจึงต้องยึดฝั่งนั้น
+var PointTxnTypeLabels = map[PointTxnType]string{
+	PointTxnTypeEarn:     "ได้รับแต้ม",
+	PointTxnTypeRedeem:   "ใช้แต้มแลก",
+	PointTxnTypeExpire:   "แต้มหมดอายุ",
+	PointTxnTypeReversal: "ยกเลิก/คืนรายการ",
+}
+
+var RewardTypeLabels = map[RewardType]string{
+	RewardTypeDiscount: "ส่วนลด",
+	RewardTypeGift:     "ของแถม",
+}
+
+func (t PointTxnType) Label() string { return lookup(PointTxnTypeLabels, t) }
+func (t RewardType) Label() string   { return lookup(RewardTypeLabels, t) }

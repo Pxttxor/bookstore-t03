@@ -20,12 +20,17 @@ import (
 const MinPasswordLength = 8
 
 type PersonService struct {
-	db     *gorm.DB
-	people *repository.PersonRepository
+	db      *gorm.DB
+	people  *repository.PersonRepository
+	members *repository.MembershipRepository
 }
 
-func NewPersonService(db *gorm.DB, people *repository.PersonRepository) *PersonService {
-	return &PersonService{db: db, people: people}
+func NewPersonService(
+	db *gorm.DB,
+	people *repository.PersonRepository,
+	members *repository.MembershipRepository,
+) *PersonService {
+	return &PersonService{db: db, people: people, members: members}
 }
 
 // ── DTO ที่หน้าจอส่งเข้ามา ───────────────────────────────────────────────
@@ -85,7 +90,10 @@ func (s *PersonService) Register(input RegisterInput) (*RegisterResult, error) {
 		if taken {
 			return model.ErrUsernameTaken
 		}
-		return s.people.CreateCustomer(tx, person, customer, account)
+		if err := s.people.CreateCustomer(tx, person, customer, account); err != nil {
+			return err
+		}
+		return s.enroll(tx, customer)
 	})
 	if err != nil {
 		return nil, err
@@ -97,6 +105,26 @@ func (s *PersonService) Register(input RegisterInput) (*RegisterResult, error) {
 		Status:     account.Status,
 		OtpHint:    model.DevOtpCode,
 	}, nil
+}
+
+// enroll — เปิดแถวสมาชิกให้ลูกค้าที่เพิ่งสมัคร (แถวที่สี่ของทรานแซกชันเดียวกัน)
+//
+// ลูกค้าทุกคนเป็นสมาชิกตั้งแต่สมัคร — class diagram วาง Member เป็น subclass ของ Customer
+// และหน้าสมัครของร้านก็เรียกตัวเองว่า "สมัครสมาชิก" อยู่แล้ว · เริ่มที่ระดับต่ำสุด แต้ม 0
+func (s *PersonService) enroll(tx *gorm.DB, customer *model.Customer) error {
+	tiers, err := s.members.ListTiers(tx)
+	if err != nil {
+		return err
+	}
+	tier := model.PickTier(tiers, 0)
+	if tier == nil {
+		return model.ErrTierNotFound
+	}
+	return s.members.CreateMember(tx, &model.Member{
+		CustomerID: customer.CustomerID,
+		JoinDate:   model.Today(),
+		TierID:     tier.TierID,
+	})
 }
 
 // buildRegistration — ตรวจข้อมูลที่กรอกแล้วประกอบเป็นสามแถวที่จะเขียนลงฐานข้อมูล

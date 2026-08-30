@@ -73,6 +73,11 @@ var sequences = []struct{ table, column string }{
 	{"shipment", "shipment_id"},
 	{"shipment_tracking", "tracking_id"},
 	{"delivery_summary", "summary_id"},
+	{"membership_tier", "tier_id"},
+	{"member", "member_id"},
+	{"point_transaction", "point_txn_id"},
+	{"reward", "reward_id"},
+	{"redemption", "redemption_id"},
 	{"notification", "id"},
 }
 
@@ -197,6 +202,23 @@ func Seed(db *gorm.DB) error {
 			return err
 		}
 		inserted["คำสั่งซื้อ"] = n
+
+		// ระดับสมาชิกต้องมาก่อนสมาชิก เพราะ member.tier_id อ้างถึง
+		// (migrate เติมให้ไปแล้วถ้าตารางว่าง — ตรงนี้จึงมักได้ 0 เหมือนบริษัทขนส่ง)
+		if n, err = seedIfEmpty(tx, seedTiers, "ระดับสมาชิก"); err != nil {
+			return err
+		}
+		inserted["ระดับสมาชิก"] = n
+
+		if n, err = seedIfEmpty(tx, seedRewards, "ของรางวัล"); err != nil {
+			return err
+		}
+		inserted["ของรางวัล"] = n
+
+		if n, err = seedMemberRows(tx); err != nil {
+			return err
+		}
+		inserted["สมาชิก"] = n
 		return nil
 	})
 	if err != nil {
@@ -210,7 +232,7 @@ func Seed(db *gorm.DB) error {
 	// เพิ่มระบบย่อยใหม่ = เติมป้ายเข้าลิสต์นี้ ไม่ต้องแก้ format string
 	order := []string{"พนักงาน", "ลูกค้า", "หมวดหมู่", "หนังสือ", "ประวัติหนังสือ",
 		"ผู้จัดจำหน่าย", "สินค้าคงคลัง", "เคลื่อนไหวสต็อก", "PR", "PO", "GR", "โปรโมชั่น", "ธนาคาร",
-		"บริษัทขนส่ง", "คำสั่งซื้อ"}
+		"บริษัทขนส่ง", "คำสั่งซื้อ", "ระดับสมาชิก", "ของรางวัล", "สมาชิก"}
 	parts := make([]string, 0, len(order))
 	for _, label := range order {
 		parts = append(parts, fmt.Sprintf("%s %d", label, inserted[label]))

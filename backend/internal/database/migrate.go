@@ -53,6 +53,11 @@ var entities = []any{
 	&model.Shipment{},
 	&model.ShipmentTracking{},
 	&model.DeliverySummary{},
+	&model.MembershipTier{},
+	&model.Member{},
+	&model.PointTransaction{},
+	&model.Reward{},
+	&model.Redemption{},
 	&model.Notification{},
 }
 
@@ -68,6 +73,12 @@ func Migrate(db *gorm.DB) error {
 		return err
 	}
 	if err := backfillCarriers(db); err != nil {
+		return err
+	}
+	if err := backfillTiers(db); err != nil {
+		return err
+	}
+	if err := backfillMembers(db); err != nil {
 		return err
 	}
 	if err := applyChecks(db); err != nil {
@@ -215,6 +226,12 @@ var foreignKeys = []foreignKey{
 	{"shipment", "order_id", "customer_order", "order_id"},
 	{"shipment", "carrier_id", "shipping_company", "carrier_id"},
 	{"shipment_tracking", "shipment_id", "shipment", "shipment_id"},
+	{"member", "customer_id", "customer", "customer_id"},
+	{"member", "tier_id", "membership_tier", "tier_id"},
+	{"point_transaction", "member_id", "member", "member_id"},
+	{"point_transaction", "order_id", "customer_order", "order_id"},
+	{"redemption", "member_id", "member", "member_id"},
+	{"redemption", "reward_id", "reward", "reward_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},
@@ -285,6 +302,8 @@ func checks() []enumCheck {
 			model.PaymentStatusSuccess, model.PaymentStatusRejected)},
 		{"shipment", "status", values(model.ShipmentStatuses()...)},
 		{"shipment_tracking", "status", values(model.ShipmentStatuses()...)},
+		{"point_transaction", "type", values(model.PointTxnTypes()...)},
+		{"reward", "type", values(model.RewardTypes()...)},
 		{"notification", "channel", values(model.ChannelInApp, model.ChannelEmail)},
 	}
 }
@@ -368,6 +387,10 @@ func applyIndexes(db *gorm.DB) error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_category_name ON category (lower(btrim(name)))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_person_email ON person (lower(email))`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_user_account_username ON user_account (lower(username))`,
+		// ชื่อระดับสมาชิกห้ามซ้ำ (กติกาเดียวกับชื่อหมวดหมู่) · รหัสคูปองต้องไม่ชนกันเด็ดขาด
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_membership_tier_name
+		 ON membership_tier (lower(btrim(name)))`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_redemption_coupon_code ON redemption (coupon_code)`,
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement).Error; err != nil {
@@ -419,6 +442,74 @@ func backfillCarriers(db *gorm.DB) error {
 	}
 	if err := db.Create(&seedCarriers).Error; err != nil {
 		return fmt.Errorf("ใส่บริษัทขนส่งตั้งต้นไม่สำเร็จ: %w", err)
+	}
+	return nil
+}
+
+// backfillTiers — ใส่ระดับสมาชิกตั้งต้นให้ก่อนถ้าตารางยังว่าง
+//
+// เหตุผลเดียวกับ backfillCarriers/backfillBookCategories: Migrate รันก่อน Seed เสมอ
+// ถ้ามีแถว member อยู่แล้วแต่ membership_tier ยังว่าง constraint `member.tier_id`
+// จะสร้างไม่ผ่าน · และ backfillMembers ข้างล่างก็ต้องมีระดับให้เลือกก่อนด้วย
+func backfillTiers(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&model.MembershipTier{}).Count(&count).Error; err != nil {
+		return fmt.Errorf("นับระดับสมาชิกไม่สำเร็จ: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+	rows := make([]model.MembershipTier, len(seedTiers))
+	copy(rows, seedTiers)
+	if err := db.Create(&rows).Error; err != nil {
+		return fmt.Errorf("ใส่ระดับสมาชิกตั้งต้นไม่สำเร็จ: %w", err)
+	}
+	return nil
+}
+
+// backfillMembers — เปิดแถวสมาชิกให้ลูกค้าที่ยังไม่มี (ระดับต่ำสุด แต้ม 0)
+//
+// ลูกค้าทุกคนเป็นสมาชิกตั้งแต่ P7 เป็นต้นไป (ดู PersonService.enroll) แต่ลูกค้าที่สมัคร
+// ไว้ก่อนหน้านั้นยังไม่มีแถว · ตัวนี้ตามเก็บให้บนฐานเดิม ส่วนฐานเปล่าจะได้ข้อมูลตัวอย่าง
+// จาก seedMemberRows แทน — คู่เดียวกับ backfillPersons() กับ seedEmployeeRows()
+//
+// รันซ้ำได้: ลูกค้าที่มีแถวแล้วไม่ถูกแตะ
+func backfillMembers(db *gorm.DB) error {
+	var customerIDs []int
+	err := db.Model(&model.Customer{}).
+		Where("customer_id NOT IN (SELECT customer_id FROM member)").
+		Pluck("customer_id", &customerIDs).Error
+	if err != nil {
+		return fmt.Errorf("หาลูกค้าที่ยังไม่เป็นสมาชิกไม่สำเร็จ: %w", err)
+	}
+	if len(customerIDs) == 0 {
+		return nil
+	}
+
+	var tiers []model.MembershipTier
+	if err := db.Find(&tiers).Error; err != nil {
+		return fmt.Errorf("อ่านระดับสมาชิกไม่สำเร็จ: %w", err)
+	}
+	tier := model.PickTier(tiers, 0)
+	if tier == nil {
+		return fmt.Errorf("ไม่มีระดับสมาชิกให้ผูกกับลูกค้า %d ราย", len(customerIDs))
+	}
+
+	// วันที่สมัครใช้วันที่ลงทะเบียนของลูกค้า เพื่อไม่ให้ประวัติย้อนหลังดูเหมือนเพิ่งสมัครวันนี้
+	rows := make([]model.Member, len(customerIDs))
+	for i, customerID := range customerIDs {
+		var customer model.Customer
+		if err := db.First(&customer, "customer_id = ?", customerID).Error; err != nil {
+			return fmt.Errorf("อ่านข้อมูลลูกค้า %d ไม่สำเร็จ: %w", customerID, err)
+		}
+		joinDate := customer.RegisteredDate
+		if joinDate.IsZero() {
+			joinDate = model.Today()
+		}
+		rows[i] = model.Member{CustomerID: customerID, JoinDate: joinDate, TierID: tier.TierID}
+	}
+	if err := db.Create(&rows).Error; err != nil {
+		return fmt.Errorf("เปิดแถวสมาชิกให้ลูกค้าเดิมไม่สำเร็จ: %w", err)
 	}
 	return nil
 }
