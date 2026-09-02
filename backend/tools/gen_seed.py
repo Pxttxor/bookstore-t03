@@ -24,14 +24,80 @@ books_ts = read(os.path.join(FE, "books", "books.ts"))
 sup_ts = read(os.path.join(FE, "suppliers", "suppliers.ts"))
 inv_ts = read(os.path.join(FE, "inventory", "inventory.ts"))
 pur_ts = read(os.path.join(FE, "purchasing", "purchasing.ts"))
+promo_ts = read(os.path.join(FE, "promotions", "promotions.ts"))
+
+# ── หมวดหมู่ ─────────────────────────────────────────────────────────────
+cat_re = re.compile(r"\{ categoryId: (\d+), name: " + STR + r", description: " + STR + r" \}")
+categories = [(int(m[0]), unq(m[1]), unq(m[2]))
+              for m in cat_re.findall(books_ts[books_ts.index("SEED_CATEGORIES"):])]
+assert len(categories) == 6, len(categories)
 
 # ── หนังสือ ─────────────────────────────────────────────────────────────
 seed = books_ts[books_ts.index("SEED_BOOKS"):]
+
+
+def calls(source, name):
+    """ตัด `name(...)` ออกมาทีละก้อนโดยนับวงเล็บ
+
+    regex เดียวจับ argument ท้าย ๆ ที่เป็นค่าไม่บังคับ (status, changeLogs) ไม่ไหว
+    เพราะบางเล่มมีคอมเมนต์คั่นและบางเล่มไม่มี argument นั้นเลย
+    """
+    out, i, opener = [], 0, name + "("
+    while True:
+        j = source.find(opener, i)
+        if j < 0:
+            return out
+        if j > 0 and (source[j - 1].isalnum() or source[j - 1] in "_."):
+            i = j + len(opener)
+            continue
+        depth, k, in_str, esc = 0, j + len(name), False, False
+        while k < len(source):
+            ch = source[k]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == "'":
+                    in_str = False
+            elif ch == "'":
+                in_str = True
+            elif ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    out.append(source[j:k + 1])
+                    break
+            k += 1
+        i = k + 1
+
+
 book_re = re.compile(r"book\(\s*(\d+),\s*" + STR + r",\s*" + STR + r",\s*" + STR +
                      r",\s*" + STR + r",\s*" + NUM + r",\s*(\d+),\s*" + STR)
-books = [(int(m[0]), unq(m[1]), unq(m[2]), unq(m[3]), unq(m[4]), float(m[5]), unq(m[7]))
-         for m in book_re.findall(seed)]
+log_re = re.compile(r"logId: (\d+),\s*changedField: " + STR + r",\s*oldValue: " + STR +
+                    r",\s*newValue: " + STR + r",\s*changedDate: " + STR +
+                    r",\s*changedBy: " + STR)
+
+books = []
+for block in calls(seed, "book"):
+    m = book_re.match(block)
+    if not m:
+        continue
+    rest = block[m.end():]
+    status = re.search(r"'(ACTIVE|INACTIVE)'", rest)
+    books.append(dict(
+        id=int(m.group(1)), isbn=unq(m.group(2)), title=unq(m.group(3)),
+        author=unq(m.group(4)), publisher=unq(m.group(5)), price=float(m.group(6)),
+        category=int(m.group(7)), description=unq(m.group(8)),
+        status=status.group(1) if status else "ACTIVE",
+        logs=[(int(x[0]), unq(x[1]), unq(x[2]), unq(x[3]), unq(x[4]), unq(x[5]))
+              for x in log_re.findall(rest)]))
 assert len(books) == 23, len(books)
+# เล่ม 118 ปิดการขายอยู่ฝั่งหน้าจอ — ก่อนหน้านี้สคริปต์ไม่ได้อ่าน status เลยจึงเขียน ACTIVE ให้ทุกเล่ม
+assert [b["id"] for b in books if b["status"] == "INACTIVE"] == [118], \
+    [b["id"] for b in books if b["status"] == "INACTIVE"]
+assert sum(len(b["logs"]) for b in books) == 1, "คาดว่ามีประวัติการแก้ไขตั้งต้น 1 แถว"
 
 # ── ผู้จัดจำหน่าย ────────────────────────────────────────────────────────
 sseed = sup_ts[sup_ts.index("SEED_SUPPLIERS"):]
@@ -61,9 +127,9 @@ assert len(suppliers) == 12, len(suppliers)
 # ── สินค้าคงคลัง ─────────────────────────────────────────────────────────
 inventory = re.findall(r"item\((\d+), (\d+), (\d+), (\d+|undefined)\)", inv_ts)
 assert len(inventory) == 23, len(inventory)
-txn_re = re.compile(r"txn\((\d+), (\d+), '(\w+)', (-?\d+), " + STR + r", " + STR + r", " + STR + r"\)")
-txns = [(int(t[0]), int(t[1]), t[2], int(t[3]), unq(t[4]), unq(t[5]), t[6])
-        for t in txn_re.findall(inv_ts)]
+# หมายเหตุ: ไม่อ่าน SEED_STOCK_TRANSACTIONS จาก frontend อีกแล้ว
+# ฝั่ง frontend ถูกลบจนเหลือ [] การสร้างต่อจึงเท่ากับลบข้อมูลแปดแถวทิ้งเงียบ ๆ
+# ข้อมูลย้ายไปอยู่ที่ internal/database/seed_inventory.go ซึ่งเขียนด้วยมือ
 
 # ── เอกสารจัดซื้อ ────────────────────────────────────────────────────────
 def obj_blocks(source, marker):
@@ -87,6 +153,24 @@ def obj_blocks(source, marker):
 def items_of(block, fn):
     return re.findall(fn, block)
 
+# ── โปรโมชั่น ────────────────────────────────────────────────────────────
+promotions = []
+for b in obj_blocks(promo_ts, "SEED_PROMOTIONS"):
+    promotions.append(dict(
+        id=int(re.search(r"promotionId: (\d+)", b).group(1)),
+        name=unq(re.search(r"name: " + STR, b).group(1)),
+        type=re.search(r"type: '(\w+)'", b).group(1),
+        detail=unq(re.search(r"conditionDetail: " + STR, b).group(1)),
+        value=float(re.search(r"discountValue: " + NUM, b).group(1)),
+        percent=re.search(r"isPercent: (true|false)", b).group(1) == "true",
+        minQty=int(re.search(r"minQty: (\d+)", b).group(1)),
+        minAmount=float(re.search(r"minAmount: " + NUM, b).group(1)),
+        start=re.search(r"startDate: " + STR, b).group(1),
+        end=re.search(r"endDate: " + STR, b).group(1),
+        status=re.search(r"status: '(\w+)'", b).group(1)))
+assert len(promotions) >= 4, len(promotions)
+
+# ── เอกสารจัดซื้อ (ต่อ) ──────────────────────────────────────────────────
 requisitions = []
 for b in obj_blocks(pur_ts, "SEED_REQUISITIONS"):
     requisitions.append(dict(
@@ -144,11 +228,41 @@ w("")
 w('import "bookstore-t03/internal/model"')
 w("")
 
+w("// seedCategories — หมวดหมู่หนังสือ · ต้องใส่ก่อน seedBooks เพราะ book.category_id อ้างถึง")
+w("var seedCategories = []model.Category{")
+for c in categories:
+    w("\t{CategoryID: %d, Name: %s, Description: %s}," % (c[0], q(c[1]), q(c[2])))
+w("}")
+w("")
+
 w("// seedBooks — หนังสือ 23 เล่ม รหัส 101–123")
 w("var seedBooks = []model.Book{")
 for b in books:
-    w("\t{BookID: %d, ISBN: %s, Title: %s, Author: %s, Publisher: %s, Price: %s, Description: %s, Status: model.BookStatusActive},"
-      % (b[0], q(b[1]), q(b[2]), q(b[3]), q(b[4]), repr(b[5]), q(b[6])))
+    w("\t{BookID: %d, ISBN: %s, Title: %s, Author: %s, Publisher: %s, Price: %s, Description: %s, CategoryID: %d, Status: model.BookStatus%s},"
+      % (b["id"], q(b["isbn"]), q(b["title"]), q(b["author"]), q(b["publisher"]),
+         repr(b["price"]), q(b["description"]), b["category"],
+         "Active" if b["status"] == "ACTIVE" else "Inactive"))
+w("}")
+w("")
+
+w("// seedPromotions — โปรโมชั่นตั้งต้น · EXPIRED คำนวณจากวันสิ้นสุด ไม่ได้เก็บในคอลัมน์ status")
+w("var seedPromotions = []model.Promotion{")
+for p in promotions:
+    w("\t{PromotionID: %d, Name: %s, Type: model.PromotionType(%s), ConditionDetail: %s,"
+      % (p["id"], q(p["name"]), q(p["type"]), q(p["detail"])))
+    w("\t\tDiscountValue: %s, IsPercent: %s, MinQty: %d, MinAmount: %s,"
+      % (repr(p["value"]), "true" if p["percent"] else "false", p["minQty"], repr(p["minAmount"])))
+    w("\t\tStartDate: mustDate(%s), EndDate: mustDate(%s), Status: model.PromotionStatus(%s)},"
+      % (q(p["start"]), q(p["end"]), q(p["status"])))
+w("}")
+w("")
+
+w("// seedBookChangeLogs — ประวัติการแก้ไขตั้งต้น ให้แท็บประวัติมีข้อมูลให้ดูตั้งแต่เปิดครั้งแรก")
+w("var seedBookChangeLogs = []model.BookChangeLog{")
+for b in books:
+    for lg in b["logs"]:
+        w("\t{LogID: %d, BookID: %d, ChangedField: %s, OldValue: %s, NewValue: %s, ChangedDate: mustTime(%s), ChangedBy: %s},"
+          % (lg[0], b["id"], q(lg[1]), q(lg[2]), q(lg[3]), q(lg[4]), q(lg[5])))
 w("}")
 w("")
 
@@ -209,14 +323,6 @@ for inv in inventory:
 w("}")
 w("")
 
-w("// seedStockTransactions — ประวัติการเคลื่อนไหวสต็อกที่ทำให้ยอดคงเหลือข้างบนสมเหตุสมผล")
-w("var seedStockTransactions = []model.StockTransaction{")
-for t in txns:
-    w("\t{TxnID: %d, BookID: %d, Type: model.StockTxnType(%s), QuantityChange: %d, Reason: %s, ReferenceDoc: %s, TxnDate: mustTime(%s)},"
-      % (t[0], t[1], q(t[2]), t[3], q(t[4]), q(t[5]), q(t[6])))
-w("}")
-w("")
-
 w("// seedRequisitions — ใบขอสั่งซื้อ 3 ใบ สถานะรออนุมัติ เพื่อให้หน้าอนุมัติมีของตั้งแต่เข้าระบบครั้งแรก")
 w("var seedRequisitions = []model.PurchaseRequisition{")
 for r in requisitions:
@@ -269,12 +375,17 @@ for g in receipts:
 w("}")
 w("")
 
+# seedStockTransactions ย้ายไปอยู่ใน seed_inventory.go ที่เขียนด้วยมือแล้ว
+# ถ้าหลุดกลับมาที่นี่ จะประกาศตัวแปรซ้ำ (คอมไพล์ไม่ผ่าน) หรือทับข้อมูลแปดแถวนั้นทิ้ง
+assert "seedStockTransactions" not in "\n".join(L), \
+    "seedStockTransactions ต้องไม่ถูกสร้างจากสคริปต์นี้ — ดู internal/database/seed_inventory.go"
+
 io.open(OUT, "w", encoding="utf-8", newline="\n").write("\n".join(L) + "\n")
 subprocess.run(["gofmt", "-w", OUT], check=True)  # ให้ผ่าน `gofmt -l .` ตั้งแต่สร้างเสร็จ
 print("wrote", OUT)
-print("books=%d suppliers=%d inventory=%d txns=%d PR=%d PO=%d GR=%d"
-      % (len(books), len(suppliers), len(inventory), len(txns),
-         len(requisitions), len(orders), len(receipts)))
+print("categories=%d books=%d changeLogs=%d promotions=%d suppliers=%d inventory=%d PR=%d PO=%d GR=%d"
+      % (len(categories), len(books), sum(len(b["logs"]) for b in books), len(promotions),
+         len(suppliers), len(inventory), len(requisitions), len(orders), len(receipts)))
 print("offers/supplier:", [len(s["offers"]) for s in suppliers])
 print("deactivated:", [s["id"] for s in suppliers if s["deact"]])
 print("PO items:", [len(o["items"]) for o in orders])

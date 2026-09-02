@@ -1,0 +1,4071 @@
+{
+  "generatedAt": "2026-08-30T14:54:27.670Z",
+  "generator": "design/build-manifest.mjs",
+  "note": "Generated from frontend/src. Do not hand-edit — re-run the script instead.",
+  "tokens": {
+    "Surfaces": {
+      "page-bg": "#f9f9f9",
+      "surface": "#ffffff",
+      "surface-alt": "#f4f3f3",
+      "border": "#bbcac4",
+      "border-soft": "#e5e7eb"
+    },
+    "Brand / accent": {
+      "primary": "#25c4a8",
+      "primary-deep": "#006b5a",
+      "on-primary": "#004b3f",
+      "mint": "#6df9db"
+    },
+    "Text": {
+      "text-heading": "#1a1c1c",
+      "text-body": "#3c4a45",
+      "text-muted": "#6b7280",
+      "nav-link": "#506263"
+    },
+    "Status": {
+      "rating": "#9b4427",
+      "danger": "#dc2626",
+      "danger-soft": "#ef4444",
+      "success": "#25c4a8"
+    },
+    "Status badges in the back office": {
+      "status-success": "#0f9d76",
+      "status-success-bg": "#d9f5ee",
+      "status-warning": "#d97706",
+      "status-warning-bg": "#fdf0dc",
+      "status-danger": "#dc2626",
+      "status-danger-bg": "#fbe0e0",
+      "status-neutral": "#6b7280",
+      "status-neutral-bg": "#eef0f2",
+      "status-info": "#006b5a",
+      "status-info-bg": "#d7f2ec"
+    },
+    "Shape & elevation": {
+      "radius-sm": "8px",
+      "radius-md": "12px",
+      "radius-pill": "9999px",
+      "shadow-sm": "0 1px 2px rgba(0, 0, 0, 0.05)",
+      "shadow-md": "0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06)",
+      "shadow-lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08)"
+    },
+    "Typography": {
+      "font-sans": "'Inter', 'Sarabun', system-ui, 'Segoe UI', Roboto, sans-serif",
+      "font-thai": "'Sarabun', 'Inter', system-ui, sans-serif",
+      "font-mono": "'Liberation Mono', ui-monospace, Consolas, monospace"
+    },
+    "Layout": {
+      "page-max": "1280px",
+      "admin-sidebar-w": "248px",
+      "admin-bg": "#f5f7f7",
+      "admin-max": "1200px"
+    }
+  },
+  "roles": {
+    "customer": "ลูกค้า",
+    "warehouse": "พนักงานคลังสินค้า",
+    "manager": "ผู้จัดการร้าน",
+    "sales": "พนักงานฝ่ายขาย",
+    "delivery": "พนักงานจัดส่ง"
+  },
+  "permissions": {
+    "viewSuppliers": [
+      "warehouse",
+      "manager",
+      "sales"
+    ],
+    "editSuppliers": [
+      "warehouse"
+    ],
+    "deactivateSupplier": [
+      "manager"
+    ],
+    "viewAlerts": [
+      "warehouse"
+    ],
+    "setReorderPoint": [
+      "warehouse"
+    ],
+    "viewPurchasing": [
+      "warehouse",
+      "manager"
+    ],
+    "createRequisition": [
+      "warehouse"
+    ],
+    "approveRequisition": [
+      "manager"
+    ],
+    "sendOrder": [
+      "warehouse"
+    ],
+    "receiveGoods": [
+      "warehouse"
+    ],
+    "createReturn": [
+      "warehouse"
+    ],
+    "viewContacts": [
+      "warehouse",
+      "manager",
+      "sales"
+    ],
+    "viewDocumentRouting": [
+      "warehouse",
+      "manager"
+    ],
+    "viewPromotions": [
+      "manager"
+    ],
+    "managePromotion": [
+      "manager"
+    ],
+    "moderateReview": [
+      "sales",
+      "manager"
+    ],
+    "manageReportedReviews": [
+      "manager"
+    ],
+    "viewOrders": [
+      "sales",
+      "warehouse",
+      "manager",
+      "delivery"
+    ],
+    "confirmStock": [
+      "sales"
+    ],
+    "verifyPayment": [
+      "sales"
+    ],
+    "packOrder": [
+      "warehouse"
+    ],
+    "shipOrder": [
+      "delivery"
+    ],
+    "confirmDelivery": [
+      "delivery"
+    ],
+    "cancelOrder": [
+      "sales",
+      "manager"
+    ],
+    "viewBooks": [
+      "warehouse",
+      "manager",
+      "sales"
+    ],
+    "editBooks": [
+      "sales",
+      "manager"
+    ],
+    "viewBookHistory": [
+      "sales",
+      "manager"
+    ],
+    "viewStock": [
+      "warehouse",
+      "manager",
+      "sales"
+    ],
+    "adjustStock": [
+      "warehouse"
+    ],
+    "viewStockCounts": [
+      "warehouse",
+      "manager"
+    ],
+    "countStock": [
+      "warehouse"
+    ],
+    "viewDiscrepancies": [
+      "warehouse",
+      "manager"
+    ],
+    "resolveDiscrepancy": [
+      "manager"
+    ],
+    "viewCustomers": [
+      "sales",
+      "manager"
+    ],
+    "suspendAccount": [
+      "manager"
+    ],
+    "viewPayments": [
+      "sales",
+      "manager"
+    ],
+    "managePaymentReports": [
+      "manager"
+    ],
+    "viewShipments": [
+      "sales",
+      "warehouse",
+      "manager",
+      "delivery"
+    ],
+    "updateTracking": [
+      "delivery"
+    ],
+    "manageDeliverySummary": [
+      "delivery",
+      "manager"
+    ],
+    "viewMembers": [
+      "sales",
+      "manager"
+    ],
+    "manageMemberTier": [
+      "manager"
+    ],
+    "manageRewards": [
+      "manager"
+    ],
+    "adjustPoints": [
+      "manager"
+    ]
+  },
+  "icons": [
+    "search",
+    "heart",
+    "cart",
+    "user",
+    "star",
+    "plus",
+    "minus",
+    "arrow-right",
+    "arrow-left",
+    "check",
+    "check-circle",
+    "shield",
+    "upload",
+    "help",
+    "chevron-down",
+    "thumbs-up",
+    "message",
+    "truck",
+    "package",
+    "edit",
+    "lock",
+    "clock",
+    "eye",
+    "eye-off",
+    "mail",
+    "log-out",
+    "book",
+    "bell",
+    "power",
+    "filter",
+    "chevron-left",
+    "chevron-right",
+    "alert-triangle",
+    "building",
+    "trash",
+    "close",
+    "file-text",
+    "shopping-bag",
+    "tag",
+    "flag",
+    "bar-chart",
+    "sort",
+    "clipboard",
+    "trending-down",
+    "check-check",
+    "trash-x",
+    "message-plus"
+  ],
+  "nav": [
+    {
+      "heading": "ภาพรวม",
+      "items": [
+        {
+          "label": "หน้าหลัก",
+          "to": "/admin",
+          "icon": "shield",
+          "allowed": "*"
+        }
+      ]
+    },
+    {
+      "heading": "คำสั่งซื้อลูกค้า",
+      "items": [
+        {
+          "label": "คำสั่งซื้อลูกค้า",
+          "to": "/admin/orders",
+          "icon": "shopping-bag",
+          "allowed": "viewOrders"
+        }
+      ]
+    },
+    {
+      "heading": "จัดการข้อมูลหนังสือ",
+      "items": [
+        {
+          "label": "รายการหนังสือ",
+          "to": "/admin/books",
+          "icon": "book",
+          "allowed": "viewBooks"
+        }
+      ]
+    },
+    {
+      "heading": "จัดการผู้จัดจำหน่าย",
+      "items": [
+        {
+          "label": "รายการผู้จัดจำหน่าย",
+          "to": "/admin/suppliers",
+          "icon": "building",
+          "allowed": "viewSuppliers"
+        }
+      ]
+    },
+    {
+      "heading": "จัดซื้อ",
+      "items": [
+        {
+          "label": "เอกสารจัดซื้อ",
+          "to": "/admin/purchasing",
+          "icon": "file-text",
+          "allowed": "viewPurchasing"
+        },
+        {
+          "label": "รับสินค้าเข้าคลัง",
+          "to": "/admin/purchasing/receipts",
+          "icon": "shopping-bag",
+          "allowed": "receiveGoods"
+        }
+      ]
+    },
+    {
+      "heading": "คลังสินค้า",
+      "items": [
+        {
+          "label": "ยอดคงเหลือ",
+          "to": "/admin/stock",
+          "icon": "package",
+          "allowed": "viewStock"
+        },
+        {
+          "label": "หนังสือที่ใกล้หมด",
+          "to": "/admin/stock/low",
+          "icon": "trending-down",
+          "allowed": "viewStock"
+        },
+        {
+          "label": "ปรับปรุงจำนวน",
+          "to": "/admin/stock/adjust",
+          "icon": "edit",
+          "allowed": "adjustStock"
+        },
+        {
+          "label": "ตรวจนับสต็อก",
+          "to": "/admin/stock/counts",
+          "icon": "clipboard",
+          "allowed": "viewStockCounts"
+        },
+        {
+          "label": "ยอดหนังสือไม่ตรง",
+          "to": "/admin/stock/discrepancies",
+          "icon": "alert-triangle",
+          "allowed": "viewDiscrepancies",
+          "dot": "discrepancy"
+        }
+      ]
+    },
+    {
+      "heading": "แจ้งเตือน",
+      "items": [
+        {
+          "label": "สินค้าถึงจุดสั่งซื้อ",
+          "to": "/admin/alerts",
+          "icon": "bell",
+          "allowed": "viewAlerts",
+          "dot": "reorder"
+        }
+      ]
+    },
+    {
+      "heading": "โปรโมชั่น",
+      "items": [
+        {
+          "label": "โปรโมชั่นและส่วนลด",
+          "to": "/admin/promotions",
+          "icon": "tag",
+          "allowed": "viewPromotions"
+        }
+      ]
+    },
+    {
+      "heading": "รีวิวลูกค้า",
+      "items": [
+        {
+          "label": "ตรวจสอบรีวิว",
+          "to": "/admin/reviews",
+          "icon": "star",
+          "allowed": "moderateReview",
+          "dot": "reviews"
+        },
+        {
+          "label": "จัดการรีวิวที่มีปัญหา",
+          "to": "/admin/reviews/manage",
+          "icon": "alert-triangle",
+          "allowed": "manageReportedReviews",
+          "dot": "reportedReviews"
+        }
+      ]
+    },
+    {
+      "heading": "การติดต่อ",
+      "items": [
+        {
+          "label": "ศูนย์การติดต่อ",
+          "to": "/admin/contacts",
+          "icon": "mail",
+          "allowed": "viewContacts"
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "AuthHeader",
+      "file": "src/components/AuthHeader.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "BookCard",
+      "file": "src/components/BookCard.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "Footer",
+      "file": "src/components/Footer.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "Icon",
+      "file": "src/components/Icon.tsx",
+      "hasCss": false
+    },
+    {
+      "name": "OrderSummary",
+      "file": "src/components/OrderSummary.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "QuantityStepper",
+      "file": "src/components/QuantityStepper.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "RatingStars",
+      "file": "src/components/RatingStars.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "ScrollToTop",
+      "file": "src/components/ScrollToTop.tsx",
+      "hasCss": false
+    },
+    {
+      "name": "TopNav",
+      "file": "src/components/TopNav.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "AdminSidebar",
+      "file": "src/admin/components/AdminSidebar.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "AdminTopBar",
+      "file": "src/admin/components/AdminTopBar.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "BookPicker",
+      "file": "src/admin/components/BookPicker.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "Breadcrumb",
+      "file": "src/admin/components/Breadcrumb.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "ContactCard",
+      "file": "src/admin/components/ContactCard.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "EmptyState",
+      "file": "src/admin/components/EmptyState.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "LineItemsTable",
+      "file": "src/admin/components/LineItemsTable.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "Meter",
+      "file": "src/admin/components/Meter.tsx",
+      "hasCss": true,
+      "variants": {
+        "tone": [
+          "accent",
+          "warning",
+          "danger"
+        ]
+      }
+    },
+    {
+      "name": "Modal",
+      "file": "src/admin/components/Modal.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "NotificationBell",
+      "file": "src/admin/components/NotificationBell.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "Pagination",
+      "file": "src/admin/components/Pagination.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "StatTile",
+      "file": "src/admin/components/StatTile.tsx",
+      "hasCss": true,
+      "variants": {
+        "tone": [
+          "default",
+          "accent",
+          "warning",
+          "danger"
+        ]
+      }
+    },
+    {
+      "name": "StatusBadge",
+      "file": "src/admin/components/StatusBadge.tsx",
+      "hasCss": true,
+      "variants": {
+        "tone": [
+          "success",
+          "warning",
+          "danger",
+          "neutral",
+          "info"
+        ]
+      }
+    },
+    {
+      "name": "Stepper",
+      "file": "src/admin/components/Stepper.tsx",
+      "hasCss": true
+    },
+    {
+      "name": "ToastContext",
+      "file": "src/admin/components/ToastContext.tsx",
+      "hasCss": false,
+      "variants": {
+        "tone": [
+          "success",
+          "error",
+          "warning",
+          "info"
+        ]
+      }
+    }
+  ],
+  "statusLabels": {
+    "BOOK_STATUS_LABELS": {
+      "source": "src/admin/books/books.ts",
+      "values": {
+        "ACTIVE": "ใช้งาน",
+        "INACTIVE": "ปิดการขาย"
+      }
+    },
+    "BOOK_FIELD_LABELS": {
+      "source": "src/admin/books/books.ts",
+      "values": {
+        "isbn": "ISBN",
+        "title": "ชื่อหนังสือ",
+        "author": "ผู้แต่ง",
+        "publisher": "สำนักพิมพ์",
+        "price": "ราคาปก",
+        "description": "รายละเอียด",
+        "categoryId": "หมวดหมู่",
+        "status": "สถานะ"
+      }
+    },
+    "STOCK_TXN_TYPE_LABELS": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "RECEIVE_IN": "รับเข้าคลัง",
+        "SALE_OUT": "ตัดขาย",
+        "RETURN": "ส่งคืน",
+        "ADJUSTMENT": "ปรับปรุงยอด"
+      }
+    },
+    "STOCK_LEVEL_LABELS": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "OUT": "หมด",
+        "LOW": "เหลือน้อย",
+        "OK": "ปกติ"
+      }
+    },
+    "APPROVAL_STATUS_LABELS": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "PENDING": "รออนุมัติ",
+        "APPROVED": "อนุมัติแล้ว",
+        "REJECTED": "ปฏิเสธ"
+      }
+    },
+    "STOCK_COUNT_STATUS_LABELS": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "DRAFT": "ร่าง",
+        "DONE": "ตรวจนับแล้ว"
+      }
+    },
+    "ORDER_STATUS_LABELS": {
+      "source": "src/admin/orders/orders.ts",
+      "values": {
+        "PENDING_CONFIRM": "รอยืนยันคำสั่งซื้อ",
+        "STOCK_CONFIRMED": "ยืนยันสต็อกแล้ว",
+        "WAITING_PAYMENT": "รอชำระเงิน",
+        "VERIFYING_PAYMENT": "กำลังตรวจสอบการชำระเงิน",
+        "PAID": "ชำระเงินแล้ว",
+        "PACKING": "กำลังแพ็กสินค้า",
+        "READY_TO_SHIP": "พร้อมจัดส่ง",
+        "SHIPPED": "จัดส่งแล้ว",
+        "DELIVERED": "ส่งถึงแล้ว",
+        "CANCELLED": "ยกเลิก",
+        "REJECTED": "ปฏิเสธ"
+      }
+    },
+    "CHANNEL_LABELS": {
+      "source": "src/admin/orders/orders.ts",
+      "values": {
+        "WEBSITE": "เว็บไซต์",
+        "MESSAGE": "ข้อความ",
+        "PHONE": "โทรศัพท์"
+      }
+    },
+    "SHIPMENT_STATUS_LABELS": {
+      "source": "src/admin/orders/orders.ts",
+      "values": {
+        "PREPARING": "กำลังเตรียม",
+        "SHIPPED": "จัดส่งแล้ว",
+        "IN_TRANSIT": "ระหว่างขนส่ง",
+        "DELIVERED": "ส่งถึงแล้ว",
+        "FAILED": "จัดส่งไม่สำเร็จ"
+      }
+    },
+    "PROMOTION_TYPE_LABELS": {
+      "source": "src/admin/promotions/promotions.ts",
+      "values": {
+        "FESTIVAL_DISCOUNT": "ส่วนลดเทศกาล",
+        "COUPON": "คูปองส่วนลด",
+        "BUY_X_QTY": "ซื้อครบจำนวน"
+      }
+    },
+    "PROMOTION_STATUS_LABELS": {
+      "source": "src/admin/promotions/promotions.ts",
+      "values": {
+        "ACTIVE": "ใช้งาน",
+        "INACTIVE": "ปิดใช้งาน",
+        "EXPIRED": "หมดอายุ"
+      }
+    },
+    "PR_STATUS_LABELS": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "DRAFT": "ร่าง",
+        "SUBMITTED": "รออนุมัติ",
+        "APPROVED": "อนุมัติแล้ว",
+        "REJECTED": "ตีกลับ"
+      }
+    },
+    "PO_STATUS_LABELS": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "PENDING_APPROVAL": "รออนุมัติ",
+        "AWAITING_SEND": "อนุมัติแล้ว รอส่ง",
+        "AWAITING_CONFIRM": "รอยืนยัน",
+        "CONFIRMED": "ยืนยันแล้ว",
+        "RECEIVED_PARTIAL": "รับบางส่วน",
+        "RECEIVED_FULL": "รับครบ",
+        "RETURNED": "ส่งคืน",
+        "CANCELLED": "ยกเลิก"
+      }
+    },
+    "RETURN_STATUS_LABELS": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "TRACKING": "กำลังติดตาม",
+        "ESCALATED": "ส่งต่อผู้จัดการ",
+        "CLOSED": "ปิดรายการ"
+      }
+    },
+    "GR_STATUS_LABELS": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "PARTIAL": "รับบางส่วน",
+        "FULL": "รับครบ"
+      }
+    },
+    "CONDITION_LABELS": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "NORMAL": "ปกติ",
+        "DAMAGED": "ขาด/ชำรุด"
+      }
+    },
+    "COMPENSATION_LABELS": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "REPLACEMENT": "สินค้าทดแทน",
+        "CREDIT_NOTE": "ใบลดหนี้"
+      }
+    },
+    "REVIEW_STATUS_LABELS": {
+      "source": "src/admin/reviews/reviews.ts",
+      "values": {
+        "PENDING": "รอตรวจสอบ",
+        "PUBLISHED": "ตรวจสอบสำเร็จ",
+        "HIDDEN": "ซ่อนไว้",
+        "REMOVED": "รีวิวที่ถูกลบ"
+      }
+    },
+    "MODERATE_ACTION_LABELS": {
+      "source": "src/admin/reviews/reviews.ts",
+      "values": {
+        "PUBLISH": "อนุมัติ",
+        "HIDE": "ซ่อนถาวร",
+        "REMOVE": "ลบรีวิว"
+      }
+    },
+    "SUPPLIER_STATUS_LABELS": {
+      "source": "src/admin/suppliers/suppliers.ts",
+      "values": {
+        "ACTIVE": "ใช้งาน",
+        "CANCELLED": "ยกเลิก"
+      }
+    },
+    "ROLE_LABELS": {
+      "source": "src/auth/roles.ts",
+      "values": {
+        "customer": "ลูกค้า",
+        "warehouse": "พนักงานคลังสินค้า",
+        "manager": "ผู้จัดการร้าน",
+        "sales": "พนักงานฝ่ายขาย",
+        "delivery": "พนักงานจัดส่ง"
+      }
+    }
+  },
+  "statusTones": {
+    "BOOK_STATUS_TONES": {
+      "source": "src/admin/books/books.ts",
+      "values": {
+        "ACTIVE": "success",
+        "INACTIVE": "neutral"
+      }
+    },
+    "STOCK_TXN_TYPE_TONES": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "RECEIVE_IN": "success",
+        "SALE_OUT": "info",
+        "RETURN": "warning",
+        "ADJUSTMENT": "neutral"
+      }
+    },
+    "STOCK_LEVEL_TONES": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "OUT": "danger",
+        "LOW": "warning",
+        "OK": "success"
+      }
+    },
+    "APPROVAL_STATUS_TONES": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "PENDING": "warning",
+        "APPROVED": "success",
+        "REJECTED": "danger"
+      }
+    },
+    "STOCK_COUNT_STATUS_TONES": {
+      "source": "src/admin/inventory/inventory.ts",
+      "values": {
+        "DRAFT": "neutral",
+        "DONE": "success"
+      }
+    },
+    "ORDER_STATUS_TONES": {
+      "source": "src/admin/orders/orders.ts",
+      "values": {
+        "PENDING_CONFIRM": "warning",
+        "STOCK_CONFIRMED": "info",
+        "WAITING_PAYMENT": "warning",
+        "VERIFYING_PAYMENT": "warning",
+        "PAID": "info",
+        "PACKING": "info",
+        "READY_TO_SHIP": "info",
+        "SHIPPED": "info",
+        "DELIVERED": "success",
+        "CANCELLED": "neutral",
+        "REJECTED": "danger"
+      }
+    },
+    "PROMOTION_STATUS_TONES": {
+      "source": "src/admin/promotions/promotions.ts",
+      "values": {
+        "ACTIVE": "success",
+        "INACTIVE": "neutral",
+        "EXPIRED": "warning"
+      }
+    },
+    "PR_STATUS_TONES": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "DRAFT": "neutral",
+        "SUBMITTED": "warning",
+        "APPROVED": "success",
+        "REJECTED": "danger"
+      }
+    },
+    "PO_STATUS_TONES": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "PENDING_APPROVAL": "warning",
+        "AWAITING_SEND": "info",
+        "AWAITING_CONFIRM": "warning",
+        "CONFIRMED": "success",
+        "RECEIVED_PARTIAL": "warning",
+        "RECEIVED_FULL": "success",
+        "RETURNED": "neutral",
+        "CANCELLED": "neutral"
+      }
+    },
+    "RETURN_STATUS_TONES": {
+      "source": "src/admin/purchasing/purchasing.ts",
+      "values": {
+        "TRACKING": "warning",
+        "ESCALATED": "danger",
+        "CLOSED": "success"
+      }
+    },
+    "REVIEW_STATUS_TONES": {
+      "source": "src/admin/reviews/reviews.ts",
+      "values": {
+        "PENDING": "warning",
+        "PUBLISHED": "success",
+        "HIDDEN": "neutral",
+        "REMOVED": "danger"
+      }
+    }
+  },
+  "routes": [
+    {
+      "path": "/login",
+      "component": "LoginPage",
+      "file": "./pages/LoginPage",
+      "layout": "AuthLayout"
+    },
+    {
+      "path": "/signup",
+      "component": "SignUpPage",
+      "file": "./pages/SignUpPage",
+      "layout": "AuthLayout"
+    },
+    {
+      "path": "/admin",
+      "component": "DashboardPage",
+      "file": "./admin/pages/DashboardPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/orders",
+      "component": "OrdersListPage",
+      "file": "./admin/pages/OrdersListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/orders/:id",
+      "component": "CustomerOrderDetailPage",
+      "file": "./admin/pages/CustomerOrderDetailPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/books",
+      "component": "BookListPage",
+      "file": "./admin/pages/BookListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/books/new",
+      "component": "BookFormPage",
+      "file": "./admin/pages/BookFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/books/:id",
+      "component": "AdminBookDetailPage",
+      "file": "./admin/pages/BookDetailPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/books/:id/edit",
+      "component": "BookFormPage",
+      "file": "./admin/pages/BookFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/suppliers",
+      "component": "SupplierListPage",
+      "file": "./admin/pages/SupplierListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/suppliers/new",
+      "component": "SupplierFormPage",
+      "file": "./admin/pages/SupplierFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/suppliers/:id",
+      "component": "SupplierDetailPage",
+      "file": "./admin/pages/SupplierDetailPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/suppliers/:id/edit",
+      "component": "SupplierFormPage",
+      "file": "./admin/pages/SupplierFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock",
+      "component": "StockListPage",
+      "file": "./admin/pages/StockListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock/low",
+      "component": "StockListPage",
+      "file": "./admin/pages/StockListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock/adjust",
+      "component": "StockAdjustPage",
+      "file": "./admin/pages/StockAdjustPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock/counts",
+      "component": "StockCountListPage",
+      "file": "./admin/pages/StockCountListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock/counts/new",
+      "component": "StockCountFormPage",
+      "file": "./admin/pages/StockCountFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock/counts/:id",
+      "component": "StockCountDetailPage",
+      "file": "./admin/pages/StockCountDetailPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/stock/discrepancies",
+      "component": "StockDiscrepancyPage",
+      "file": "./admin/pages/StockDiscrepancyPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/alerts",
+      "component": "ReorderAlertsPage",
+      "file": "./admin/pages/ReorderAlertsPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing",
+      "component": "PurchasingListPage",
+      "file": "./admin/pages/PurchasingListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/pr/new",
+      "component": "RequisitionFormPage",
+      "file": "./admin/pages/RequisitionFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/pr/:id",
+      "component": "RequisitionFormPage",
+      "file": "./admin/pages/RequisitionFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/pr/:id/approve",
+      "component": "ApproveRequisitionPage",
+      "file": "./admin/pages/ApproveRequisitionPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/po/:id",
+      "component": "OrderDetailPage",
+      "file": "./admin/pages/OrderDetailPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/po/:id/receive",
+      "component": "ReceiveGoodsPage",
+      "file": "./admin/pages/ReceiveGoodsPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/receipts",
+      "component": "ReceiptsListPage",
+      "file": "./admin/pages/ReceiptsListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/returns/new",
+      "component": "PurchaseReturnPage",
+      "file": "./admin/pages/PurchaseReturnPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/purchasing/returns/:id",
+      "component": "PurchaseReturnPage",
+      "file": "./admin/pages/PurchaseReturnPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/promotions",
+      "component": "PromotionListPage",
+      "file": "./admin/pages/PromotionListPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/promotions/new",
+      "component": "PromotionFormPage",
+      "file": "./admin/pages/PromotionFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/promotions/:id/edit",
+      "component": "PromotionFormPage",
+      "file": "./admin/pages/PromotionFormPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/reviews",
+      "component": "ReviewModerationPage",
+      "file": "./admin/pages/ReviewModerationPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/reviews/manage",
+      "component": "ReviewManagerPage",
+      "file": "./admin/pages/ReviewManagerPage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/admin/contacts",
+      "component": "ContactCentrePage",
+      "file": "./admin/pages/ContactCentrePage",
+      "layout": "AdminLayout"
+    },
+    {
+      "path": "/",
+      "component": "HomePage",
+      "file": "./pages/HomePage",
+      "layout": "StorefrontLayout"
+    },
+    {
+      "path": "/book/:id",
+      "component": "BookDetailPage",
+      "file": "./pages/BookDetailPage",
+      "layout": "StorefrontLayout"
+    },
+    {
+      "path": "/checkout/shipping",
+      "component": "CheckoutShippingPage",
+      "file": "./pages/CheckoutShippingPage",
+      "layout": "StorefrontLayout"
+    },
+    {
+      "path": "/checkout/payment",
+      "component": "CheckoutPaymentPage",
+      "file": "./pages/CheckoutPaymentPage",
+      "layout": "StorefrontLayout"
+    },
+    {
+      "path": "/order/:id",
+      "component": "OrderTrackingPage",
+      "file": "./pages/OrderTrackingPage",
+      "layout": "StorefrontLayout"
+    },
+    {
+      "path": "/orders",
+      "component": "OrderHistoryPage",
+      "file": "./pages/OrderHistoryPage",
+      "layout": "StorefrontLayout"
+    },
+    {
+      "path": "/profile",
+      "component": "ProfilePage",
+      "file": "./pages/ProfilePage",
+      "layout": "StorefrontLayout"
+    }
+  ],
+  "screens": [
+    {
+      "component": "ApproveRequisitionPage",
+      "file": "src/admin/pages/ApproveRequisitionPage.tsx",
+      "routes": [
+        "/admin/purchasing/pr/:id/approve"
+      ],
+      "kind": "other",
+      "titles": [
+        "ใบขอสั่งซื้อ {…} {…}",
+        "อนุมัติใบสั่งซื้อ",
+        "ไม่พบข้อมูล",
+        "«formatPRCode(requisition.prId)»"
+      ],
+      "subtitles": [
+        "ผู้จัดจำหน่าย {…} {…} · ผู้ขอ: {…} · วันที่{…} {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "อนุมัติใบสั่งซื้อ"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "«formatPRCode(requisition.prId)»"
+        ]
+      ],
+      "columns": [],
+      "fields": [
+        {
+          "label": "เหตุผลที่อนุมัติทั้งที่เกินงบประมาณ",
+          "required": true
+        },
+        {
+          "label": "เหตุผล (กรณีตีกลับ)",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ตีกลับให้แก้ไข",
+          "variant": "btn btn-danger btn-sm"
+        },
+        {
+          "label": "อนุมัติ",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์อนุมัติใบสั่งซื้อ",
+          "description": "การอนุมัติและการตีกลับเป็นสิทธิ์ของผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "title": "ไม่พบใบขอสั่งซื้อ",
+          "description": "เลขที่ที่ระบุอาจถูกลบไปแล้วหรือพิมพ์ไม่ถูกต้อง"
+        }
+      ],
+      "permissions": [
+        "approveRequisition"
+      ],
+      "statusMaps": [
+        "PR_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "LineItemsTable",
+        "Meter",
+        "StatusBadge",
+        "Stepper"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "BookDetailPage",
+      "file": "src/admin/pages/BookDetailPage.tsx",
+      "routes": [
+        "/book/:id"
+      ],
+      "kind": "detail",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "«book.title»"
+      ],
+      "subtitles": [
+        "รหัส {…} · ISBN {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ข้อมูลหนังสือ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "ข้อมูลหนังสือ",
+          "«book.title»"
+        ]
+      ],
+      "columns": [
+        "วันเวลา",
+        "ช่องที่แก้ไข",
+        "ค่าเดิม",
+        "ค่าใหม่",
+        "ผู้แก้ไข",
+        "วันเวลา",
+        "ประเภท",
+        "จำนวน",
+        "เหตุผล",
+        "เอกสารอ้างอิง"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "แก้ไขข้อมูลหนังสือ",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบข้อมูลหนังสือ",
+          "description": "รหัสหนังสือที่ระบุไม่มีอยู่ในระบบ"
+        },
+        {
+          "title": "ยังไม่มีประวัติการแก้ไข",
+          "description": "ระบบจะบันทึกทุกช่องที่เปลี่ยนแปลงไว้ที่นี่เมื่อมีการแก้ไขข้อมูลหนังสือ"
+        },
+        {
+          "title": "ยังไม่มีการเคลื่อนไหวสต็อก",
+          "description": "รายการรับเข้า ขายออก ส่งคืน และการปรับปรุงยอดของหนังสือเล่มนี้จะแสดงที่นี่"
+        }
+      ],
+      "permissions": [
+        "editBooks"
+      ],
+      "statusMaps": [
+        "BOOK_FIELD_LABELS",
+        "BOOK_STATUS_LABELS",
+        "STOCK_LEVEL_LABELS",
+        "STOCK_TXN_TYPE_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "StatTile",
+        "StatusBadge",
+        "Tab"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "รหัส {…} · ISBN {…}"
+      ]
+    },
+    {
+      "component": "BookDetailPage",
+      "file": "src/pages/BookDetailPage.tsx",
+      "routes": [
+        "/book/:id"
+      ],
+      "kind": "detail",
+      "titles": [],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Back to catalog",
+          "variant": "btn btn-outline"
+        },
+        {
+          "label": "{…}",
+          "variant": "btn btn-primary detail__add"
+        },
+        {
+          "label": "ซื้อ",
+          "variant": "btn btn-outline detail__buynow"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Link",
+        "QuantityStepper",
+        "RatingStars"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Back to catalog"
+      ]
+    },
+    {
+      "component": "BookFormPage",
+      "file": "src/admin/pages/BookFormPage.tsx",
+      "routes": [
+        "/admin/books/new",
+        "/admin/books/:id/edit"
+      ],
+      "kind": "form",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "«title»"
+      ],
+      "subtitles": [
+        "{…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ข้อมูลหนังสือ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "ข้อมูลหนังสือ",
+          "«existing.title»",
+          "«title»"
+        ]
+      ],
+      "columns": [],
+      "fields": [
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…} (บาท)",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": false
+        },
+        {
+          "label": "{…}",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึก",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์แก้ไขข้อมูลหนังสือ",
+          "description": "การเพิ่มและแก้ไขข้อมูลหนังสือเป็นสิทธิ์ของพนักงานฝ่ายขายเท่านั้น"
+        },
+        {
+          "title": "ไม่พบข้อมูลหนังสือ",
+          "description": "ไม่สามารถเปิดฟอร์มแก้ไขได้เพราะไม่พบรหัสที่ระบุ"
+        }
+      ],
+      "permissions": [
+        "editBooks"
+      ],
+      "statusMaps": [
+        "BOOK_FIELD_LABELS",
+        "BOOK_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "BookForm",
+        "Breadcrumb",
+        "EmptyState",
+        "Values"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "BookListPage",
+      "file": "src/admin/pages/BookListPage.tsx",
+      "routes": [
+        "/admin/books"
+      ],
+      "kind": "list",
+      "titles": [
+        "รายการหนังสือ",
+        "ข้อมูลหนังสือ"
+      ],
+      "subtitles": [
+        "ค้นหาและเรียกดูข้อมูลหนังสือในระบบทั้งหมด {…} รายการ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ข้อมูลหนังสือ"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "ISBN",
+        "ชื่อหนังสือ",
+        "ผู้แต่ง",
+        "หมวดหมู่",
+        "ราคาปก",
+        "สถานะ",
+        "จัดการ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เพิ่มหนังสือ",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ล้างตัวกรอง",
+          "variant": "btn btn-ghost btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [
+          "กรอกรายละเอียดของหนังสือในช่องค้นหา — ชื่อหนังสือ ผู้แต่ง หรือ ISBN"
+        ],
+        "selects": [
+          "หมวดหมู่",
+          "สถานะ"
+        ]
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบหนังสือที่ตรงกับคำค้น",
+          "description": "ลองปรับคำค้น เปลี่ยนหมวดหมู่ หรือล้างตัวกรองเพื่อดูรายการทั้งหมดอีกครั้ง"
+        }
+      ],
+      "permissions": [
+        "editBooks"
+      ],
+      "statusMaps": [
+        "BOOK_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "Pagination",
+        "StatusBadge",
+        "StatusFilter"
+      ],
+      "usesPagination": true,
+      "usesToast": false,
+      "latinText": [
+        "ISBN",
+        "กรอกรายละเอียดของหนังสือในช่องค้นหา — ชื่อหนังสือ ผู้แต่ง หรือ ISBN"
+      ]
+    },
+    {
+      "component": "CheckoutPaymentPage",
+      "file": "src/pages/CheckoutPaymentPage.tsx",
+      "routes": [
+        "/checkout/payment"
+      ],
+      "kind": "other",
+      "titles": [
+        "Scan to Pay"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Confirm Payment",
+          "variant": "btn btn-primary pay__confirm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "HTMLInputElement",
+        "QrPlaceholder"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Scan to Pay",
+        "Confirm Payment"
+      ]
+    },
+    {
+      "component": "CheckoutShippingPage",
+      "file": "src/pages/CheckoutShippingPage.tsx",
+      "routes": [
+        "/checkout/shipping"
+      ],
+      "kind": "other",
+      "titles": [
+        "Checkout"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Proceed to Payment",
+          "variant": "btn btn-primary checkout__pay"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Field",
+        "OrderSummary"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Checkout",
+        "Proceed to Payment"
+      ]
+    },
+    {
+      "component": "ContactCentrePage",
+      "file": "src/admin/pages/ContactCentrePage.tsx",
+      "routes": [
+        "/admin/contacts"
+      ],
+      "kind": "other",
+      "titles": [
+        "ศูนย์การติดต่อ & การส่งเอกสาร",
+        "ศูนย์การติดต่อ"
+      ],
+      "subtitles": [
+        "รวมไว้ที่เดียวว่าต้องส่งเอกสารอะไร ให้ใคร ช่องทางไหน และจุดใดที่ระบบแจ้งเตือนอัตโนมัติ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ศูนย์การติดต่อ"
+        ]
+      ],
+      "columns": [
+        "เอกสาร",
+        "ผู้รับ",
+        "ช่องทาง",
+        "ทริกเกอร์",
+        "Use Case"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เปิดเอกสาร",
+          "variant": "btn btn-outline btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ยังไม่มีผู้จัดจำหน่ายในระบบ",
+          "description": "เพิ่มผู้จัดจำหน่ายก่อนจึงจะติดต่อและสั่งซื้อได้"
+        },
+        {
+          "title": "ยังไม่มีการแจ้งเตือน",
+          "description": "เมื่อมีการส่งใบขอสั่งซื้อหรือบันทึกรับสินค้า รายการจะปรากฏที่นี่"
+        }
+      ],
+      "permissions": [
+        "viewDocumentRouting"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "Breadcrumb",
+        "ContactCard",
+        "EmptyState",
+        "Link",
+        "StatusBadge",
+        "Tab"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Use Case"
+      ]
+    },
+    {
+      "component": "CustomerOrderDetailPage",
+      "file": "src/admin/pages/CustomerOrderDetailPage.tsx",
+      "routes": [
+        "/admin/orders/:id"
+      ],
+      "kind": "detail",
+      "titles": [
+        "คำสั่งซื้อ {…} {…}",
+        "บันทึกการจัดส่ง ${…}",
+        "ไม่พบข้อมูล",
+        "«formatOrderCode(order.orderId)»"
+      ],
+      "subtitles": [
+        "ลูกค้า {…} · ช่องทาง {…} · วันที่{…} {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "คำสั่งซื้อลูกค้า",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "คำสั่งซื้อลูกค้า",
+          "«formatOrderCode(order.orderId)»"
+        ]
+      ],
+      "columns": [
+        "หนังสือ",
+        "ราคา/เล่ม",
+        "จำนวน",
+        "รวม"
+      ],
+      "fields": [
+        {
+          "label": "บริษัทขนส่ง",
+          "required": false
+        },
+        {
+          "label": "หมายเลขติดตามพัสดุ",
+          "required": true
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกและเปลี่ยนเป็นจัดส่งแล้ว",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบคำสั่งซื้อ",
+          "description": "เลขที่ที่ระบุอาจถูกลบไปแล้วหรือพิมพ์ไม่ถูกต้อง"
+        }
+      ],
+      "permissions": [
+        "confirmStock",
+        "verifyPayment",
+        "packOrder",
+        "shipOrder",
+        "confirmDelivery",
+        "cancelOrder"
+      ],
+      "statusMaps": [
+        "ROLE_LABELS",
+        "CHANNEL_LABELS",
+        "ORDER_STATUS_LABELS",
+        "SHIPMENT_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Modal",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "DashboardPage",
+      "file": "src/admin/pages/DashboardPage.tsx",
+      "routes": [
+        "/admin"
+      ],
+      "kind": "other",
+      "titles": [
+        "สวัสดี {…}"
+      ],
+      "subtitles": [
+        "{…} · สรุปงานที่ต้องดำเนินการวันนี้"
+      ],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เปิดพิจารณา",
+          "variant": "btn btn-outline btn-sm"
+        },
+        {
+          "label": "แก้ไข",
+          "variant": "btn btn-outline btn-sm"
+        },
+        {
+          "label": "สร้างใบขอสั่งซื้อ",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ศูนย์การติดต่อ",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "เพิ่มผู้จัดจำหน่าย",
+          "variant": "btn btn-ghost btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ตำแหน่งงานของคุณยังไม่มีเมนูในระบบหลังร้าน",
+          "description": "ระบบหลังร้านครอบคลุมงานผู้จัดจำหน่ายและงานจัดซื้อ หากต้องการสิทธิ์เพิ่มเติม กรุณาติดต่อผู้จัดการร้าน"
+        }
+      ],
+      "permissions": [
+        "approveRequisition",
+        "createRequisition",
+        "viewSuppliers",
+        "viewPurchasing"
+      ],
+      "statusMaps": [
+        "ROLE_LABELS"
+      ],
+      "usesComponents": [
+        "EmptyState",
+        "Link",
+        "Meter",
+        "StatTile",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "DeactivateSupplierModal",
+      "file": "src/admin/pages/DeactivateSupplierModal.tsx",
+      "routes": [],
+      "kind": "overlay",
+      "titles": [
+        "ปิดใช้งานผู้จัดจำหน่าย"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [
+        {
+          "label": "เหตุผล",
+          "required": true
+        },
+        {
+          "label": "หมายเหตุ",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ยืนยันปิดใช้งาน",
+          "variant": "btn btn-danger btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [
+        "PO_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Modal",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "HomePage",
+      "file": "src/pages/HomePage.tsx",
+      "routes": [
+        "/"
+      ],
+      "kind": "other",
+      "titles": [],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Load More",
+          "variant": "btn btn-ghost"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "BookCard",
+        "Category"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Load More"
+      ]
+    },
+    {
+      "component": "LoginPage",
+      "file": "src/pages/LoginPage.tsx",
+      "routes": [
+        "/login"
+      ],
+      "kind": "other",
+      "titles": [
+        "Sign In"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Sign In",
+          "variant": "btn btn-primary auth-submit"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Link",
+        "Navigate"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Sign In"
+      ]
+    },
+    {
+      "component": "OrderDetailPage",
+      "file": "src/admin/pages/OrderDetailPage.tsx",
+      "routes": [
+        "/admin/purchasing/po/:id"
+      ],
+      "kind": "detail",
+      "titles": [
+        "ใบสั่งซื้อ {…} {…}",
+        "ไม่พบข้อมูล",
+        "«formatPOCode(order.poId)»"
+      ],
+      "subtitles": [
+        "ผู้จัดจำหน่าย {…} {…} · วันที่สั่ง {…} · กำหนดส่ง{…} {…} {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "«formatPOCode(order.poId)»"
+        ]
+      ],
+      "columns": [
+        "เลขที่",
+        "วันที่รับ",
+        "เลขใบส่งของ",
+        "ผู้รับ",
+        "รับ",
+        "สถานะ"
+      ],
+      "fields": [
+        {
+          "label": "ช่องทางส่ง",
+          "required": false
+        },
+        {
+          "label": "กำหนดวันส่ง (ผู้จัดจำหน่ายกรอก/ยืนยัน)",
+          "required": true
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ดาวน์โหลด PDF",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ส่งให้ผู้จัดจำหน่าย",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "บันทึกการยืนยัน",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "บันทึกรับสินค้าเข้าคลัง",
+          "variant": "btn btn-primary btn-sm po-detail__next"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบใบสั่งซื้อ",
+          "description": "เลขที่ที่ระบุอาจถูกลบไปแล้วหรือพิมพ์ไม่ถูกต้อง"
+        }
+      ],
+      "permissions": [
+        "sendOrder"
+      ],
+      "statusMaps": [
+        "GR_STATUS_LABELS",
+        "PO_STATUS_LABELS",
+        "RETURN_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "LineItemsTable",
+        "Link",
+        "StatusBadge",
+        "Stepper"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": [
+        "ดาวน์โหลด PDF"
+      ]
+    },
+    {
+      "component": "OrderHistoryPage",
+      "file": "src/pages/OrderHistoryPage.tsx",
+      "routes": [
+        "/orders"
+      ],
+      "kind": "other",
+      "titles": [
+        "ประวัติการสั่งซื้อ"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เลือกซื้อหนังสือ",
+          "variant": "btn btn-primary"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [
+        "ORDER_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Link",
+        "Navigate",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "OrdersListPage",
+      "file": "src/admin/pages/OrdersListPage.tsx",
+      "routes": [
+        "/admin/orders"
+      ],
+      "kind": "list",
+      "titles": [
+        "คำสั่งซื้อลูกค้า"
+      ],
+      "subtitles": [
+        "ติดตามคำสั่งซื้อทั้งหมด {…} รายการ {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "คำสั่งซื้อลูกค้า"
+        ]
+      ],
+      "columns": [
+        "เลขคำสั่งซื้อ",
+        "ลูกค้า",
+        "ช่องทาง",
+        "วันที่",
+        "ยอดสุทธิ",
+        "สถานะ",
+        "จัดการ"
+      ],
+      "fields": [],
+      "buttons": [],
+      "filters": {
+        "search": [
+          "ค้นหาเลขคำสั่งซื้อหรือชื่อลูกค้า"
+        ],
+        "selects": [
+          "สถานะ"
+        ]
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบคำสั่งซื้อ",
+          "description": "ลองปรับคำค้นหรือตัวกรองสถานะเพื่อดูรายการอื่น"
+        }
+      ],
+      "permissions": [],
+      "statusMaps": [
+        "CHANNEL_LABELS",
+        "ORDER_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Pagination",
+        "StatusBadge",
+        "StatusFilter"
+      ],
+      "usesPagination": true,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "OrderTrackingPage",
+      "file": "src/pages/OrderTrackingPage.tsx",
+      "routes": [
+        "/order/:id"
+      ],
+      "kind": "other",
+      "titles": [
+        "Order #{…}"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Submit Review",
+          "variant": "btn btn-primary track-review__submit"
+        },
+        {
+          "label": "Need Help?",
+          "variant": "btn btn-ghost track__help"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [
+        "ORDER_STATUS_LABELS",
+        "STEP_LABELS"
+      ],
+      "usesComponents": [
+        "RatingStars",
+        "RealOrderView",
+        "ReviewForm",
+        "StaticDemoView"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Order #{…}",
+        "Submit Review",
+        "Need Help?"
+      ]
+    },
+    {
+      "component": "ProfilePage",
+      "file": "src/pages/ProfilePage.tsx",
+      "routes": [
+        "/profile"
+      ],
+      "kind": "other",
+      "titles": [],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Edit Profile",
+          "variant": "btn btn-ghost profile__edit"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Link",
+        "Navigate"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Edit Profile"
+      ]
+    },
+    {
+      "component": "PromotionFormPage",
+      "file": "src/admin/pages/PromotionFormPage.tsx",
+      "routes": [
+        "/admin/promotions/new",
+        "/admin/promotions/:id/edit"
+      ],
+      "kind": "form",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "«title»"
+      ],
+      "subtitles": [
+        "{…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "โปรโมชั่นและส่วนลด",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "โปรโมชั่นและส่วนลด",
+          "«title»"
+        ]
+      ],
+      "columns": [],
+      "fields": [
+        {
+          "label": "ชื่อโปรโมชั่น",
+          "required": true
+        },
+        {
+          "label": "ประเภท",
+          "required": false
+        },
+        {
+          "label": "รูปแบบส่วนลด",
+          "required": false
+        },
+        {
+          "label": "มูลค่าส่วนลด",
+          "required": true
+        },
+        {
+          "label": "ยอดซื้อขั้นต่ำ (บาท)",
+          "required": false
+        },
+        {
+          "label": "จำนวนขั้นต่ำ (เล่ม)",
+          "required": false
+        },
+        {
+          "label": "วันเริ่มต้น",
+          "required": false
+        },
+        {
+          "label": "วันสิ้นสุด",
+          "required": false
+        },
+        {
+          "label": "รายละเอียดเงื่อนไข",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึก",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์จัดการโปรโมชั่น",
+          "description": "การเพิ่มและแก้ไขโปรโมชั่นเป็นสิทธิ์ของผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "title": "ไม่พบข้อมูลโปรโมชั่น",
+          "description": "ไม่สามารถเปิดฟอร์มแก้ไขได้เพราะไม่พบรหัสที่ระบุ"
+        }
+      ],
+      "permissions": [
+        "managePromotion"
+      ],
+      "statusMaps": [
+        "PROMOTION_TYPE_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Errors",
+        "PromotionForm",
+        "PromotionType"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "PromotionListPage",
+      "file": "src/admin/pages/PromotionListPage.tsx",
+      "routes": [
+        "/admin/promotions"
+      ],
+      "kind": "list",
+      "titles": [
+        "โปรโมชั่นและส่วนลด",
+        "ลบโปรโมชั่น"
+      ],
+      "subtitles": [
+        "จัดการโปรโมชั่นและส่วนลดทั้งหมด {…} รายการ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "โปรโมชั่นและส่วนลด"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "ชื่อโปรโมชั่น",
+        "ประเภท",
+        "ส่วนลด",
+        "ระยะเวลา",
+        "สถานะ",
+        "จัดการ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เพิ่มโปรโมชั่น",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ล้างตัวกรอง",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ยืนยันการลบ",
+          "variant": "btn btn-danger btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [
+          "ค้นหาชื่อโปรโมชั่น เงื่อนไข หรือรหัส"
+        ],
+        "selects": [
+          "ประเภท",
+          "สถานะ"
+        ]
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์จัดการโปรโมชั่น",
+          "description": "การจัดการโปรโมชั่นและส่วนลดเป็นสิทธิ์ของผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "title": "ไม่พบโปรโมชั่นที่ตรงกับคำค้น",
+          "description": "ลองปรับคำค้นหรือล้างตัวกรองเพื่อดูรายการทั้งหมดอีกครั้ง"
+        }
+      ],
+      "permissions": [
+        "managePromotion",
+        "viewPromotions"
+      ],
+      "statusMaps": [
+        "PROMOTION_STATUS_LABELS",
+        "PROMOTION_TYPE_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "Modal",
+        "Pagination",
+        "Promotion",
+        "StatusBadge",
+        "StatusFilter",
+        "TypeFilter"
+      ],
+      "usesPagination": true,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "PurchaseReturnPage",
+      "file": "src/admin/pages/PurchaseReturnPage.tsx",
+      "routes": [
+        "/admin/purchasing/returns/new",
+        "/admin/purchasing/returns/:id"
+      ],
+      "kind": "other",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "ส่งคืนสินค้า"
+      ],
+      "subtitles": [
+        "ผู้จัดจำหน่าย {…} {…} {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ส่งคืนสินค้า"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "«formatPOCode(order.poId)»",
+          "ส่งคืนสินค้า"
+        ]
+      ],
+      "columns": [
+        "หนังสือ",
+        "จำนวนคืน",
+        "เหตุผล",
+        "หลักฐาน"
+      ],
+      "fields": [
+        {
+          "label": "เหตุผลรวมของใบส่งคืน",
+          "required": false
+        },
+        {
+          "label": "รูปแบบการชดเชย",
+          "required": false
+        },
+        {
+          "label": "รายละเอียด",
+          "required": false
+        },
+        {
+          "label": "กรณีผู้จัดจำหน่ายปฏิเสธการรับคืน",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "บันทึกการชดเชย",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ส่งเรื่องให้ผู้จัดการร้านพิจารณา",
+          "variant": "btn btn-danger btn-sm"
+        },
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ส่งเรื่องคืน",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบใบสั่งซื้อที่อ้างอิง",
+          "description": "ใบส่งคืนต้องอ้างอิงใบสั่งซื้อที่มีการรับสินค้าแล้ว"
+        },
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์บันทึกการส่งคืน",
+          "description": "การส่งคืนสินค้าเป็นหน้าที่ของพนักงานคลังสินค้า"
+        }
+      ],
+      "permissions": [
+        "createReturn"
+      ],
+      "statusMaps": [
+        "COMPENSATION_LABELS",
+        "RETURN_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "DraftLine",
+        "EmptyState",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "PurchasingListPage",
+      "file": "src/admin/pages/PurchasingListPage.tsx",
+      "routes": [
+        "/admin/purchasing"
+      ],
+      "kind": "list",
+      "titles": [
+        "เอกสารจัดซื้อ"
+      ],
+      "subtitles": [
+        "ติดตามใบขอสั่งซื้อและใบสั่งซื้อทั้งหมด {…} รายการ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ"
+        ]
+      ],
+      "columns": [
+        "เลขที่",
+        "ผู้จัดจำหน่าย",
+        "ยอดรวม",
+        "สถานะ",
+        "อัปเดต",
+        "จัดการ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "สร้างใบขอสั่งซื้อ",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "{…}",
+          "variant": "btn btn-outline btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [
+          "ค้นหาเลขที่เอกสารหรือผู้จัดจำหน่าย"
+        ],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบเอกสารในหมวดนี้",
+          "description": "ลองเปลี่ยนแท็บหรือปรับคำค้นเพื่อดูรายการอื่น"
+        }
+      ],
+      "permissions": [
+        "approveRequisition",
+        "sendOrder",
+        "createRequisition"
+      ],
+      "statusMaps": [
+        "PO_STATUS_LABELS",
+        "PR_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "DocumentRow",
+        "EmptyState",
+        "Link",
+        "Pagination",
+        "StatusBadge",
+        "Tab"
+      ],
+      "usesPagination": true,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "ReceiptsListPage",
+      "file": "src/admin/pages/ReceiptsListPage.tsx",
+      "routes": [
+        "/admin/purchasing/receipts"
+      ],
+      "kind": "list",
+      "titles": [
+        "รับสินค้าเข้าคลัง"
+      ],
+      "subtitles": [
+        "ใบสั่งซื้อที่ผู้จัดจำหน่ายยืนยันแล้ว {…} ใบ รอการตรวจรับ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "รับสินค้าเข้าคลัง"
+        ]
+      ],
+      "columns": [
+        "เลขที่",
+        "ผู้จัดจำหน่าย",
+        "กำหนดส่ง",
+        "คงค้าง",
+        "สถานะ",
+        "จัดการ",
+        "เลขที่",
+        "อ้างอิง",
+        "วันที่รับ",
+        "เลขใบส่งของ",
+        "ผู้รับ",
+        "จำนวน",
+        "สถานะ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "รับสินค้า",
+          "variant": "btn btn-outline btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์เข้าหน้ารับสินค้า",
+          "description": "การตรวจรับสินค้าเข้าคลังเป็นหน้าที่ของพนักงานคลังสินค้า"
+        },
+        {
+          "title": "ไม่มีใบสั่งซื้อรอตรวจรับ",
+          "description": "เมื่อผู้จัดจำหน่ายยืนยันใบสั่งซื้อแล้ว รายการจะปรากฏที่นี่"
+        },
+        {
+          "title": "ยังไม่มีประวัติการรับสินค้า"
+        }
+      ],
+      "permissions": [
+        "receiveGoods"
+      ],
+      "statusMaps": [
+        "GR_STATUS_LABELS",
+        "PO_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "ReceiveGoodsPage",
+      "file": "src/admin/pages/ReceiveGoodsPage.tsx",
+      "routes": [
+        "/admin/purchasing/po/:id/receive"
+      ],
+      "kind": "other",
+      "titles": [
+        "รับสินค้า — อ้างอิง {…}",
+        "ไม่พบข้อมูล",
+        "รับสินค้า"
+      ],
+      "subtitles": [
+        "ผู้จัดจำหน่าย {…} {…} · กำหนดส่ง {…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "รับสินค้า"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "«formatPOCode(order.poId)»",
+          "รับสินค้า"
+        ]
+      ],
+      "columns": [
+        "หนังสือ",
+        "สั่ง",
+        "รับจริง",
+        "สภาพ",
+        "หมายเหตุ"
+      ],
+      "fields": [
+        {
+          "label": "เลขใบส่งของ",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกการรับ",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบใบสั่งซื้อ",
+          "description": "เลขที่ที่ระบุอาจถูกลบไปแล้วหรือพิมพ์ไม่ถูกต้อง"
+        },
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์บันทึกรับสินค้า",
+          "description": "การตรวจรับสินค้าเข้าคลังเป็นหน้าที่ของพนักงานคลังสินค้า"
+        },
+        {
+          "title": "ใบสั่งซื้อนี้รับสินค้าครบแล้ว",
+          "description": "ไม่มีรายการคงค้างให้ตรวจรับเพิ่มเติม"
+        }
+      ],
+      "permissions": [
+        "receiveGoods"
+      ],
+      "statusMaps": [
+        "CONDITION_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "DraftLine",
+        "EmptyState"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "ReorderAlertsPage",
+      "file": "src/admin/pages/ReorderAlertsPage.tsx",
+      "routes": [
+        "/admin/alerts"
+      ],
+      "kind": "other",
+      "titles": [
+        "แจ้งเตือนสินค้าถึงจุดสั่งซื้อ",
+        "แจ้งเตือนสต็อก"
+      ],
+      "subtitles": [
+        "ระบบตรวจสอบยอดคงเหลือเทียบจุดสั่งซื้อตามรอบเวลา พบ {…} รายการที่ต้องดำเนินการ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "แจ้งเตือนสต็อก"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "ชื่อหนังสือ",
+        "คงเหลือ",
+        "จุดสั่งซื้อ",
+        "ผู้จัดจำหน่ายแนะนำ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "สร้าง PR จากที่เลือก{…}",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ยังไม่มีสินค้าถึงจุดสั่งซื้อ",
+          "description": "ยอดคงเหลือของทุกรายการยังสูงกว่าจุดสั่งซื้อที่ตั้งไว้"
+        }
+      ],
+      "permissions": [
+        "setReorderPoint",
+        "createRequisition"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "ReportStatusModal",
+      "file": "src/admin/pages/ReportStatusModal.tsx",
+      "routes": [],
+      "kind": "overlay",
+      "titles": [
+        "สถานะการรายงานผู้จัดการ"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "ปิด",
+          "variant": "btn btn-ghost btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Modal",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "ReportToManagerModal",
+      "file": "src/admin/pages/ReportToManagerModal.tsx",
+      "routes": [],
+      "kind": "overlay",
+      "titles": [
+        "รายงานรีวิวให้ผู้จัดการร้าน"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [
+        {
+          "label": "เหตุผลในการรายงาน *",
+          "required": false
+        },
+        {
+          "label": "รายละเอียดเพิ่มเติมส่งถึงผู้จัดการ",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ส่งรายงานให้ผู้จัดการ",
+          "variant": "btn btn-danger btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Modal"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "RequisitionFormPage",
+      "file": "src/admin/pages/RequisitionFormPage.tsx",
+      "routes": [
+        "/admin/purchasing/pr/new",
+        "/admin/purchasing/pr/:id"
+      ],
+      "kind": "form",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "ใบขอสั่งซื้อ",
+        "สร้างใบขอสั่งซื้อ"
+      ],
+      "subtitles": [
+        "{…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "ใบขอสั่งซื้อ"
+        ],
+        [
+          "หน้าหลัก",
+          "เอกสารจัดซื้อ",
+          "สร้างใบขอสั่งซื้อ"
+        ]
+      ],
+      "columns": [],
+      "fields": [
+        {
+          "label": "ผู้จัดจำหน่าย",
+          "required": true
+        },
+        {
+          "label": "เงื่อนไข",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกร่าง",
+          "variant": "btn btn-secondary btn-sm"
+        },
+        {
+          "label": "ส่งขออนุมัติ",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบใบขอสั่งซื้อ",
+          "description": "เลขที่ที่ระบุอาจถูกลบไปแล้วหรือพิมพ์ไม่ถูกต้อง"
+        },
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์สร้างใบขอสั่งซื้อ",
+          "description": "เฉพาะพนักงานคลังสินค้าเท่านั้นที่จัดทำใบขอสั่งซื้อได้"
+        }
+      ],
+      "permissions": [
+        "createRequisition"
+      ],
+      "statusMaps": [
+        "PR_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "LineItemsTable",
+        "StatusBadge",
+        "Stepper"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "ReviewDetailDrawer",
+      "file": "src/admin/pages/ReviewDetailDrawer.tsx",
+      "routes": [],
+      "kind": "overlay",
+      "titles": [],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [
+        {
+          "label": "ข้อความตอบกลับถึงลูกค้า",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "แก้ไขข้อความตอบกลับ",
+          "variant": "btn btn-ghost btn-sm drawer-edit-reply-btn"
+        },
+        {
+          "label": "ตอบกลับรีวิว",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกคำตอบกลับ",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ปิดหน้าต่าง",
+          "variant": "btn btn-ghost"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "RatingStars",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "ReviewDetailModal",
+      "file": "src/admin/pages/ReviewDetailModal.tsx",
+      "routes": [],
+      "kind": "overlay",
+      "titles": [
+        "รีวิว ${…}"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [
+        {
+          "label": "{…}",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ปิด",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกคำตอบกลับ",
+          "variant": "btn btn-secondary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [
+        "MODERATE_ACTION_LABELS",
+        "REVIEW_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Modal",
+        "RatingStars",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "ReviewManagerPage",
+      "file": "src/admin/pages/ReviewManagerPage.tsx",
+      "routes": [
+        "/admin/reviews/manage"
+      ],
+      "kind": "other",
+      "titles": [
+        "จัดการรีวิวที่มีปัญหา"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "จัดการรีวิวที่มีปัญหา"
+        ]
+      ],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "ล้างตัวกรอง",
+          "variant": "btn-reset-filters"
+        },
+        {
+          "label": "ลบรีวิว",
+          "variant": "btn-card-action btn-action--delete"
+        },
+        {
+          "label": "ซ่อนถาวร",
+          "variant": "btn-card-action btn-action--hide"
+        },
+        {
+          "label": "อนุมัติ",
+          "variant": "btn-card-action btn-action--approve"
+        },
+        {
+          "label": "ตอบกลับรีวิว",
+          "variant": "btn-card-action btn-action--reply"
+        }
+      ],
+      "filters": {
+        "search": [
+          "ชื่อหนังสือ, ผู้ใช้, ISBN หรือข้อความ..."
+        ],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์จัดการรีวิวที่มีปัญหา",
+          "description": "หน้านี้สงวนสิทธิ์สำหรับผู้จัดการร้าน (Store Manager) เท่านั้น"
+        },
+        {
+          "title": "ไม่พบรายการรีวิวในหมวดนี้",
+          "description": "ไม่มีรีวิวที่ตรงกับเงื่อนไขหรือตัวกรองที่เลือกในขณะนี้"
+        }
+      ],
+      "permissions": [
+        "manageReportedReviews"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Pagination",
+        "RatingStars",
+        "Review",
+        "ReviewDetailDrawer",
+        "ReviewReplyModal",
+        "SortOrder",
+        "TabType"
+      ],
+      "usesPagination": true,
+      "usesToast": true,
+      "latinText": [
+        "หน้านี้สงวนสิทธิ์สำหรับผู้จัดการร้าน (Store Manager) เท่านั้น",
+        "ชื่อหนังสือ, ผู้ใช้, ISBN หรือข้อความ..."
+      ]
+    },
+    {
+      "component": "ReviewModerationPage",
+      "file": "src/admin/pages/ReviewModerationPage.tsx",
+      "routes": [
+        "/admin/reviews"
+      ],
+      "kind": "other",
+      "titles": [
+        "ตรวจสอบรีวิว"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ตรวจสอบรีวิว"
+        ]
+      ],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "ตอบกลับรีวิว",
+          "variant": "btn-reply-action-sales"
+        },
+        {
+          "label": "ดูรายละเอียด",
+          "variant": "btn-detail-action-sales"
+        },
+        {
+          "label": "รอผู้จัดการตรวจสอบ (คลิกดูสถานะ)",
+          "variant": "btn-reported-status-sales"
+        },
+        {
+          "label": "รายงานให้ผู้จัดการ",
+          "variant": "btn-report-action-sales"
+        }
+      ],
+      "filters": {
+        "search": [
+          "ค้นหาชื่อหนังสือ, ชื่อผู้ใช้ หรือ ISBN..."
+        ],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ตรวจสอบรีวิว",
+          "description": "การตรวจสอบและจัดการรีวิวเป็นสิทธิ์ของพนักงานฝ่ายขายและผู้จัดการร้าน"
+        },
+        {
+          "title": "ไม่พบข้อมูลรีวิว",
+          "description": "ลองปรับเปลี่ยนคำค้นหาหรือตัวกรองสถานะเพื่อดูรายการอีกครั้ง"
+        }
+      ],
+      "permissions": [
+        "moderateReview"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "FilterStatus",
+        "Pagination",
+        "RatingStars",
+        "ReportStatusModal",
+        "ReportToManagerModal",
+        "Review",
+        "ReviewDetailDrawer",
+        "ReviewReplyModal",
+        "SortOrder"
+      ],
+      "usesPagination": true,
+      "usesToast": true,
+      "latinText": [
+        "ค้นหาชื่อหนังสือ, ชื่อผู้ใช้ หรือ ISBN..."
+      ]
+    },
+    {
+      "component": "ReviewReplyModal",
+      "file": "src/admin/pages/ReviewReplyModal.tsx",
+      "routes": [],
+      "kind": "overlay",
+      "titles": [
+        "ตอบกลับรีวิว - ${…}"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [
+        {
+          "label": "ข้อความตอบกลับถึงลูกค้า *",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกคำตอบกลับ",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Modal"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "SignUpPage",
+      "file": "src/pages/SignUpPage.tsx",
+      "routes": [
+        "/signup"
+      ],
+      "kind": "other",
+      "titles": [
+        "Create Account"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [],
+      "columns": [],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "Create Account",
+          "variant": "btn btn-primary auth-submit"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [],
+      "permissions": [],
+      "statusMaps": [],
+      "usesComponents": [
+        "Link",
+        "Navigate"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": [
+        "Create Account"
+      ]
+    },
+    {
+      "component": "StockAdjustPage",
+      "file": "src/admin/pages/StockAdjustPage.tsx",
+      "routes": [
+        "/admin/stock/adjust"
+      ],
+      "kind": "other",
+      "titles": [
+        "แก้ไขจำนวนหนังสือ",
+        "ปรับปรุงจำนวน"
+      ],
+      "subtitles": [
+        "เพิ่มหนังสือที่ต้องการ แล้วระบุจำนวนที่เปลี่ยนแปลง — ใส่ค่าติดลบเพื่อหักออกจากคลัง"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "สินค้าคงคลัง",
+          "ปรับปรุงจำนวน"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "หนังสือ",
+        "คงเหลือปัจจุบัน",
+        "จำนวนที่เปลี่ยน (+/-)",
+        "คงเหลือใหม่",
+        "เหตุผล"
+      ],
+      "fields": [
+        {
+          "label": "อ้างอิงคำสั่งซื้อ (Order ID)",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "เพิ่มหนังสือ",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึก",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ปรับปรุงจำนวนสินค้าคงคลัง",
+          "description": "การแก้ไขจำนวนหนังสือเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
+        },
+        {
+          "title": "ยังไม่ได้เลือกหนังสือ",
+          "description": "กด &quot;เพิ่มหนังสือ&quot; เพื่อค้นหาและเลือกเล่มที่ต้องการแก้ไขจำนวน"
+        }
+      ],
+      "permissions": [
+        "adjustStock"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "BookPicker",
+        "Breadcrumb",
+        "EmptyState",
+        "Row"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": [
+        "อ้างอิงคำสั่งซื้อ (Order ID)",
+        "กด &quot;เพิ่มหนังสือ&quot; เพื่อค้นหาและเลือกเล่มที่ต้องการแก้ไขจำนวน"
+      ]
+    },
+    {
+      "component": "StockCountDetailPage",
+      "file": "src/admin/pages/StockCountDetailPage.tsx",
+      "routes": [
+        "/admin/stock/counts/:id"
+      ],
+      "kind": "detail",
+      "titles": [
+        "รอบตรวจนับ {…}",
+        "ไม่พบข้อมูล",
+        "«formatCountCode(count.countId)»"
+      ],
+      "subtitles": [
+        "ตรวจนับวันที่ {…} · ผู้ตรวจนับ{…} {…} · {…} รายการ พบผลต่าง {…} รายการ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ตรวจนับสต็อก",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "ตรวจนับสต็อก",
+          "«formatCountCode(count.countId)»"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "หนังสือ",
+        "จำนวนในระบบ",
+        "จำนวนที่นับได้จริง",
+        "ผลต่าง",
+        "ผลการเทียบ",
+        "รายงานผลต่าง"
+      ],
+      "fields": [],
+      "buttons": [],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ดูประวัติการตรวจนับ",
+          "description": "ประวัติการตรวจนับเปิดให้พนักงานคลังสินค้าและผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "title": "ไม่พบรอบการตรวจนับ",
+          "description": "รหัสรอบที่ระบุไม่มีอยู่ในระบบ"
+        }
+      ],
+      "permissions": [
+        "viewStockCounts"
+      ],
+      "statusMaps": [
+        "APPROVAL_STATUS_LABELS",
+        "STOCK_COUNT_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "StockCountFormPage",
+      "file": "src/admin/pages/StockCountFormPage.tsx",
+      "routes": [
+        "/admin/stock/counts/new"
+      ],
+      "kind": "form",
+      "titles": [
+        "ตรวจนับหนังสือ",
+        "ยืนยันการบันทึก"
+      ],
+      "subtitles": [
+        "เพิ่มหนังสือที่ต้องการนับ แล้วใส่จำนวนที่นับได้จริง ๆ ระบบจะเทียบกับยอดในระบบให้อัตโนมัติ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ตรวจนับสต็อก",
+          "ตรวจนับหนังสือ"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "หนังสือ",
+        "จำนวนในระบบ",
+        "จำนวนที่นับได้จริง",
+        "ผลต่าง",
+        "ผลการเทียบ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เพิ่มหนังสือ",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึกการตรวจสอบ",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ตกลง",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ตรวจนับสินค้าคงคลัง",
+          "description": "การตรวจนับเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
+        },
+        {
+          "title": "ยังไม่ได้เลือกหนังสือที่จะนับ",
+          "description": "กด &quot;เพิ่มหนังสือ&quot; เพื่อค้นหาและเลือกเล่มที่ต้องการตรวจนับ"
+        }
+      ],
+      "permissions": [
+        "countStock"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "BookPicker",
+        "Breadcrumb",
+        "EmptyState",
+        "Modal",
+        "StatusBadge"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": [
+        "กด &quot;เพิ่มหนังสือ&quot; เพื่อค้นหาและเลือกเล่มที่ต้องการตรวจนับ"
+      ]
+    },
+    {
+      "component": "StockCountListPage",
+      "file": "src/admin/pages/StockCountListPage.tsx",
+      "routes": [
+        "/admin/stock/counts"
+      ],
+      "kind": "list",
+      "titles": [
+        "ประวัติการตรวจนับ",
+        "ตรวจนับสต็อก"
+      ],
+      "subtitles": [
+        "บันทึกรอบการตรวจนับสินค้าคงคลังทั้งหมด {…} รอบ"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ตรวจนับสต็อก"
+        ]
+      ],
+      "columns": [
+        "รหัสรอบ",
+        "วันที่ตรวจนับ",
+        "ผู้ตรวจนับ",
+        "จำนวนรายการ",
+        "พบผลต่าง",
+        "สถานะ",
+        "จัดการ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "ตรวจนับหนังสือ",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ดูประวัติการตรวจนับ",
+          "description": "ประวัติการตรวจนับเปิดให้พนักงานคลังสินค้าและผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "title": "ยังไม่มีประวัติการตรวจนับ",
+          "description": "เมื่อบันทึกการตรวจนับแล้ว รอบนั้นจะถูกเก็บไว้ที่นี่พร้อมผลต่างของแต่ละเล่ม"
+        }
+      ],
+      "permissions": [
+        "viewStockCounts",
+        "countStock"
+      ],
+      "statusMaps": [
+        "STOCK_COUNT_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "Pagination",
+        "StatusBadge"
+      ],
+      "usesPagination": true,
+      "usesToast": false,
+      "latinText": []
+    },
+    {
+      "component": "StockDiscrepancyPage",
+      "file": "src/admin/pages/StockDiscrepancyPage.tsx",
+      "routes": [
+        "/admin/stock/discrepancies"
+      ],
+      "kind": "other",
+      "titles": [
+        "หนังสือที่จำนวนคลาดเคลื่อน",
+        "รายงานผลต่าง ${…}",
+        "ยอดหนังสือไม่ตรง"
+      ],
+      "subtitles": [
+        "แสดงรายงานหนังสือที่มีจำนวนคลาดเคลื่อนและยังไม่ได้รับการแก้ไข"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ยอดหนังสือไม่ตรง"
+        ]
+      ],
+      "columns": [
+        "รหัสรายงาน",
+        "รอบตรวจนับ",
+        "หนังสือ",
+        "ผลต่าง",
+        "ผู้แจ้ง",
+        "สถานะ",
+        "จัดการ"
+      ],
+      "fields": [
+        {
+          "label": "กรอกสาเหตุที่จำนวนไม่ตรง",
+          "required": true
+        }
+      ],
+      "buttons": [
+        {
+          "label": "ตรวจสอบ",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ปฏิเสธรายงาน",
+          "variant": "btn btn-danger btn-sm"
+        },
+        {
+          "label": "รับทราบและอัพเดทจำนวน",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ดูรายงานผลต่างสต็อก",
+          "description": "รายงานผลต่างเปิดให้พนักงานคลังสินค้าและผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "title": "ไม่มีรายงานผลต่างที่รอดำเนินการ",
+          "description": "เมื่อการตรวจนับพบจำนวนคลาดเคลื่อน ระบบจะเปิดรายงานและแจ้งเตือนผู้จัดการร้านที่นี่"
+        }
+      ],
+      "permissions": [
+        "viewDiscrepancies",
+        "resolveDiscrepancy"
+      ],
+      "statusMaps": [
+        "APPROVAL_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "Modal",
+        "StatusBadge",
+        "Tab"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": []
+    },
+    {
+      "component": "StockListPage",
+      "file": "src/admin/pages/StockListPage.tsx",
+      "routes": [
+        "/admin/stock",
+        "/admin/stock/low"
+      ],
+      "kind": "list",
+      "titles": [
+        "สินค้าคงคลัง"
+      ],
+      "subtitles": [
+        "{…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "สินค้าคงคลัง",
+          "หนังสือที่ใกล้หมด",
+          "สินค้าคงคลัง"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "ชื่อหนังสือ",
+        "หมวดหมู่",
+        "คงเหลือ",
+        "จุดสั่งซื้อ",
+        "สถานะ",
+        "อัปเดตล่าสุด"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "อัปเดทจำนวนหนังสือ",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ล้างตัวกรอง",
+          "variant": "btn btn-ghost btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [
+          "ค้นหาชื่อหนังสือ ผู้แต่ง ISBN หรือรหัส"
+        ],
+        "selects": [
+          "เลือกหมวดหมู่หนังสือ"
+        ]
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์ดูข้อมูลสินค้าคงคลัง",
+          "description": "ยอดคงเหลือเปิดให้พนักงานคลังสินค้า พนักงานฝ่ายขาย และผู้จัดการร้านเท่านั้น"
+        },
+        {
+          "description": "ลองเปลี่ยนแท็บ ปรับหมวดหมู่ หรือล้างตัวกรองเพื่อดูรายการอื่น"
+        }
+      ],
+      "permissions": [
+        "viewStock",
+        "adjustStock",
+        "viewAlerts"
+      ],
+      "statusMaps": [
+        "STOCK_LEVEL_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "Pagination",
+        "StatTile",
+        "StatusBadge",
+        "StockList",
+        "Tab"
+      ],
+      "usesPagination": true,
+      "usesToast": false,
+      "latinText": [
+        "ค้นหาชื่อหนังสือ ผู้แต่ง ISBN หรือรหัส"
+      ]
+    },
+    {
+      "component": "SupplierDetailPage",
+      "file": "src/admin/pages/SupplierDetailPage.tsx",
+      "routes": [
+        "/admin/suppliers/:id"
+      ],
+      "kind": "detail",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "«supplier.companyName»"
+      ],
+      "subtitles": [],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ผู้จัดจำหน่าย",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "ผู้จัดจำหน่าย",
+          "«supplier.companyName»"
+        ]
+      ],
+      "columns": [
+        "ISBN",
+        "ชื่อหนังสือ",
+        "ผู้แต่ง",
+        "สำนักพิมพ์",
+        "ราคาส่ง",
+        "ระยะเวลาส่ง",
+        "เลขที่ใบสั่งซื้อ",
+        "วันที่สั่ง",
+        "กำหนดส่ง",
+        "ยอดรวม",
+        "สถานะ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "แก้ไข",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ปิดใช้งาน",
+          "variant": "btn btn-danger btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบข้อมูลผู้จัดจำหน่าย",
+          "description": "รหัสที่ระบุอาจถูกลบไปแล้วหรือพิมพ์ไม่ถูกต้อง"
+        },
+        {
+          "title": "ยังไม่มีรายการหนังสือของผู้จัดจำหน่ายรายนี้"
+        },
+        {
+          "title": "ยังไม่มีประวัติการสั่งซื้อ"
+        }
+      ],
+      "permissions": [
+        "editSuppliers",
+        "deactivateSupplier"
+      ],
+      "statusMaps": [
+        "PO_STATUS_LABELS",
+        "SUPPLIER_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "DeactivateSupplierModal",
+        "EmptyState",
+        "Link",
+        "StatusBadge",
+        "Tab"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": [
+        "ISBN"
+      ]
+    },
+    {
+      "component": "SupplierFormPage",
+      "file": "src/admin/pages/SupplierFormPage.tsx",
+      "routes": [
+        "/admin/suppliers/new",
+        "/admin/suppliers/:id/edit"
+      ],
+      "kind": "form",
+      "titles": [
+        "ไม่พบข้อมูล",
+        "«title»"
+      ],
+      "subtitles": [
+        "{…}"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ผู้จัดจำหน่าย",
+          "ไม่พบข้อมูล"
+        ],
+        [
+          "หน้าหลัก",
+          "ผู้จัดจำหน่าย",
+          "«existing.companyName»",
+          "«title»"
+        ]
+      ],
+      "columns": [],
+      "fields": [
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": true
+        },
+        {
+          "label": "{…}",
+          "required": false
+        },
+        {
+          "label": "{…}",
+          "required": false
+        },
+        {
+          "label": "ชื่อหนังสือ",
+          "required": false
+        },
+        {
+          "label": "ISBN",
+          "required": false
+        },
+        {
+          "label": "ผู้แต่ง",
+          "required": false
+        },
+        {
+          "label": "สำนักพิมพ์",
+          "required": false
+        },
+        {
+          "label": "ราคาส่ง (บาท)",
+          "required": false
+        },
+        {
+          "label": "ระยะเวลาส่ง (วัน)",
+          "required": false
+        }
+      ],
+      "buttons": [
+        {
+          "label": "เพิ่มรายการ",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "ยกเลิก",
+          "variant": "btn btn-ghost btn-sm"
+        },
+        {
+          "label": "บันทึก",
+          "variant": "btn btn-primary btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [],
+        "selects": []
+      },
+      "emptyStates": [
+        {
+          "title": "บทบาทของคุณไม่มีสิทธิ์แก้ไขข้อมูลผู้จัดจำหน่าย",
+          "description": "การเพิ่มและแก้ไขข้อมูลเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
+        },
+        {
+          "title": "ไม่พบข้อมูลผู้จัดจำหน่าย",
+          "description": "ไม่สามารถเปิดฟอร์มแก้ไขได้เพราะไม่พบรหัสที่ระบุ"
+        }
+      ],
+      "permissions": [
+        "editSuppliers"
+      ],
+      "statusMaps": [],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "SupplierForm"
+      ],
+      "usesPagination": false,
+      "usesToast": true,
+      "latinText": [
+        "ISBN"
+      ]
+    },
+    {
+      "component": "SupplierListPage",
+      "file": "src/admin/pages/SupplierListPage.tsx",
+      "routes": [
+        "/admin/suppliers"
+      ],
+      "kind": "list",
+      "titles": [
+        "ผู้จัดจำหน่าย"
+      ],
+      "subtitles": [
+        "ค้นหาและเรียกดูข้อมูลผู้จัดจำหน่ายทั้งหมด {…} ราย"
+      ],
+      "breadcrumbs": [
+        [
+          "หน้าหลัก",
+          "ผู้จัดจำหน่าย"
+        ]
+      ],
+      "columns": [
+        "รหัส",
+        "ชื่อบริษัท",
+        "ผู้ติดต่อ",
+        "เบอร์โทร",
+        "จำนวนหนังสือ",
+        "สถานะ",
+        "จัดการ"
+      ],
+      "fields": [],
+      "buttons": [
+        {
+          "label": "เพิ่มผู้จัดจำหน่าย",
+          "variant": "btn btn-primary btn-sm"
+        },
+        {
+          "label": "ล้างตัวกรอง",
+          "variant": "btn btn-ghost btn-sm"
+        }
+      ],
+      "filters": {
+        "search": [
+          "ค้นหาชื่อบริษัท ผู้ติดต่อ เบอร์โทร หรือรหัส"
+        ],
+        "selects": [
+          "สถานะ",
+          "สำนักพิมพ์"
+        ]
+      },
+      "emptyStates": [
+        {
+          "title": "ไม่พบข้อมูลที่ตรงกับคำค้น",
+          "description": "ลองปรับคำค้นหรือล้างตัวกรองเพื่อดูรายการทั้งหมดอีกครั้ง"
+        }
+      ],
+      "permissions": [
+        "editSuppliers"
+      ],
+      "statusMaps": [
+        "SUPPLIER_STATUS_LABELS"
+      ],
+      "usesComponents": [
+        "Breadcrumb",
+        "EmptyState",
+        "Link",
+        "Pagination",
+        "StatusBadge",
+        "StatusFilter"
+      ],
+      "usesPagination": true,
+      "usesToast": false,
+      "latinText": []
+    }
+  ]
+}

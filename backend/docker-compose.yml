@@ -1,0 +1,38 @@
+# docker-compose.yml — PostgreSQL สำหรับพัฒนา/ทดสอบ backend
+#
+# ใช้ได้ทั้งบนเครื่องตัวเองและบน Raspberry Pi (image postgres:17 มีทั้ง amd64 และ arm64)
+#   docker compose up -d          เปิดฐานข้อมูล
+#   docker compose ps             ดูสถานะ (ต้องขึ้น healthy)
+#   docker compose down           ปิด (ข้อมูลยังอยู่ใน volume)
+#   docker compose down -v        ปิดพร้อมลบข้อมูลทั้งหมด — ใช้ตอนอยาก seed ใหม่
+#
+# พอร์ตฝั่งเครื่องเป็น 5433 ไม่ใช่ 5432 เพื่อไม่ให้ชนกับ PostgreSQL ตัวอื่นที่อาจรันอยู่แล้ว
+# แก้รหัสผ่านด้วยตัวแปรแวดล้อม POSTGRES_PASSWORD (ค่าปริยาย bookstore)
+name: bookstore-t03
+
+services:
+  db:
+    image: postgres:17
+    container_name: bookstore-t03-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bookstore_t03
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bookstore}
+      # ต้องบังคับ UTF8 — ข้อมูลเกือบทั้งระบบเป็นภาษาไทย
+      # ถ้าปล่อยให้ initdb เลือกเอง (หรือไปตั้ง LANG=C) จะได้ฐานข้อมูลเป็น SQL_ASCII
+      # แล้ว driver จะปฏิเสธคำสั่งด้วย "simple protocol queries must be run with client_encoding=UTF8"
+      # หมายเหตุ: ค่านี้มีผลตอน initdb เท่านั้น เปลี่ยนทีหลังต้อง docker compose down -v
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    ports:
+      - "5433:5432"
+    volumes:
+      - bookstore_t03_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookstore -d bookstore_t03"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bookstore_t03_pgdata:

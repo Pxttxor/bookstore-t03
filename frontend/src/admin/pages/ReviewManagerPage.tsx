@@ -423,6 +423,8 @@ export default function ReviewManagerPage() {
                         src={bookCover}
                         alt={review.bookTitle}
                         className="review-book-cover-img"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="review-book-cover-placeholder">

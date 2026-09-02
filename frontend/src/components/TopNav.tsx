@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from './Icon'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
@@ -25,6 +25,14 @@ function initialsOf(name: string): string {
 export default function TopNav({ showSearch = false }: TopNavProps) {
   const { user } = useAuth()
   const { count } = useCart()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const query = params.get('q') ?? ''
+
+  // ค้นหาที่ TopNav พาไปโชว์ผลบน grid หน้าหลัก — sync กับ ?q= เส้นเดียว
+  const onSearch = (value: string) => {
+    navigate(value ? `/?q=${encodeURIComponent(value)}` : '/', { replace: true })
+  }
 
   return (
     <header className="topnav">
@@ -53,7 +61,13 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
           {showSearch && (
             <label className="topnav__search">
               <Icon name="search" size={16} />
-              <input type="search" placeholder="Search books..." />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => onSearch(e.target.value)}
+                placeholder="ค้นหาหนังสือ..."
+                aria-label="ค้นหาหนังสือ"
+              />
             </label>
           )}
           <button

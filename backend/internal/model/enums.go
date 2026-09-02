@@ -182,26 +182,45 @@ const (
 	RoleManager   Role = "manager"
 	RoleSales     Role = "sales"
 	RoleDelivery  Role = "delivery"
+
+	// RoleCustomer ไม่ใช่พนักงาน — เป็น Customer ที่สืบทอดจาก Person คนละสายกับ Employee
+	// **ห้ามใส่ในลิสต์ของ chk_employee_role** และห้ามใส่ในชุดบทบาทของหลังร้าน (roleStaff/roleOffice)
+	// มีไว้ให้ token ของลูกค้าผ่าน Verify และให้ RequireRole กันเส้นทางฝั่งลูกค้าได้
+	RoleCustomer Role = "customer"
 )
+
+// EmployeeRoles — บทบาทที่เป็นพนักงานจริง ใช้กับ CHECK constraint ของตาราง employee
+func EmployeeRoles() []Role {
+	return []Role{RoleWarehouse, RoleManager, RoleSales, RoleDelivery}
+}
 
 func (r Role) IsValid() bool {
 	switch r {
-	case RoleWarehouse, RoleManager, RoleSales, RoleDelivery:
+	case RoleWarehouse, RoleManager, RoleSales, RoleDelivery, RoleCustomer:
 		return true
 	}
 	return false
 }
 
+// IsEmployee — บทบาทนี้เป็นพนักงานหลังร้านหรือไม่ (ตรงกับ isEmployee() ของ frontend)
+func (r Role) IsEmployee() bool { return r.IsValid() && r != RoleCustomer }
+
 // NotificationKind / NotificationChannel — การแจ้งเตือนที่ระบบจัดซื้อสร้าง (U6–U10)
 type NotificationKind string
 
 const (
-	NotifyReorderAlert    NotificationKind = "REORDER_ALERT"
-	NotifyPRSubmitted     NotificationKind = "PR_SUBMITTED"
-	NotifyPRApproved      NotificationKind = "PR_APPROVED"
-	NotifyPRRejected      NotificationKind = "PR_REJECTED"
-	NotifyGRRecorded      NotificationKind = "GR_RECORDED"
-	NotifyReturnEscalated NotificationKind = "RETURN_ESCALATED"
+	NotifyReorderAlert     NotificationKind = "REORDER_ALERT"
+	NotifyPRSubmitted      NotificationKind = "PR_SUBMITTED"
+	NotifyPRApproved       NotificationKind = "PR_APPROVED"
+	NotifyPRRejected       NotificationKind = "PR_REJECTED"
+	NotifyGRRecorded       NotificationKind = "GR_RECORDED"
+	NotifyReturnEscalated  NotificationKind = "RETURN_ESCALATED"
+	NotifyStockDiscrepancy NotificationKind = "STOCK_DISCREPANCY"
+	NotifyOrderPlaced      NotificationKind = "ORDER_PLACED"
+	NotifyOrderPaid        NotificationKind = "ORDER_PAID"
+	NotifyOrderReadyToShip NotificationKind = "ORDER_READY_TO_SHIP"
+	NotifyShipmentFailed   NotificationKind = "SHIPMENT_FAILED"
+	NotifyReviewReported   NotificationKind = "REVIEW_REPORTED"
 )
 
 type NotificationChannel string

@@ -29,6 +29,7 @@ type PurchasingService struct {
 	purchasing    *repository.PurchasingRepository
 	suppliers     *repository.SupplierRepository
 	inventory     *repository.InventoryRepository
+	books         *repository.BookRepository
 	notifications *repository.NotificationRepository
 }
 
@@ -37,11 +38,12 @@ func NewPurchasingService(
 	purchasing *repository.PurchasingRepository,
 	suppliers *repository.SupplierRepository,
 	inventory *repository.InventoryRepository,
+	books *repository.BookRepository,
 	notifications *repository.NotificationRepository,
 ) *PurchasingService {
 	return &PurchasingService{
 		db: db, purchasing: purchasing, suppliers: suppliers,
-		inventory: inventory, notifications: notifications,
+		inventory: inventory, books: books, notifications: notifications,
 	}
 }
 
@@ -140,7 +142,7 @@ func (s *PurchasingService) ReorderAlerts() ([]ReorderAlert, error) {
 	if err != nil {
 		return nil, err
 	}
-	books, err := s.inventory.BooksByID()
+	books, err := s.books.BooksByID()
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +353,7 @@ func (s *PurchasingService) assertSupplierActive(supplierID int) error {
 
 // Budget — งบประมาณและยอดผูกพันปัจจุบัน (แถบบน SCR-23)
 func (s *PurchasingService) Budget() (*BudgetSummary, error) {
-	orders, err := s.purchasing.ListOrders(repository.OrderFilter{})
+	orders, err := s.purchasing.ListOrders(repository.PurchaseOrderFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +383,7 @@ func (s *PurchasingService) ApproveRequisition(prID int, input ApproveInput, by 
 			return err
 		}
 
-		orders, err := s.purchasing.ListOrders(repository.OrderFilter{})
+		orders, err := s.purchasing.ListOrders(repository.PurchaseOrderFilter{})
 		if err != nil {
 			return err
 		}
@@ -463,7 +465,7 @@ func (s *PurchasingService) RejectRequisition(prID int, input RejectInput) (*mod
 
 // ── U8 ส่งใบสั่งซื้อให้ผู้จัดจำหน่าย ─────────────────────────────────────
 
-func (s *PurchasingService) ListOrders(filter repository.OrderFilter) ([]model.PurchaseOrder, error) {
+func (s *PurchasingService) ListOrders(filter repository.PurchaseOrderFilter) ([]model.PurchaseOrder, error) {
 	return s.purchasing.ListOrders(filter)
 }
 
@@ -513,333 +515,6 @@ func (s *PurchasingService) ConfirmOrder(poID int, input ConfirmInput) (*model.P
 		return nil, err
 	}
 	return s.purchasing.FindOrder(poID)
-}
-
-// ── U9 บันทึกรับสินค้าเข้าคลัง ──────────────────────────────────────────
-
-func (s *PurchasingService) ListReceipts(poID int) ([]model.GoodsReceipt, error) {
-	return s.purchasing.ListReceipts(poID)
-}
-
-// ReceiveGoods — ออกใบรับสินค้า ปรับจำนวนที่รับแล้ว ปรับสถานะ PO และเพิ่มสต็อก ในทรานแซกชันเดียว
-// ลำดับตรงกับ sequence diagram SD-U9
-func (s *PurchasingService) ReceiveGoods(poID int, input ReceiptInput, by Identity) (*model.GoodsReceipt, error) {
-	if strings.TrimSpace(input.DeliveryNoteNo) == "" {
-		return nil, model.Validation("MISSING_DELIVERY_NOTE", "ต้องระบุเลขที่ใบส่งของ")
-	}
-
-	var receipt *model.GoodsReceipt
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		order, err := s.purchasing.LockOrder(tx, poID)
-		if err != nil {
-			return err
-		}
-		if err := order.CanReceive(); err != nil {
-			return err
-		}
-
-		lines, err := s.buildReceiptLines(order, input.Lines)
-		if err != nil {
-			return err
-		}
-
-		receipt = &model.GoodsReceipt{
-			POID:           poID,
-			ReceivedDate:   model.Today(),
-			DeliveryNoteNo: strings.TrimSpace(input.DeliveryNoteNo),
-			ReceivedBy:     by.Name,
-			Items:          lines,
-		}
-
-		// ปรับจำนวนที่รับแล้วก่อน เพื่อให้รู้ว่าใบนี้ทำให้ PO ครบหรือยัง
-		order.ApplyReceipt(receipt)
-		if order.Status == model.POStatusReceivedFull {
-			receipt.Status = model.GRStatusFull
-		} else {
-			receipt.Status = model.GRStatusPartial
-		}
-
-		if err := s.purchasing.CreateReceipt(tx, receipt); err != nil {
-			return err
-		}
-		if err := s.purchasing.SaveOrderItems(tx, order); err != nil {
-			return err
-		}
-		if err := s.purchasing.SaveOrderHeader(tx, order); err != nil {
-			return err
-		}
-
-		// ของที่มาถึงเข้าสต็อกทั้งหมด ทั้งของดีและของชำรุด — U10 ตัดของชำรุดออกตอนเปิดใบคืน
-		if err := s.inventory.ApplyStockChanges(tx, receipt.ToStockTransactions()); err != nil {
-			return err
-		}
-
-		received := 0
-		for _, line := range receipt.Items {
-			received += line.ReceivedQty
-		}
-		supplier, err := s.suppliers.FindByID(order.SupplierID)
-		if err != nil {
-			return err
-		}
-		return s.notifyInApp(tx, model.RoleManager, model.NotifyGRRecorded,
-			"บันทึกรับสินค้าเข้าคลัง",
-			fmt.Sprintf("%s · %s · รับ %d เล่ม",
-				model.FormatPOCode(poID), supplier.CompanyName, received),
-			fmt.Sprintf("/admin/purchasing/po/%d", poID))
-	})
-	if err != nil {
-		return nil, err
-	}
-	return receipt, nil
-}
-
-// buildReceiptLines — ตรวจรายการที่กรอกแล้วแปลงเป็นรายการของใบรับสินค้า
-//
-// รับเกินจำนวนที่สั่งได้ (เหตุผลส่งคืนมีข้อ "เกินจำนวนที่สั่ง") จึงไม่ปิดกั้น
-// แต่รับติดลบหรือรับหนังสือที่ไม่ได้อยู่ในใบสั่งซื้อไม่ได้
-func (s *PurchasingService) buildReceiptLines(order *model.PurchaseOrder, inputs []ReceiptLineInput) ([]model.GoodsReceiptItem, error) {
-	if len(inputs) == 0 {
-		return nil, model.ErrEmptyItems
-	}
-
-	lines := make([]model.GoodsReceiptItem, 0, len(inputs))
-	seen := make(map[int]bool, len(inputs))
-	total := 0
-
-	for _, input := range inputs {
-		if seen[input.BookID] {
-			return nil, model.ErrDuplicateBookInDocument
-		}
-		seen[input.BookID] = true
-
-		if !order.HasBook(input.BookID) {
-			return nil, model.Validation("BOOK_NOT_IN_ORDER",
-				fmt.Sprintf("หนังสือรหัส %d ไม่อยู่ในใบสั่งซื้อนี้", input.BookID))
-		}
-		if input.ReceivedQty < 0 {
-			return nil, model.ErrInvalidQuantity
-		}
-
-		condition := model.ItemCondition(input.Condition)
-		if condition == "" {
-			condition = model.ItemConditionNormal
-		}
-		if !condition.IsValid() {
-			return nil, model.Validation("INVALID_CONDITION", "สภาพสินค้าไม่ถูกต้อง: "+input.Condition)
-		}
-
-		total += input.ReceivedQty
-		lines = append(lines, model.GoodsReceiptItem{
-			BookID:      input.BookID,
-			OrderedQty:  order.OrderedQty(input.BookID),
-			ReceivedQty: input.ReceivedQty,
-			Condition:   condition,
-			Note:        strings.TrimSpace(input.Note),
-		})
-	}
-
-	if total == 0 {
-		return nil, model.ErrNothingReceived
-	}
-	return lines, nil
-}
-
-// ── U10 บันทึกส่งคืนสินค้า ──────────────────────────────────────────────
-
-func (s *PurchasingService) ListReturns(poID int) ([]model.PurchaseReturn, error) {
-	return s.purchasing.ListReturns(poID)
-}
-
-func (s *PurchasingService) GetReturn(returnID int) (*model.PurchaseReturn, error) {
-	return s.purchasing.FindReturn(returnID)
-}
-
-// CreateReturn — เปิดใบส่งคืนจากใบสั่งซื้อ แล้วตัดของออกจากสต็อก
-// ถ้าคืนครบทุกหน่วยที่เคยรับเข้ามา ใบสั่งซื้อจะเปลี่ยนเป็น RETURNED
-func (s *PurchasingService) CreateReturn(poID int, input ReturnInput, by Identity) (*model.PurchaseReturn, error) {
-	if strings.TrimSpace(input.Reason) == "" {
-		return nil, model.ErrReasonRequired
-	}
-	if len(input.Items) == 0 {
-		return nil, model.ErrEmptyItems
-	}
-
-	var entry *model.PurchaseReturn
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		order, err := s.purchasing.LockOrder(tx, poID)
-		if err != nil {
-			return err
-		}
-
-		alreadyReturned, err := s.purchasing.ReturnedQtyByBook(tx, poID)
-		if err != nil {
-			return err
-		}
-
-		items := make([]model.PurchaseReturnItem, 0, len(input.Items))
-		seen := make(map[int]bool, len(input.Items))
-		for _, line := range input.Items {
-			if seen[line.BookID] {
-				return model.ErrDuplicateBookInDocument
-			}
-			seen[line.BookID] = true
-
-			if line.Quantity <= 0 {
-				return model.ErrInvalidQuantity
-			}
-			if !order.HasBook(line.BookID) {
-				return model.Validation("BOOK_NOT_IN_ORDER",
-					fmt.Sprintf("หนังสือรหัส %d ไม่อยู่ในใบสั่งซื้อนี้", line.BookID))
-			}
-			// คืนได้ไม่เกินจำนวนที่รับเข้าคลังจริง หักด้วยที่เคยคืนไปแล้ว
-			if alreadyReturned[line.BookID]+line.Quantity > order.ReceivedQty(line.BookID) {
-				return model.ErrReturnExceedsReceived
-			}
-			alreadyReturned[line.BookID] += line.Quantity
-
-			reason := strings.TrimSpace(line.Reason)
-			if reason == "" {
-				reason = strings.TrimSpace(input.Reason)
-			}
-			items = append(items, model.PurchaseReturnItem{
-				BookID:   line.BookID,
-				Quantity: line.Quantity,
-				Reason:   reason,
-				Evidence: line.Evidence,
-			})
-		}
-
-		entry = &model.PurchaseReturn{
-			POID:       poID,
-			ReturnDate: model.Today(),
-			Reason:     strings.TrimSpace(input.Reason),
-			Status:     model.ReturnStatusTracking,
-			CreatedBy:  by.Name,
-			Items:      items,
-		}
-		if err := s.purchasing.CreateReturn(tx, entry); err != nil {
-			return err
-		}
-
-		// ใบสั่งซื้อถือว่า "ส่งคืน" เมื่อทุกหน่วยที่รับเข้ามาถูกคืนกลับหมดแล้ว
-		fullyReturned := true
-		for _, item := range order.Items {
-			if item.ReceivedQty == 0 || alreadyReturned[item.BookID] < item.ReceivedQty {
-				fullyReturned = false
-				break
-			}
-		}
-		if fullyReturned {
-			order.Status = model.POStatusReturned
-			if err := s.purchasing.SaveOrderHeader(tx, order); err != nil {
-				return err
-			}
-		}
-
-		return s.inventory.ApplyStockChanges(tx, entry.ToStockTransactions())
-	})
-	if err != nil {
-		return nil, err
-	}
-	return s.purchasing.FindReturn(entry.ReturnID)
-}
-
-// EscalateReturn — SCR-26 Abnormal (U10): ผู้จัดจำหน่ายปฏิเสธการรับคืน ส่งเรื่องให้ผู้จัดการ
-func (s *PurchasingService) EscalateReturn(returnID int, input EscalateInput) (*model.PurchaseReturn, error) {
-	note := strings.TrimSpace(input.Note)
-
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		entry, err := s.purchasing.FindReturn(returnID)
-		if err != nil {
-			return err
-		}
-		if err := entry.Escalate(note); err != nil {
-			return err
-		}
-		if err := s.purchasing.SaveReturn(tx, entry); err != nil {
-			return err
-		}
-		return s.notify(tx, model.RoleManager, model.NotifyReturnEscalated,
-			"ผู้จัดจำหน่ายปฏิเสธการรับคืน",
-			fmt.Sprintf("%s · %s", model.FormatPOCode(entry.POID), note),
-			fmt.Sprintf("/admin/purchasing/returns/%d", returnID))
-	})
-	if err != nil {
-		return nil, err
-	}
-	return s.purchasing.FindReturn(returnID)
-}
-
-// RecordCompensation — ปิดใบส่งคืนเมื่อได้รับการชดเชยครบ (U10 postcondition)
-// ถ้าเป็นสินค้าทดแทน ของชุดใหม่เข้าสต็อกกลับมา
-func (s *PurchasingService) RecordCompensation(returnID int, input CompensationInput, by Identity) (*model.PurchaseReturn, error) {
-	kind := model.CompensationType(strings.TrimSpace(input.Type))
-
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		entry, err := s.purchasing.FindReturn(returnID)
-		if err != nil {
-			return err
-		}
-		if err := entry.RecordCompensation(kind, strings.TrimSpace(input.Note), by.Name, time.Now().UTC()); err != nil {
-			return err
-		}
-		if err := s.purchasing.SaveReturn(tx, entry); err != nil {
-			return err
-		}
-		if kind != model.CompensationReplacement {
-			return nil
-		}
-
-		replacements := make([]model.StockTransaction, 0, len(entry.Items))
-		for _, item := range entry.Items {
-			replacements = append(replacements, model.StockTransaction{
-				BookID:         item.BookID,
-				Type:           model.StockTxnTypeReceiveIn,
-				QuantityChange: item.Quantity,
-				Reason:         "สินค้าทดแทนจากการส่งคืน",
-				ReferenceDoc:   model.FormatPOCode(entry.POID),
-				TxnDate:        time.Now().UTC(),
-			})
-		}
-		return s.inventory.ApplyStockChanges(tx, replacements)
-	})
-	if err != nil {
-		return nil, err
-	}
-	return s.purchasing.FindReturn(returnID)
-}
-
-// ── การแจ้งเตือน ────────────────────────────────────────────────────────
-
-// notifySubmitted — U6 postcondition: ใบขอสั่งซื้อวิ่งไปหาผู้จัดการอัตโนมัติ
-func (s *PurchasingService) notifySubmitted(tx *gorm.DB, pr *model.PurchaseRequisition) error {
-	supplier, err := s.suppliers.FindByID(pr.SupplierID)
-	if err != nil {
-		return err
-	}
-	body := fmt.Sprintf("%s · %s · ฿%.2f · ผู้ขอ %s",
-		model.FormatPRCode(pr.PRID), supplier.CompanyName,
-		model.DocumentTotal(pr.Items), pr.RequestedBy)
-
-	return s.notify(tx, model.RoleManager, model.NotifyPRSubmitted,
-		"ใบขอสั่งซื้อรออนุมัติ", body,
-		fmt.Sprintf("/admin/purchasing/pr/%d/approve", pr.PRID))
-}
-
-// notify — บันทึกแจ้งเตือนทั้งในระบบและ "อีเมล" (อีเมลเป็นการจำลอง ไม่ได้ส่งจริง)
-func (s *PurchasingService) notify(tx *gorm.DB, to model.Role, kind model.NotificationKind, title, body, link string) error {
-	return s.notifications.Push(tx, []model.Notification{
-		{To: to, Kind: kind, Title: title, Body: body, Link: link, Channel: model.ChannelInApp},
-		{To: to, Kind: kind, Title: title, Body: body, Link: link, Channel: model.ChannelEmail},
-	})
-}
-
-// notifyInApp — แจ้งเตือนเฉพาะในระบบ ไม่ส่งอีเมล (การรับสินค้าเป็นข้อมูลภายใน)
-func (s *PurchasingService) notifyInApp(tx *gorm.DB, to model.Role, kind model.NotificationKind, title, body, link string) error {
-	return s.notifications.Push(tx, []model.Notification{
-		{To: to, Kind: kind, Title: title, Body: body, Link: link, Channel: model.ChannelInApp},
-	})
 }
 
 func toRequisitionItems(inputs []RequisitionLineInput) []model.PurchaseRequisitionItem {

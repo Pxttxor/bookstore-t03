@@ -309,12 +309,24 @@ export default function PurchaseReturnPage() {
                           />
                         </label>
                       ) : line.evidence ? (
-                        <img className="ret__thumb" src={line.evidence} alt="หลักฐานการส่งคืน" />
+                        <img
+                          className="ret__thumb"
+                          src={line.evidence}
+                          alt="หลักฐานการส่งคืน"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <span className="ret__none">ไม่มี</span>
                       )}
                       {draft?.evidence && (
-                        <img className="ret__thumb" src={draft.evidence} alt="หลักฐานการส่งคืน" />
+                        <img
+                          className="ret__thumb"
+                          src={draft.evidence}
+                          alt="หลักฐานการส่งคืน"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       )}
                     </td>
                   </tr>

@@ -73,7 +73,12 @@ export default function ReviewDetailDrawer({
             <div className="drawer-book-card">
               <div className="drawer-book-cover">
                 {(review.coverUrl || getBook(review.bookId)?.cover) ? (
-                  <img src={review.coverUrl || getBook(review.bookId)?.cover} alt={review.bookTitle} />
+                  <img
+                    src={review.coverUrl || getBook(review.bookId)?.cover}
+                    alt={review.bookTitle}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <div className="drawer-book-cover-placeholder">
                     <Icon name="book" size={32} />

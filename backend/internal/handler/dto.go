@@ -144,7 +144,7 @@ func toReturnDTOs(entries []model.PurchaseReturn) []purchaseReturnDTO {
 	return out
 }
 
-// requisitionDTO / orderDTO / receiptDTO — เหมือน model แต่เติมป้ายไทยและรหัสเอกสาร
+// requisitionDTO / purchaseOrderDTO / receiptDTO — เหมือน model แต่เติมป้ายไทยและรหัสเอกสาร
 // ให้หน้าจอไม่ต้องประกอบเอง
 
 type requisitionDTO struct {
@@ -183,16 +183,16 @@ func displayStatus(po model.PurchaseOrder) (string, string) {
 	return string(po.Status), po.Status.Label()
 }
 
-type orderDTO struct {
+type purchaseOrderDTO struct {
 	model.PurchaseOrder
 	DisplayStatus string `json:"displayStatus"`
 	StatusLabel   string `json:"statusLabel"`
 	Code          string `json:"code"`
 }
 
-func toOrderDTO(po model.PurchaseOrder) orderDTO {
+func toPurchaseOrderDTO(po model.PurchaseOrder) purchaseOrderDTO {
 	status, label := displayStatus(po)
-	return orderDTO{
+	return purchaseOrderDTO{
 		PurchaseOrder: po,
 		DisplayStatus: status,
 		StatusLabel:   label,
@@ -200,10 +200,10 @@ func toOrderDTO(po model.PurchaseOrder) orderDTO {
 	}
 }
 
-func toOrderDTOs(rows []model.PurchaseOrder) []orderDTO {
-	out := make([]orderDTO, 0, len(rows))
+func toPurchaseOrderDTOs(rows []model.PurchaseOrder) []purchaseOrderDTO {
+	out := make([]purchaseOrderDTO, 0, len(rows))
 	for _, po := range rows {
-		out = append(out, toOrderDTO(po))
+		out = append(out, toPurchaseOrderDTO(po))
 	}
 	return out
 }

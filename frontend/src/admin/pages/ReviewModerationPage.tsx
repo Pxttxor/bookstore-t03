@@ -233,7 +233,12 @@ export default function ReviewModerationPage() {
                 <div className="review-card-left-sales">
                   <div className="review-book-cover-sales">
                     {bookCover ? (
-                      <img src={bookCover} alt={review.bookTitle} />
+                      <img
+                        src={bookCover}
+                        alt={review.bookTitle}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <div className="review-book-cover-placeholder-sales">
                         <Icon name="book" size={28} />

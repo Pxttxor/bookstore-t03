@@ -28,7 +28,7 @@ export default function OrderSummary({
           {lines.map(({ book, qty }) => (
             <li key={book.id} className="summary__item">
               <div className="summary__thumb">
-                <img src={book.cover} alt={book.title} />
+                <img src={book.cover} alt={book.title} loading="lazy" decoding="async" />
                 {qty > 1 && <span className="summary__qty">{qty}</span>}
               </div>
               <div className="summary__info">
