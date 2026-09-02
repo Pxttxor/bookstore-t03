@@ -1,0 +1,1033 @@
+/* ── Delivery Summary Report Page (Harmonized, Clean, Spacious & Premium) ── */
+
+.delivery-report-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Page Header & Top Bar Actions */
+.delivery-report__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.delivery-report__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.delivery-report__head h1.admin-page__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.25;
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.delivery-report__head p.admin-page__subtitle {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.delivery-report__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.delivery-report__date-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-muted);
+}
+
+.delivery-report__date-picker input[type='date'] {
+  border: none;
+  background: transparent;
+  font-family: var(--font-thai);
+  font-size: 13px;
+  color: var(--text-heading);
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Prominent Green Button for Revenue Summary */
+.btn-revenue-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #00B092;
+  color: #ffffff;
+  border: 1px solid #00967c;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 4px rgba(0, 176, 146, 0.18);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-revenue-summary:hover {
+  background: #00967c;
+  box-shadow: 0 4px 8px rgba(0, 176, 146, 0.25);
+  transform: translateY(-1px);
+}
+
+.delivery-report__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.delivery-report__btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  background: var(--surface);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+
+/* Compact Book Inventory Note Banner (Refined & Clean) */
+.delivery-report__banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.04);
+}
+
+.delivery-report__banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #dcfce7;
+  color: var(--primary-deep);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.delivery-report__banner-text {
+  color: #14532d;
+  font-size: 13px;
+  line-height: 1.4;
+  font-family: var(--font-thai);
+}
+
+.delivery-report__banner-text strong {
+  font-weight: 700;
+  color: var(--primary-deep);
+  margin-right: 4px;
+}
+
+/* KPI Cards (Top Row - High Clarity & Spacious) */
+.delivery-report__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.delivery-kpi-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.delivery-kpi-card:hover {
+  border-color: var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.delivery-kpi-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--status-info-bg);
+  color: var(--primary-deep);
+  flex-shrink: 0;
+}
+
+.delivery-kpi-card__icon--revenue {
+  background: #e6f7f2;
+  color: #00B092;
+}
+
+.delivery-kpi-card__icon--success {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.delivery-kpi-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.delivery-kpi-card__label {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delivery-kpi-card__val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.delivery-kpi-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.delivery-kpi-card__unit {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.delivery-kpi-card__note-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.delivery-kpi-card__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delivery-kpi-card__link-btn {
+  border: none;
+  background: transparent;
+  color: #00B092;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.delivery-kpi-card__link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Full-Width Parcel Table Card */
+.delivery-report__table-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+}
+
+/* ── Carrier Tabs Filter Bar ────────────────────────────────────────── */
+.carrier-tabs-bar {
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 14px;
+  margin-bottom: 2px;
+}
+
+.carrier-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.carrier-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-thai);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.carrier-tab:hover {
+  background: var(--surface-alt);
+  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.carrier-tab--active {
+  font-weight: 700;
+}
+
+.carrier-tab__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.carrier-tab__label {
+  letter-spacing: -0.01em;
+}
+
+.carrier-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-pill);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border-soft);
+  transition: all 0.15s ease;
+}
+
+.carrier-tab--active .carrier-tab__badge {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.parcel-table__reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #e11d48;
+  padding: 0 10px;
+  height: 32px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px dashed #fca5a5;
+  background: #fff1f2;
+  font-weight: 600;
+  font-family: var(--font-thai);
+  transition: all 0.15s ease;
+}
+
+.parcel-table__reset-btn:hover {
+  background: #ffe4e6;
+  border-color: #f43f5e;
+  color: #be123c;
+}
+
+.parcel-table__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.parcel-table__title-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parcel-table__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.parcel-table__count-chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+}
+
+.parcel-table__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.parcel-table__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  width: 220px;
+}
+
+.parcel-table__search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12.5px;
+  font-family: var(--font-thai);
+  color: var(--text-heading);
+  width: 100%;
+}
+
+.parcel-table__filter-selects {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.parcel-table__select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-heading);
+  font-size: 12.5px;
+  font-family: var(--font-thai);
+  outline: none;
+  cursor: pointer;
+}
+
+.parcel-table__wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.parcel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.parcel-table th {
+  background: var(--surface-alt);
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+
+/* Compact Row Padding for reduced clutter */
+.parcel-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+
+.parcel-table tr:last-child td {
+  border-bottom: none;
+}
+
+.parcel-table tr:hover td {
+  background: rgba(0, 176, 146, 0.03);
+}
+
+.parcel-table__empty {
+  text-align: center;
+  padding: 28px 12px !important;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.parcel-table__order-link {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: #00B092;
+  font-size: 12px;
+}
+
+.parcel-table__order-code {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.parcel-table__order-link:hover {
+  text-decoration: underline;
+}
+
+.parcel-table__customer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.parcel-table__customer-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e6f7f2;
+  color: #006b5a;
+  font-weight: 700;
+  font-size: 10.5px;
+}
+
+.parcel-table__customer-name {
+  font-weight: 500;
+  color: var(--text-heading);
+  font-size: 12.5px;
+}
+
+.parcel-carrier-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.parcel-table__tracking-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.parcel-table__tracking-cell code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-heading);
+  background: var(--surface-alt);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border-soft);
+}
+
+.parcel-table__copy-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.parcel-table__copy-btn:hover {
+  color: #00B092;
+  background: var(--border-soft);
+}
+
+.parcel-table__amount {
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--text-heading);
+  font-size: 12.5px;
+}
+
+.parcel-table__date {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Icon-only Button with Tooltip for Actions */
+.parcel-table__icon-print-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.parcel-table__icon-print-btn:hover {
+  border-color: #00B092;
+  color: #00B092;
+  background: #e6f7f2;
+  transform: scale(1.05);
+}
+
+.parcel-table__pagination {
+  margin-top: 6px;
+}
+
+/* ── Revenue Summary Modal ────────────────────────────────────────── */
+.revenue-summary-modal {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.revenue-summary-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+
+.revenue-summary-modal__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.revenue-summary-modal__subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 3px 0 0 0;
+}
+
+.revenue-summary-modal__body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.revenue-summary__stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .revenue-summary__stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.revenue-stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+
+.revenue-stat-box--primary {
+  background: #e6f7f2;
+  border-color: #a7f3d0;
+}
+
+.revenue-stat-box__label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.revenue-stat-box--primary .revenue-stat-box__label {
+  color: #006b5a;
+  font-weight: 600;
+}
+
+.revenue-stat-box__val {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  color: var(--text-heading);
+}
+
+.revenue-stat-box--primary .revenue-stat-box__val {
+  color: #007965;
+  font-size: 20px;
+}
+
+.revenue-stat-box__hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.revenue-summary__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.revenue-summary__section-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.revenue-summary__table-wrap {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.revenue-summary__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.revenue-summary__table th {
+  background: var(--surface-alt);
+  padding: 8px 12px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.revenue-summary__table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.revenue-summary__table tfoot td {
+  background: var(--surface-alt);
+  border-bottom: none;
+  border-top: 1.5px solid var(--border-soft);
+}
+
+.revenue-summary-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+
+/* ── Shipping Label Modal & Backdrop ────────────────────────────────── */
+/* .modal-backdrop is the shared class from admin/components/Modal.css. Scope the page's
+   own version so its blur and stacking never leak into the other modals of the app. */
+.delivery-report-page .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.shipping-label-modal {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.shipping-label-modal--batch {
+  max-width: 480px;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.shipping-label-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.delivery-report-page .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.delivery-report-page .btn-icon:hover {
+  background: var(--surface-alt);
+  color: var(--text-heading);
+}
+
+.shipping-label-modal__head h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-heading);
+}
+
+.shipping-label-preview {
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--surface-alt);
+  display: flex;
+  justify-content: center;
+}
+
+.label-box {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border: 1.5px solid #0f172a;
+  border-radius: 4px;
+  padding: 14px;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.label-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label-box__brand h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.label-box__brand span {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.label-box__carrier-tag {
+  border: 1.5px solid #0f172a;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12.5px;
+}
+
+.label-box__divider {
+  height: 1.5px;
+  background: #0f172a;
+  margin: 10px 0;
+}
+
+.label-box__barcode-section {
+  text-align: center;
+  padding: 4px 0;
+}
+
+.barcode-graphic {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.barcode-lines {
+  width: 200px;
+  height: 42px;
+  background: repeating-linear-gradient(
+    90deg,
+    #0f172a 0px,
+    #0f172a 2px,
+    transparent 2px,
+    transparent 4px,
+    #0f172a 4px,
+    #0f172a 7px,
+    transparent 7px,
+    transparent 10px
+  );
+}
+
+.label-box__tracking-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.label-box__parties {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.label-party {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.party-title {
+  font-weight: 800;
+  font-size: 10.5px;
+  color: #475569;
+}
+
+.party-name {
+  font-weight: 700;
+  font-size: 13px;
+  margin: 0;
+}
+
+.party-addr {
+  margin: 0;
+  color: #334155;
+  line-height: 1.35;
+}
+
+.party-tel,
+.party-meta {
+  margin: 0;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.label-box__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.shipping-label-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+
+.batch-labels-info {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--text-body);
+}
+
+.batch-carrier-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.batch-pill {
+  padding: 4px 10px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 12px;
+}
