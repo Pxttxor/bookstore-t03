@@ -16,7 +16,7 @@ export default function BookCard({ book }: { book: Book }) {
   return (
     <Link to={`/book/${book.id}`} className="book-card">
       <div className="book-card__cover">
-        <img src={book.cover} alt={book.title} loading="lazy" />
+        <img src={book.cover} alt={book.title} loading="lazy" decoding="async" />
         <button
           type="button"
           className="book-card__add"

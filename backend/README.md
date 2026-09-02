@@ -1,9 +1,20 @@
-# Backend — ระบบจัดการผู้จัดจำหน่าย (U1–U4) และระบบจัดซื้อ (U5–U10)
+# Backend — ระบบร้านหนังสือออนไลน์ ทีม T03
 
-REST API เขียนด้วย **Go + GORM + PostgreSQL** สำหรับสองระบบย่อยของโครงงานร้านหนังสือออนไลน์ ทีม T03
+REST API เขียนด้วย **Go + GORM + PostgreSQL** ของโครงงานร้านหนังสือออนไลน์ ทีม T03
+
+แกนหลักคือสองระบบย่อยของอาชัน สง่าศรี — **จัดการผู้จัดจำหน่าย (U1–U4)** และ **จัดซื้อ (U5–U10)**
+รอบนี้ขยายจนครบ **ทั้ง 46 คลาสของ class diagram** แล้ว (ระบบย่อยของเพื่อนร่วมทีมอีก 8 ระบบ)
+ทำเป็นเฟส ดูสถานะที่ [`PROGRESS.md`](PROGRESS.md) — ที่เพิ่มเข้ามาคือ **บุคคล/ลูกค้า/บัญชีผู้ใช้** ·
+**ข้อมูลหนังสือ (หมวดหมู่ · หนังสือ · ประวัติการแก้ไข)** ·
+**สินค้าคงคลังเต็มรูป (ปรับยอดด้วยมือ · ตรวจนับ · รายงานผลต่าง)** ·
+**คำสั่งซื้อลูกค้ากับโปรโมชั่น** · **ตรวจสอบการชำระเงิน (ธนาคาร · สลิป · รายงานรับชำระ)** ·
+**จัดการการจัดส่ง (พัสดุ · ติดตามสถานะ · สรุปบัญชีพัสดุ)** ·
+**สมาชิกและแต้มสะสม (ระดับ · แต้ม · ของรางวัล · การแลกแต้ม)** และ
+**รีวิวลูกค้า (ตรวจสอบ · ตอบกลับ · รายงานให้ผู้จัดการ · ตัวกรองคำหยาบ)**
 
 ตาราง คลาส และชื่อฟิลด์ทั้งหมดยึดตาม class diagram ระดับ Analysis
-(`Sub1-Supplier-Management.md`, `Sub2-Purchasing.md`) และตาราง schema 15 ตาราง PK/FK ในเอกสารที่ส่ง
+(`Sub1-Supplier-Management.md`, `Sub2-Purchasing.md` และของเจ้าของคลาสในระบบย่อยอื่น)
+กับตาราง schema 15 ตาราง PK/FK ในเอกสารที่ส่ง
 กฎทางธุรกิจยึดตาม use case description และหัวข้อ Abnormal ของ Figma UI Spec §6
 
 ---
@@ -23,7 +34,8 @@ go run ./cmd/api -migrate -seed
 | `go run ./cmd/api -migrate` | สร้าง/อัปเดต schema ก่อนเปิด |
 | `go run ./cmd/api -migrate -seed` | สร้าง schema + ใส่ข้อมูลตั้งต้น (ทำงานเมื่อฐานข้อมูลว่างเท่านั้น) |
 | `go run ./cmd/api -migrate -seed -setup-only` | ทำ migrate/seed แล้วจบ ไม่เปิดเซิร์ฟเวอร์ |
-| `go run ./cmd/smoke` | เดิน flow U1–U10 ทั้งเส้นทางปกติและผิดปกติ สรุป PASS/FAIL |
+| `go run ./cmd/smoke` | เดิน flow ทุกระบบย่อยที่ทำแล้ว ทั้งเส้นทางปกติและผิดปกติ สรุป PASS/FAIL |
+| `python tools/gen_seed.py` | สร้าง `seed_data.go` ใหม่จาก `SEED_*` ของ frontend |
 
 ### บัญชีทดสอบ
 
@@ -33,8 +45,17 @@ go run ./cmd/api -migrate -seed
 |---|---|---|
 | `warehouse@bookhaven.co.th` | พนักงานคลังสินค้า | U1, U2, U5, U6, U8, U9, U10 |
 | `manager@bookhaven.co.th` | ผู้จัดการร้าน | U3, U7 + ดูข้อมูลทั้งหมด |
-| `sales@bookhaven.co.th` | พนักงานฝ่ายขาย | ดูข้อมูลผู้จัดจำหน่ายอย่างเดียว |
+| `sales@bookhaven.co.th` | พนักงานฝ่ายขาย | ดูข้อมูลผู้จัดจำหน่าย · **เจ้าของแคตตาล็อกหนังสือ** · ดูข้อมูลลูกค้า |
 | `delivery@bookhaven.co.th` | พนักงานจัดส่ง | ไม่มีสิทธิ์ในสองระบบย่อยนี้ |
+
+บัญชีลูกค้า รหัสผ่าน `customer1234` · สมัครใหม่เองได้ที่ `POST /api/auth/register`
+แล้วยืนยันด้วยรหัส OTP โหมดพัฒนา `123456`
+
+| อีเมล | ชื่อ | สถานะบัญชี |
+|---|---|---|
+| `napat@example.com` | ณภัทร วงศ์สว่าง | `ACTIVE` |
+| `kanya@example.com` | กัญญา ศรีสาย | `UNVERIFIED` — ล็อกอินไม่ได้จนกว่าจะยืนยัน |
+| `somsak@example.com` | สมศักดิ์ ใจดี | `SUSPENDED` — ถูกผู้จัดการระงับ |
 
 ---
 
@@ -61,12 +82,12 @@ sudo ufw allow from 192.168.11.0/24 to any port 5432
 
 ```
 cmd/api        เปิดเซิร์ฟเวอร์ · ประกอบ dependency ทั้งหมดไว้ที่ main.go
-cmd/smoke      สคริปต์เดิน flow U1–U10 ผ่าน API จริง
+cmd/smoke      สคริปต์เดิน flow ของทุกระบบย่อยผ่าน API จริง (flow_*.go หนึ่งไฟล์ต่อระบบย่อย)
 internal/
   model        Entity ตาม class diagram + enum + กฎที่ตัดสินได้จากข้อมูลในตัวเอง
   repository   คำสั่ง GORM ทั้งหมด (รับ *gorm.DB เข้ามาได้ เพื่อทำงานในทรานแซกชันเดียวกับ service)
   service      กฎทางธุรกิจที่ต้องอ่านหลายตาราง + ขอบเขตทรานแซกชัน + การแจ้งเตือน
-  handler      อ่าน request → เรียก service → เขียน response · ตารางเส้นทางอยู่ที่ handler.go
+  handler      อ่าน request → เรียก service → เขียน response · ตารางเส้นทางอยู่ที่ routes.go
   middleware   ยืนยันตัวตน (JWT) · ตรวจสิทธิ์ตามบทบาท · CORS · log · กัน panic
   httpx        ตัวช่วยอ่าน/เขียน JSON และแปลง error เป็น HTTP status
   config       อ่านค่าตั้งต้นจาก .env
@@ -81,16 +102,22 @@ internal/
 
 ## Schema
 
-15 ตารางตามเอกสาร บวกตารางส่วนขยายที่หน้าจอต้องใช้ ชื่อตารางเป็น snake_case เอกพจน์
-เพื่อให้ `\dt` แมปกับเอกสารได้ทีละแถว
+15 ตารางตามเอกสารที่ส่งอาจารย์ บวกตารางของระบบย่อยที่ทำเพิ่มในรอบนี้ และตารางส่วนขยายที่หน้าจอต้องใช้
+ชื่อตารางเป็น snake_case เอกพจน์ เพื่อให้ `\dt` แมปกับเอกสารได้ทีละแถว
 
 ### ตารางตาม class diagram
 
 | ตาราง | PK | FK |
 |---|---|---|
+| `person` | person_id | — |
+| `employee` | employee_id | person_id → person |
+| `customer` | customer_id | person_id → person |
+| `user_account` | account_id | person_id → person |
 | `supplier` | supplier_id | — |
 | `supplier_book` | supplier_id, book_id | → supplier, book |
-| `book` | book_id | — |
+| `category` | category_id | — |
+| `book` | book_id | category_id → category |
+| `book_change_log` | log_id | book_id → book |
 | `purchase_requisition` | pr_id | requested_by_id → employee |
 | `purchase_requisition_item` | pr_id, book_id | → purchase_requisition, book |
 | `purchase_order` | po_id | supplier_id → supplier · pr_id → PR (nullable) · approved_by_id → employee |
@@ -99,11 +126,32 @@ internal/
 | `goods_receipt_item` | gr_id, book_id | → goods_receipt, book |
 | `purchase_return` | return_id | po_id → purchase_order |
 | `purchase_return_item` | return_id, book_id | → purchase_return, book |
-| `employee` | employee_id | — |
 | `inventory_item` | inventory_id | book_id → book |
 | `stock_transaction` | txn_id | book_id → book |
+| `stock_count` | count_id | — |
+| `stock_count_item` | count_id, book_id | → stock_count, book, stock_discrepancy_report (nullable) |
+| `stock_discrepancy_report` | report_id | count_id → stock_count · book_id → book |
+| `promotion` | promotion_id | — |
+| `customer_order` | order_id | customer_id → customer · promotion_id → promotion (nullable) |
+| `customer_order_item` | order_id, book_id | → customer_order, book |
+| `customer_order_status_history` | history_id | order_id → customer_order |
+| `bank` | bank_id | — |
+| `payment` | payment_id | order_id → customer_order (unique) · bank_id → bank (nullable) |
+| `payment_report` | report_id | — |
+| `shipping_company` | carrier_id | — |
+| `shipment` | shipment_id | order_id → customer_order (unique) · carrier_id → shipping_company |
+| `shipment_tracking` | tracking_id | shipment_id → shipment |
+| `delivery_summary` | summary_id | — |
+| `membership_tier` | tier_id | — |
+| `member` | member_id | customer_id → customer (unique) · tier_id → membership_tier |
+| `point_transaction` | point_txn_id | member_id → member · order_id → customer_order (nullable) |
+| `reward` | reward_id | — |
+| `redemption` | redemption_id | member_id → member · reward_id → reward |
+| `review` | review_id | customer_id → customer · book_id → book · order_id → customer_order (nullable) |
+| `review_reply` | reply_id | review_id → review |
+| `review_report` | report_id | review_id → review (unique) |
 
-ตารางลูกทั้งห้าใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
+ตารางลูกทั้งเจ็ดใช้ PK ผสม `(รหัสเอกสาร, book_id)` ตามเอกสาร ผลข้างเคียงคือหนังสือเล่มเดียว
 ซ้ำในเอกสารฉบับเดียวไม่ได้ — service ตรวจให้ก่อนแล้วคืนข้อความไทย
 
 ### ตารางส่วนขยาย
@@ -127,6 +175,19 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | `ItemCondition` | NORMAL, DAMAGED |
 | `BookStatus` | ACTIVE, INACTIVE |
 | `StockTxnType` | RECEIVE_IN, SALE_OUT, RETURN, ADJUSTMENT |
+| `AccountStatus` | UNVERIFIED, ACTIVE, SUSPENDED |
+| `StockCountStatus` | DRAFT, DONE |
+| `ApprovalStatus` | PENDING, APPROVED, REJECTED |
+| `OrderChannel` | WEBSITE, MESSAGE, PHONE |
+| `OrderStatus` | PENDING_CONFIRM, STOCK_CONFIRMED, WAITING_PAYMENT, VERIFYING_PAYMENT, PAID, PACKING, READY_TO_SHIP, SHIPPED, DELIVERED, CANCELLED, REJECTED |
+| `PromotionType` | FESTIVAL_DISCOUNT, COUPON, BUY_X_QTY |
+| `PromotionStatus` | ACTIVE, INACTIVE, EXPIRED |
+| `PaymentStatus` | WAITING, VERIFYING, SUCCESS, REJECTED |
+| `ShipmentStatus` | PREPARING, SHIPPED, IN_TRANSIT, DELIVERED, FAILED |
+| `PointTxnType` | EARN, REDEEM, EXPIRE, REVERSAL |
+| `RewardType` | DISCOUNT, GIFT |
+| `ReviewStatus` | PENDING, PUBLISHED, HIDDEN, REMOVED |
+| `ModerateAction` | PUBLISH, HIDE, REMOVE (คำสั่งที่ส่งเข้ามา ไม่ได้เก็บลงตาราง) |
 
 ---
 
@@ -143,25 +204,62 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 
 | Method | Path | UC | สิทธิ์ |
 |---|---|---|---|
-| POST | `/auth/login` | — | เปิดสาธารณะ |
-| GET | `/auth/me` | — | พนักงานทุกบทบาท |
+| POST | `/auth/login` · `/auth/register` · `/auth/verify-otp` | — | เปิดสาธารณะ |
+| GET | `/auth/me` | — | ทุกคนที่ล็อกอินแล้ว (รวมลูกค้า) |
+| GET/PUT | `/customers/me` | — | ลูกค้า |
+| GET | `/customers` · `/customers/{id}` | — | ฝ่ายขาย, ผจก. |
+| POST | `/accounts/{id}/suspend` · `/accounts/{id}/reactivate` | — | ผู้จัดการร้าน |
 | GET | `/suppliers` · `/suppliers/{id}` · `/suppliers/{id}/orders` | U4 | คลัง, ผจก., ฝ่ายขาย |
 | POST | `/suppliers` | U1 | คลังสินค้า |
 | PUT | `/suppliers/{id}` | U2 | คลังสินค้า |
 | POST | `/suppliers/{id}/deactivate` | U3 | ผู้จัดการร้าน |
-| GET | `/books` · `/inventory` | — | คลัง, ผจก., ฝ่ายขาย |
+| GET | `/categories` · `/books` · `/books/{id}` · `/inventory` | — | คลัง, ผจก., ฝ่ายขาย |
+| GET | `/books/{id}/change-logs` | — | ฝ่ายขาย, ผจก. |
+| POST/PUT | `/books` · `/books/{id}` · `/books/{id}/status` | — | ฝ่ายขาย, ผจก. |
 | GET | `/inventory/alerts` | U5 | คลังสินค้า |
+| GET | `/inventory/low-stock` | — | คลัง, ผจก., ฝ่ายขาย |
+| POST | `/inventory/adjust` | — | คลังสินค้า |
+| GET | `/stock-counts` · `/stock-counts/{id}` · `/discrepancies` | — | คลัง, ผจก. |
+| POST | `/stock-counts` | — | คลังสินค้า |
+| POST | `/discrepancies/{id}/approve` · `/discrepancies/{id}/reject` | — | ผู้จัดการร้าน |
+| GET | `/orders` · `/orders/{id}` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะใบตัวเอง) |
+| POST | `/orders` · `/orders/{id}/payment` | — | ลูกค้า, ฝ่ายขาย |
+| POST | `/orders/{id}/confirm-stock` · `/await-payment` · `/verify-payment` · `/reject-payment` | — | ฝ่ายขาย |
+| POST | `/orders/{id}/pack` · `/orders/{id}/ready` | — | คลังสินค้า |
+| POST | `/orders/{id}/ship` · `/orders/{id}/deliver` | — | ฝ่ายจัดส่ง |
+| POST | `/orders/{id}/cancel` | — | ฝ่ายขาย, ผจก. |
+| GET/POST/PUT/DELETE | `/promotions` · `/promotions/{id}` · `/promotions/{id}/status` | — | ผู้จัดการร้าน |
+| GET | `/banks` | — | ทุกคนที่ล็อกอินแล้ว (ลูกค้าต้องรู้ว่าจะโอนเข้าบัญชีไหน) |
+| GET | `/payments` · `/payments/{id}` | — | ฝ่ายขาย, ผจก. |
+| GET | `/orders/{id}/payment` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะใบตัวเอง) |
+| GET/POST | `/payment-reports` | — | ผู้จัดการร้าน |
+| GET | `/carriers` | — | พนักงานทุกบทบาท |
+| GET | `/shipments` · `/shipments/{id}` · `/orders/{id}/shipment` | — | พนักงานทุกบทบาท + ลูกค้า (เห็นเฉพาะพัสดุของใบตัวเอง) |
+| POST | `/shipments/{id}/tracking` | — | ฝ่ายจัดส่ง |
+| GET/POST | `/delivery-summaries` | — | ฝ่ายจัดส่ง, ผจก. |
+| GET | `/membership-tiers` · `/rewards` · `/redemptions` | — | ทุกคนที่ล็อกอินแล้ว (ลูกค้าเห็นเฉพาะของตัวเอง) |
+| POST/PUT/DELETE | `/membership-tiers` · `/membership-tiers/{id}` | — | ผู้จัดการร้าน |
+| POST/PUT/DELETE | `/rewards` · `/rewards/{id}` | — | ผู้จัดการร้าน |
+| GET | `/members/me` · POST `/rewards/{id}/redeem` | — | ลูกค้า |
+| GET | `/members` · `/members/{id}` | — | ฝ่ายขาย, ผจก. |
+| GET | `/members/{id}/point-transactions` | — | ทุกคนที่ล็อกอินแล้ว (ลูกค้าเห็นเฉพาะของตัวเอง) |
+| POST | `/members/{id}/point-adjustments` | — | ผู้จัดการร้าน |
+| POST | `/reviews` | — | ลูกค้า |
+| GET | `/reviews` · `/reviews/{id}` | — | ฝ่ายขาย, ผจก. + ลูกค้า (เห็นเฉพาะรีวิวของตัวเอง) |
+| GET | `/books/{id}/reviews` | — | ทุกคนที่ล็อกอินแล้ว (เฉพาะรีวิวที่เผยแพร่แล้ว) |
+| POST | `/reviews/{id}/moderate` · `/reviews/{id}/replies` · `/reviews/{id}/report` | — | ฝ่ายขาย, ผจก. |
+| GET | `/review-reports` · `/review-reports/{id}` | — | ผู้จัดการร้าน |
 | PUT | `/inventory/{bookId}/reorder-point` | U5 | คลังสินค้า |
 | GET | `/requisitions` · `/requisitions/{id}` | U6, U7 | คลัง, ผจก. |
 | POST | `/requisitions` · PUT `/requisitions/{id}` · POST `/requisitions/{id}/submit` | U6 | คลังสินค้า |
 | POST | `/requisitions/{id}/approve` · `/requisitions/{id}/reject` | U7 | ผู้จัดการร้าน |
 | GET | `/purchasing/budget` | U7 | คลัง, ผจก. |
-| GET | `/orders` · `/orders/{id}` | U8 | คลัง, ผจก. |
-| POST | `/orders/{id}/send` · `/orders/{id}/confirm` | U8 | คลังสินค้า |
-| GET | `/orders/{id}/receipts` · `/receipts` | U9 | คลัง, ผจก. |
-| POST | `/orders/{id}/receipts` | U9 | คลังสินค้า |
-| GET | `/orders/{id}/returns` · `/returns` · `/returns/{id}` | U10 | คลัง, ผจก. |
-| POST | `/orders/{id}/returns` · `/returns/{id}/escalate` · `/returns/{id}/compensation` | U10 | คลังสินค้า |
+| GET | `/purchase-orders` · `/purchase-orders/{id}` | U8 | คลัง, ผจก. |
+| POST | `/purchase-orders/{id}/send` · `/purchase-orders/{id}/confirm` | U8 | คลังสินค้า |
+| GET | `/purchase-orders/{id}/receipts` · `/receipts` | U9 | คลัง, ผจก. |
+| POST | `/purchase-orders/{id}/receipts` | U9 | คลังสินค้า |
+| GET | `/purchase-orders/{id}/returns` · `/returns` · `/returns/{id}` | U10 | คลัง, ผจก. |
+| POST | `/purchase-orders/{id}/returns` · `/returns/{id}/escalate` · `/returns/{id}/compensation` | U10 | คลังสินค้า |
 | GET/POST | `/notifications` · `/notifications/{id}/read` · `/notifications/read-all` | — | พนักงานทุกบทบาท |
 
 สิทธิ์ของทุกเส้นทางตรงกับ `can.*` ใน `frontend/src/admin/permissions.ts` — หน้าจอซ่อนหรือปิดปุ่มไว้แล้ว
@@ -182,6 +280,15 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | U8 | ส่งได้เฉพาะใบที่อนุมัติแล้ว · ยืนยันได้เฉพาะใบที่ส่งไปแล้ว · วันที่ส่งมอบต้องไม่ย้อนหลัง | 409 · 422 |
 | U9 | ใบต้องยืนยันแล้วหรือรับไปบางส่วน · รับหนังสือนอกใบสั่งซื้อไม่ได้ · รับ 0 ทุกรายการไม่ได้ · รับครบ → RECEIVED_FULL, ไม่ครบ → RECEIVED_PARTIAL | 409 · 422 |
 | U10 | คืนได้ไม่เกินจำนวนที่รับจริงหักที่เคยคืนไปแล้ว · คืนครบทุกหน่วย → PO = RETURNED · ปฏิเสธการรับคืน → ส่งต่อผู้จัดการ | 422 · 409 |
+| สมาชิก | อีเมลและชื่อผู้ใช้ห้ามซ้ำ (ไม่สนตัวพิมพ์) · รหัสผ่านอย่างน้อย 8 ตัว · ยังไม่ยืนยัน OTP หรือถูกระงับ = ล็อกอินไม่ได้ | 409 · 422 · 401 |
+| หนังสือ | ฟิลด์บังคับครบ · ISBN ไม่ซ้ำ · หมวดหมู่ที่อ้างถึงต้องมีจริง · **แก้ไขแล้วบันทึกประวัติทีละฟิลด์ที่เปลี่ยนจริง** | 422 · 409 · 404 |
+| ปรับยอด | ต้องมีเหตุผล · จำนวนที่ปรับไม่เป็นศูนย์ · **ยอดรวมหลังปรับของทุกเล่มต้องไม่ติดลบ (ตรวจให้ครบก่อนเขียน)** | 422 |
+| ตรวจนับ | ห้ามหนังสือซ้ำในรอบเดียว · จำนวนที่นับได้ไม่ติดลบ · แถวที่ไม่ตรงเปิดรายงานให้ผู้จัดการอัตโนมัติ | 422 |
+| ผลต่าง | ตัดสินได้ครั้งเดียว · ปฏิเสธต้องมีเหตุผล · **อนุมัติแล้วตั้งยอดเท่าที่นับได้ ไม่ใช่บวก variance** | 409 · 422 |
+| สั่งซื้อ | ต้องมีสินค้าอย่างน้อยหนึ่งรายการ · ห้ามหนังสือซ้ำ · หนังสือที่ปิดการขายสั่งไม่ได้ · โปรโมชั่นต้องเข้าเงื่อนไข | 422 |
+| สถานะคำสั่งซื้อ | เดินตามตารางการเปลี่ยนสถานะเท่านั้น ข้ามขั้นไม่ได้ · ยกเลิก/ปฏิเสธต้องมีเหตุผล · **สต็อกไม่พอ = ยืนยันสต็อกและแพ็กไม่ได้** | 409 · 422 |
+| รีวิว | **รีวิวได้เฉพาะเล่มที่มีใบสถานะ `DELIVERED` ของตัวเอง** · หนึ่งรีวิวต่อ (ลูกค้า, เล่ม, ใบ) · คะแนน 1–5 · คำไม่เหมาะสม = ติดธงไม่ใช่ปฏิเสธ · `REMOVED` เป็นปลายทาง | 422 · 409 |
+| โปรโมชั่น | ชื่อบังคับ · ส่วนลด > 0 และเปอร์เซ็นต์ไม่เกิน 100 · วันเริ่มไม่หลังวันสิ้นสุด · **ตั้งสถานะ EXPIRED เองไม่ได้** · ใบที่ถูกใช้แล้วลบไม่ได้ | 422 · 409 |
 
 ### ทรานแซกชัน
 
@@ -192,6 +299,30 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 2. **U9 รับสินค้า** — ออก GRN + เพิ่มจำนวนที่รับ + ปรับสถานะ PO + เคลื่อนไหวสต็อก + แจ้งเตือน
 3. **U10 เปิดใบคืน** — ออกใบคืน + ตัดสต็อก + ปิด PO ถ้าคืนครบ
 4. **U10 ชดเชย** — ปิดใบคืน + เพิ่มสต็อกคืนถ้าเป็นสินค้าทดแทน
+5. **สมัครสมาชิก** — สร้าง `person` + `customer` + `user_account` สามแถวพร้อมกัน
+6. **เพิ่มหนังสือ** — สร้าง `book` + `inventory_item` ยอด 0
+7. **แก้ไขหนังสือ** — ล็อกแถวหนังสือ + ตรวจ ISBN ซ้ำ + เขียนประวัติทุกฟิลด์ที่เปลี่ยน
+8. **ปรับยอดด้วยมือ** — ล็อกแถวสินค้าคงคลัง + ตรวจยอดติดลบทุกเล่ม + ออกรายการเคลื่อนไหว
+9. **บันทึกรอบตรวจนับ** — ล็อกยอดคงเหลือ + ออกรอบ + เปิดรายงานผลต่าง + รายการที่นับ + แจ้งเตือน
+10. **ตัดสินผลต่าง** — ล็อกรายงาน + บันทึกผล + ปรับยอดให้เท่าที่นับได้ถ้าอนุมัติ
+11. **สั่งซื้อ** — ออกใบ + รายการ + timeline แถวแรก + แจ้งฝ่ายขาย
+12. **เปลี่ยนสถานะคำสั่งซื้อ** — ล็อกหัวเอกสาร + ตรวจสต็อก + เขียนสถานะกับ timeline + แจ้งเตือน
+    (ขั้นแพ็กตัดสต็อกเป็น `SALE_OUT` ในทรานแซกชันเดียวกัน)
+13. **แนบสลิป / ตรวจสลิป** — ล็อกทั้งแถว `customer_order` และ `payment` แล้วเขียนพร้อมกัน
+    การชำระเงินจึงไม่มีทางไม่ตรงกับสถานะของคำสั่งซื้อ
+14. **บันทึกการจัดส่ง** — เปลี่ยนใบเป็น SHIPPED + เปิดแถว `shipment` + ประวัติสองแถว (PREPARING → SHIPPED)
+15. **ยืนยันรับสินค้า** — ปิดใบเป็น DELIVERED + ปิดพัสดุ + เขียนประวัติ ในทรานแซกชันเดียว
+16. **อัปเดตสถานะพัสดุ** — ล็อกหัวพัสดุ + เขียนสถานะกับประวัติ + แจ้งฝ่ายขายถ้าส่งไม่สำเร็จ
+17. **สมัครสมาชิก (ต่อจากข้อ 5)** — เพิ่มแถว `member` เป็นแถวที่สี่ในทรานแซกชันเดียวกัน
+18. **ยืนยันรับสินค้า (ต่อจากข้อ 15)** — ล็อกแถวสมาชิก + เติมแต้ม + เลื่อนระดับ ในทรานแซกชันเดียวกัน
+19. **แลกของรางวัล** — ล็อกแถวสมาชิก + ตัดแต้ม + ออกรายการแต้ม + ออกใบแลก + เติมรหัสคูปอง
+20. **ปรับแต้มด้วยมือ** — ล็อกแถวสมาชิก + หักแต้ม + เขียนรายการ EXPIRE/REVERSAL พร้อมเหตุผล
+21. **เขียนรีวิว** — ตรวจใบที่ส่งถึงแล้ว + กันรีวิวซ้ำ + เขียนแถวรีวิว ในทรานแซกชันเดียว
+    (ตรวจแล้วเขียนคนละคำสั่งกัน ถ้าไม่ครอบไว้ ลูกค้ากดสองครั้งพร้อมกันจะได้รีวิวซ้ำ)
+22. **ตรวจสอบรีวิว** — ล็อกหัวรีวิว + เขียนสถานะ + **ปิดรายงานที่ยังค้างในทรานแซกชันเดียวกัน**
+    (เผยแพร่ = รายงานไม่เป็นผล · ซ่อน/ลบ = รายงานเป็นผล)
+23. **ตอบกลับรีวิว** — ล็อกหัวรีวิว + เพิ่มแถวคำตอบกลับ + ดันสถานะเป็น PUBLISHED
+24. **รายงานรีวิว** — ล็อกหัวรีวิว + กันรายงานซ้ำ + ออกรายงาน + แจ้งผู้จัดการ
 
 ---
 
@@ -225,15 +356,115 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 7. **ป้ายไทยยึดตาม frontend** — `labels.go` ชุดเดิมของ Go model เขียนต่างจาก TS อยู่ 5 คำ
    (เช่น `SUBMITTED` เดิม "ส่งขออนุมัติ") · ยึดข้อความฝั่งหน้าจอเป็นหลักเพราะเป็นสิ่งที่ผู้ใช้เห็น
 
+8. **`person` เป็นตารางแม่ แต่ `employee` ยังเก็บชื่อ/เบอร์/อีเมลซ้ำไว้** — class diagram วาง
+   `Person <|-- Employee` และ `Person <|-- Customer` ไว้ · ทำเป็น class-table inheritance
+   แบบ "เพิ่มพ่อ ไม่ย้ายลูก" เพราะ `employee_id` เป็น varchar PK ตามตาราง schema ที่ส่งไปแล้ว
+   ถ้าย้ายคอลัมน์ออกต้องรื้อ auth, seed และ smoke ของ U1–U10 ที่ทำเสร็จแล้วทั้งชุด
+
+9. **เพิ่มหนังสือใหม่ = เปิดแถว `inventory_item` ยอด 0 ให้ในทรานแซกชันเดียวกัน** — diagram ผูก
+   `Book "1" *-- "1" InventoryItem` เป็น composition · ถ้าไม่สร้างคู่กัน หนังสือเล่มใหม่จะหายไปจาก
+   หน้ายอดคงเหลือและจากการตรวจจุดสั่งซื้อของ U5 · ฝั่ง frontend แยกสองโมดูลจึงไม่ได้ทำข้อนี้
+
+10. **`book_change_log.changed_by` เก็บ "ชื่อ" ไม่ใช่ FK ไปยังพนักงาน** — diagram วาดเส้น
+    `SalesStaff "1" --> "*" BookChangeLog : records` ไว้แต่ไม่ระบุ attribute
+    เก็บเป็นชื่อแบบเดียวกับ `supplier_edit_log.by` · **ต้องตกลงกับเจ้าของคลาสก่อนรวมงาน**
+
+11. **`Category` เป็นข้อมูลอ้างอิงอ่านอย่างเดียว** — diagram ไม่ได้ให้เมธอดจัดการหมวดหมู่ไว้
+    และ `BookContext` ฝั่งหน้าจอก็อ่านอย่างเดียว จึงมีแค่ `GET /api/categories`
+
+12. **`stock_count_item.report_id` · `stock_discrepancy_report.count_id` และ `.book_id`** —
+    diagram เข้าถึงรายงานผ่าน `StockCountItem.reportId` ทางเดียว การให้รายงานถือรหัสรอบและ
+    รหัสหนังสือไว้ด้วยทำให้หน้าจอ "ยอดหนังสือไม่ตรง" ไม่ต้องไล่ย้อนทุกรอบตรวจนับ
+
+13. **`StockCountStatus` เป็น enum** — diagram พิมพ์ `status` ของ `StockCount` เป็น `string` เฉย ๆ
+    (deviation แบบเดียวกับข้อ 3) · ค่าที่ระบบออกจริงมีแค่ `DRAFT` กับ `DONE`
+
+14. **`StockLevel` กับ `LowStockThreshold` ไม่มีใน diagram** — เป็นเกณฑ์ของรายงาน
+    "หนังสือใกล้หมด" ที่มาจาก activity diagram ของเจ้าของคลาส · **คนละเรื่องกับ `isBelowReorder()`**
+    ซึ่งใช้จุดสั่งซื้อรายเล่มของ U5 · สองอันนี้ตอบคนละคำถาม ห้ามยุบรวมกัน
+
+15. **ตารางคำสั่งซื้อลูกค้าชื่อ `customer_order` ไม่ใช่ `order`** — `ORDER` เป็นคำสงวนของ SQL
+    ต้องใส่เครื่องหมายคำพูดทุกครั้งที่เขียน query ซึ่งพลาดง่ายมาก · ตารางลูกใช้คำนำหน้าเดียวกัน
+    (`customer_order_item`, `customer_order_status_history`) · ชื่อคลาสใน Go ยังเป็น `Order` ตาม diagram
+
+16. **`customer_order_item.book_id` เป็นตัวเลข ไม่ใช่ slug ของหน้าร้าน** — ฝั่ง frontend เก็บ slug
+    เพราะ storefront ไม่มีตารางหนังสือจริง (deviation ที่บันทึกไว้ใน `frontend/CLAUDE.md`)
+    ฝั่งนี้มีตาราง `book` จึงยึด `OrderItem "*" --> "1" Book` ตาม class diagram ตรง ๆ
+    ข้อมูลตั้งต้นใน `seed_order.go` แปลง slug กับราคาดอลลาร์ของหน้าร้านเป็น `book_id` และบาท
+
+17. **สต็อกถูกตัดตอน "แพ็กสินค้า" ไม่ใช่ตอน "ยืนยันสต็อก"** — diagram บอกแค่
+    `Order ..> StockTransaction : SALE_OUT` ไม่ได้ระบุจังหวะ · ขั้นยืนยันสต็อกจึงเป็นการ**ตรวจ**ว่ามีของพอ
+    ส่วนของออกจากคลังจริงตอนแพ็ก · ตารางการเปลี่ยนสถานะไม่ให้ยกเลิกใบที่แพ็กแล้ว
+    จึงไม่มีเส้นทางที่ต้องคืนสต็อกกลับ
+
+18. **โปรโมชั่นต้องระบุ `promotionId` มาเอง ระบบไม่เลือกให้อัตโนมัติ** — diagram ไม่ได้บอกว่าใครเลือก
+    ใบที่ไม่เข้าเงื่อนไขจะได้ 422 ตรง ๆ แทนที่จะเงียบแล้วไม่ลดให้
+
+19. **การตรวจสลิปไม่มี endpoint ของตัวเอง** — ใช้ `/orders/{id}/verify-payment` กับ `/reject-payment`
+    ที่มีอยู่แล้ว เพราะเป็นเหตุการณ์เดียวกับการเปลี่ยนสถานะคำสั่งซื้อ · `order.slip_file_name` กับ
+    `payment.slip_image_url` เก็บค่าเดียวกันโดยตั้งใจ (ตัวแรกเป็นสำเนาสำหรับหน้าจอตามสัญญาเดิม
+    กับ frontend ตัวหลังเป็นค่าจริงของระบบย่อยนี้ เขียนพร้อมกันในทรานแซกชันเดียว) ·
+    `PaymentReport` เก็บ **ผลลัพธ์** ลงเป็นแถว ไม่ได้คำนวณสดตอนเปิดดู (`generatedDate` ใน diagram)
+    และนับจาก `verified_date` เพราะตอบคำถามว่า "รอบนี้ร้านรับเงินเข้ามาเท่าไร" ·
+    (ทำครบแล้วใน P5)
+
+21. **การเปิดพัสดุไม่มี endpoint ของตัวเอง เช่นเดียวกัน** — `POST /orders/{id}/ship` เปิดแถว `shipment`
+    ในทรานแซกชันเดียวกับการเปลี่ยนสถานะ ตรงกับหน้าจอที่ส่ง `updateStatus(orderId,'SHIPPED',{tracking,carrier})`
+    · พัสดุเดินสองก้าว PREPARING → SHIPPED ตอนบันทึก เพื่อให้ `record()` ของ class diagram
+    (ที่กำหนดให้เริ่มที่ PREPARING) ยังเป็นจริง และประวัติเล่าเรื่องครบตั้งแต่เปิดรายการ ·
+    **`DELIVERED` อัปเดตผ่าน `/shipments/{id}/tracking` ไม่ได้** (422 `DELIVER_VIA_ORDER`)
+    เพราะต้องเขียนคู่กับ `customer_order` เสมอ · เส้นทาง tracking รับเฉพาะ `IN_TRANSIT` กับ `FAILED`
+    ซึ่งเป็นสถานะที่คำสั่งซื้อไม่มีคู่ให้ตรงกัน (ใบที่พัสดุ `FAILED` ยังเป็น SHIPPED
+    เพราะ OrderStatus ตาม diagram ไม่มีค่าสำหรับกรณีนี้)
+
+20. **`user_account.status` เพิ่ม `UNVERIFIED`** — diagram ระบุแค่ ACTIVE/SUSPENDED
+    แต่หน้าสมัครสมาชิกมีขั้นยืนยัน OTP จึงต้องมีสถานะระหว่างทาง · รหัส OTP โหมดพัฒนาเป็นค่าคงที่
+    `model.DevOtpCode` เช่นเดียวกับที่การส่งอีเมลเป็นการจำลอง
+
+22. **ลูกค้าที่สมัครสำเร็จเป็น `Member` ทันที** — diagram วาง `Customer <|-- Member` ไว้
+    โดยไม่ได้บอกว่าใครกลายเป็นสมาชิกเมื่อไร · ในระบบนี้ลูกค้าเกิดจากการสมัครทางเดียว
+    และหน้าสมัครก็เรียกตัวเองว่า "สมัครสมาชิก" อยู่แล้ว จึงเปิดแถว `member` ให้เป็นแถวที่สี่
+    ในทรานแซกชันเดียวกับ `person` → `customer` → `user_account` (เริ่มที่ระดับต่ำสุด แต้ม 0)
+    · ลูกค้าที่สมัครไว้ก่อน P7 ถูกตามเก็บด้วย `backfillMembers()` ใน `migrate.go`
+
+23. **แต้มสะสมเกิดตอนคำสั่งซื้อเป็น `DELIVERED` ที่เดียว** — diagram บอกแค่
+    `PointTransaction "*" --> "0..1" Order : from` ไม่ได้ระบุจังหวะ · เลือกขั้นรับสินค้าเพราะเป็น
+    สถานะปลายทางที่ยกเลิกต่อไม่ได้ จึงไม่ต้องมีเส้นทางคืนแต้มเมื่อใบถูกยกเลิกภายหลัง ·
+    แต้ม = `floor(netAmount × tier.pointRate)` คิดจากยอดหลังหักส่วนลด แล้วเลื่อนระดับตามยอดสะสมใหม่
+    · การเพิ่มแต้มไม่มี endpoint ของตัวเอง (เหตุผลเดียวกับการตรวจสลิปในข้อ 19)
+
+24. **`point_transaction.note` ไม่มีใน class diagram** — เพิ่มเพราะการหักแต้มด้วยมือของผู้จัดการ
+    (`EXPIRE` / `REVERSAL`) ไม่มีเอกสารต้นทางให้ย้อนดูว่าทำไปทำไม · รูปแบบเดียวกับ `note` ของ
+    `OrderStatusHistory` · **ต้องตกลงกับเจ้าของคลาสก่อนรวมงาน** ·
+    `membership_tier.point_rate` เป็น `numeric(12,4)` ไม่ใช่ `(12,2)` เหมือนคอลัมน์เงินอื่น
+    เพราะอัตราอย่าง 0.015 จะถูกปัดเป็น 0.02 ถ้าเก็บแค่สองตำแหน่ง
+
+25. **`review` เพิ่มสามคอลัมน์ที่ diagram ไม่มี** — `headline` (หน้าจอแสดงหัวข้อรีวิวแยกจากเนื้อ) ·
+    `flagged` (ผลของ `ProfanityFilter` ตอนที่ลูกค้าส่งเข้ามา เก็บไว้เพราะรายการคำต้องห้ามเปลี่ยนได้
+    แต่ผลที่พนักงานเห็นตอนตรวจต้องเป็นผลของตอนนั้น) · `review_reply.replied_by`
+    (กติกาเดียวกับ `book_change_log.changed_by` — บันทึกว่าใครทำ) · **ต้องตกลงกับเจ้าของคลาสก่อนรวมงาน**
+
+26. **`review_report.status` แคบลงเป็น `ApprovalStatus`** — diagram พิมพ์เป็น `string` เฉย ๆ
+    (deviation แบบเดียวกับ `StockCount.status`) · ค่าตรงกับ `managerStatus` ฝั่งหน้าจอพอดี
+    **ความหมายยึดตาม `SEED_REVIEWS`**: `APPROVED` = รายงานเป็นผล รีวิวถูกซ่อนหรือลบ ·
+    `REJECTED` = รายงานไม่เป็นผล รีวิวถูกเผยแพร่ · (`ReviewContext.tsx` เขียนตรงข้ามกับ seed
+    ของตัวเอง จึงเลือกฝั่งที่อ่านแล้วสมเหตุสมผล) · การตัดสินไม่มี endpoint ของตัวเอง
+    แต่เกิดพร้อมการ moderate เพื่อไม่ให้สถานะรีวิวกับผลรายงานไม่ตรงกัน (เหตุผลเดียวกับข้อ 19)
+
+27. **รีวิวต้องมาจากคำสั่งซื้อที่ได้รับของแล้ว** — diagram วาง `Review "*" --> "0..1" Order`
+    ไว้แบบไม่บังคับ · เส้นทาง API บังคับให้ต้องมีใบ `DELIVERED` ที่มีเล่มนั้น แล้วผูก `order_id`
+    ให้เอง (= ป้าย "ซื้อสินค้าจริง" ของหน้าจอ) · คอลัมน์ยังเป็น nullable ตาม 0..1 เพราะ
+    รีวิวเก่าที่นำเข้ามาไม่มีใบอ้างอิง (ดูข้อมูลตั้งต้น)
+
 ---
 
 ## ตรวจงาน
 
 ```bash
-go build ./...     # ต้องสะอาด
-go vet ./...       # ต้องสะอาด
-gofmt -l .         # ต้องไม่มีไฟล์ขึ้นมา
-go test ./...      # ทดสอบ state machine และการคำนวณ (ไม่ต้องมีฐานข้อมูล)
+go build ./...             # ต้องสะอาด
+go vet ./...               # ต้องสะอาด
+test -z "$(gofmt -l .)"    # ต้องไม่มีไฟล์ขึ้นมา — gofmt -l คืน exit 0 เสมอ ต้องห่อด้วย test -z
+go test ./...              # state machine · การคำนวณ · ข้อมูลตั้งต้น (ไม่ต้องมีฐานข้อมูล)
 ```
 
 ตรวจกับฐานข้อมูลจริง:
@@ -247,7 +478,7 @@ go run ./cmd/smoke                # อีกหน้าต่างหนึ�
 
 ```sql
 \dt                        -- ตารางตามเอกสาร
-\dv                        -- warehouse_staff, store_manager
+\dv                        -- warehouse_staff, store_manager, sales_staff, delivery_staff
 \d purchase_order_item     -- PK ต้องเป็น (po_id, book_id)
 SELECT status, count(*) FROM purchase_order GROUP BY status;
 ```
@@ -257,18 +488,33 @@ SELECT status, count(*) FROM purchase_order GROUP BY status;
 ## ข้อมูลตั้งต้น
 
 `internal/database/seed_data.go` ถูก **สร้างด้วยสคริปต์** `tools/gen_seed.py` จาก `SEED_*` ของ frontend
-(ผู้จัดจำหน่าย 12 ราย · หนังสือ 23 เล่ม · PR 3 ใบ · PO 10 ใบ · GRN 1 ใบ) เพื่อให้ backend
-กับหน้าจอเห็นข้อมูลชุดเดียวกันตอนต่อ API — อย่าแก้ไฟล์นั้นด้วยมือ ให้แก้ที่ frontend แล้วสั่ง `python tools/gen_seed.py` สร้างใหม่
+(หมวดหมู่ 6 · หนังสือ 23 เล่ม · ประวัติการแก้ไข 1 · ผู้จัดจำหน่าย 12 ราย · PR 3 ใบ · PO 10 ใบ · GRN 1 ใบ)
+เพื่อให้ backend กับหน้าจอเห็นข้อมูลชุดเดียวกันตอนต่อ API — อย่าแก้ไฟล์นั้นด้วยมือ
+ให้แก้ที่ frontend แล้วสั่ง `python tools/gen_seed.py` สร้างใหม่
 
-`Seed()` ทำงานเมื่อตาราง `supplier` ยังว่างเท่านั้น รันซ้ำจะข้ามไป และปิดท้ายด้วยการเลื่อน sequence
-ให้เลขเอกสารใหม่เริ่มต่อจากข้อมูลตั้งต้น (ผู้จัดจำหน่าย 1–12 · หนังสือ 101–123 · PR 101+ · PO 2380+ · GRN 5001+)
+`seed_inventory.go` (การเคลื่อนไหวสต็อก) · `seed_person.go` (พนักงาน + ลูกค้า) · `seed_order.go`
+(คำสั่งซื้อพร้อมแถวการชำระเงินและพัสดุ) · `seed_payment.go` (บัญชีธนาคาร 3 แห่ง) ·
+`seed_delivery.go` (บริษัทขนส่ง 5 แห่ง) · `seed_membership.go` (ระดับสมาชิก 3 · ของรางวัล 5 · สมาชิก 3) ·
+`seed_review.go` (รีวิว 5 ชิ้น ครบทั้งสี่สถานะ พร้อมคำตอบกลับและรายงาน) **เขียนด้วยมือ**
+เพราะ frontend ไม่มีข้อมูลตั้งต้นให้ · `seed_data_test.go` ตรวจว่าไฟล์ที่สคริปต์สร้างยังครบและ FK ชี้ถูกที่
+
+รีวิวตั้งต้นมีแถวเดียวที่ผูกใบสั่งซื้อ (SO-1003 ใบเดียวในข้อมูลตั้งต้นที่ส่งถึงลูกค้าแล้ว)
+อีกสี่แถวเป็น **รีวิวเก่าที่นำเข้ามา** จึงไม่มี `order_id` ตามที่ diagram อนุญาต (0..1) ·
+`SEED_REVIEWS` ของ frontend เอามาใช้ตรง ๆ ไม่ได้เพราะอ้าง slug ของหน้าร้านและลูกค้าสมมติ
+ที่ไม่มีในตาราง `customer`
+
+การใส่พนักงานต้องสร้างแถว `person` ให้เองก่อนแล้วผูก `person_id` (`seedEmployeeRows`) เพราะคอลัมน์นั้น
+เป็น NOT NULL + unique ตั้งแต่ P1 · `backfillPersons()` ใน `migrate.go` ช่วยได้เฉพาะฐานที่มีพนักงาน
+อยู่ก่อนแล้ว ไม่ใช่ฐานเปล่า
+
+`Seed()` ตรวจความว่าง **เป็นรายตาราง** ตารางที่มีข้อมูลแล้วจะถูกข้าม จึงสั่งซ้ำได้เรื่อย ๆ
+อยากได้ข้อมูลใหม่หมดต้อง `docker compose down -v` · ปิดท้ายด้วยการเลื่อน sequence ให้เลขเอกสารใหม่
+เริ่มต่อจากข้อมูลตั้งต้น (ผู้จัดจำหน่าย 1–12 · หนังสือ 101–123 · PR 101+ · PO 2380+ · GRN 5001+)
 
 ---
 
 ## นอกขอบเขต
 
-- ระบบย่อยของเพื่อนร่วมทีม (คำสั่งซื้อลูกค้า ชำระเงิน จัดส่ง รีวิว โปรโมชั่น สมาชิก) —
-  `book` / `inventory_item` / `stock_transaction` ใส่ไว้เท่าที่ U5, U9, U10 ต้องใช้เท่านั้น
 - การส่งอีเมลจริง — บันทึกลงตาราง `notification` ช่อง `email` ไว้ให้ SCR-27 แสดงเส้นทางเอกสาร
   แต่ไม่ได้ส่งออกไปจริง (เหมือนที่ frontend ทำ)
 - การเก็บไฟล์แนบ — หลักฐานการส่งคืนเก็บเป็น data URL ในคอลัมน์ `text`

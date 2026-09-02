@@ -10,6 +10,8 @@ export type NotificationKind =
   | 'PR_REJECTED'
   | 'GR_RECORDED'
   | 'RETURN_ESCALATED'
+  // Inventory subsystem — a counting round found a variance.
+  | 'STOCK_DISCREPANCY'
   // Customer-order flow (Order / Delivery subsystems).
   | 'ORDER_PLACED'
   | 'ORDER_READY_TO_SHIP'

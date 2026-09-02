@@ -16,16 +16,16 @@ type SupplierService struct {
 	db         *gorm.DB
 	suppliers  *repository.SupplierRepository
 	purchasing *repository.PurchasingRepository
-	inventory  *repository.InventoryRepository
+	books      *repository.BookRepository
 }
 
 func NewSupplierService(
 	db *gorm.DB,
 	suppliers *repository.SupplierRepository,
 	purchasing *repository.PurchasingRepository,
-	inventory *repository.InventoryRepository,
+	books *repository.BookRepository,
 ) *SupplierService {
-	return &SupplierService{db: db, suppliers: suppliers, purchasing: purchasing, inventory: inventory}
+	return &SupplierService{db: db, suppliers: suppliers, purchasing: purchasing, books: books}
 }
 
 // SupplierBookInput — หนังสือหนึ่งเล่มที่ผู้จัดจำหน่ายเสนอขาย (รับจากฟอร์ม SCR-12/13)
@@ -67,7 +67,7 @@ func (s *SupplierService) OrdersFor(supplierID int) ([]model.PurchaseOrder, erro
 	if _, err := s.suppliers.FindByID(supplierID); err != nil {
 		return nil, err
 	}
-	return s.purchasing.ListOrders(repository.OrderFilter{SupplierID: supplierID})
+	return s.purchasing.ListOrders(repository.PurchaseOrderFilter{SupplierID: supplierID})
 }
 
 // Create — U1 เพิ่มข้อมูลผู้จัดจำหน่าย
@@ -221,7 +221,7 @@ func (s *SupplierService) validate(input SupplierInput) error {
 		}
 		seen[book.BookID] = true
 
-		exists, err := s.inventory.BookExists(book.BookID)
+		exists, err := s.books.Exists(book.BookID)
 		if err != nil {
 			return err
 		}

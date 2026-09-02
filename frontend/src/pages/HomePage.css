@@ -2,6 +2,14 @@
   padding-block: 32px 64px;
 }
 
+/* search result heading */
+.home__result-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-heading);
+}
+
 /* category chips */
 .home__chips {
   padding-block: 16px 24px;

@@ -25,7 +25,7 @@ function ReviewForm({ id }: { id: string }) {
   return (
     <div className="track-review">
       <div className="track-review__book">
-        <img src={book.cover} alt={book.title} />
+        <img src={book.cover} alt={book.title} loading="lazy" decoding="async" />
         <h4>{book.title}</h4>
       </div>
       {sent ? (
@@ -183,7 +183,9 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 const book = getBook(line.bookId)
                 return (
                   <li key={line.bookId} className="track__item">
-                    {book && <img src={book.cover} alt={line.title} />}
+                    {book && (
+                      <img src={book.cover} alt={line.title} loading="lazy" decoding="async" />
+                    )}
                     <div className="track__item-info">
                       <strong>{line.title}</strong>
                       {book && <span>{book.author}</span>}
@@ -334,7 +336,7 @@ function StaticDemoView({ orderNo }: { orderNo: string }) {
                 if (!book) return null
                 return (
                   <li key={it.id} className="track__item">
-                    <img src={book.cover} alt={book.title} />
+                    <img src={book.cover} alt={book.title} loading="lazy" decoding="async" />
                     <div className="track__item-info">
                       <strong>{book.title}</strong>
                       <span>{book.author}</span>

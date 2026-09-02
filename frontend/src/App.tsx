@@ -1,35 +1,53 @@
+import { lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import StorefrontLayout from './layouts/StorefrontLayout'
 import AuthLayout from './layouts/AuthLayout'
+import AdminLayout from './admin/AdminLayout'
 import HomePage from './pages/HomePage'
 import BookDetailPage from './pages/BookDetailPage'
-import CheckoutShippingPage from './pages/CheckoutShippingPage'
-import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
-import OrderTrackingPage from './pages/OrderTrackingPage'
-import OrderHistoryPage from './pages/OrderHistoryPage'
-import LoginPage from './pages/LoginPage'
-import SignUpPage from './pages/SignUpPage'
-import ProfilePage from './pages/ProfilePage'
-import AdminLayout from './admin/AdminLayout'
-import DashboardPage from './admin/pages/DashboardPage'
-import OrdersListPage from './admin/pages/OrdersListPage'
-import CustomerOrderDetailPage from './admin/pages/CustomerOrderDetailPage'
-import SupplierListPage from './admin/pages/SupplierListPage'
-import SupplierDetailPage from './admin/pages/SupplierDetailPage'
-import SupplierFormPage from './admin/pages/SupplierFormPage'
-import ReorderAlertsPage from './admin/pages/ReorderAlertsPage'
-import PurchasingListPage from './admin/pages/PurchasingListPage'
-import RequisitionFormPage from './admin/pages/RequisitionFormPage'
-import ApproveRequisitionPage from './admin/pages/ApproveRequisitionPage'
-import OrderDetailPage from './admin/pages/OrderDetailPage'
-import ReceiptsListPage from './admin/pages/ReceiptsListPage'
-import ReceiveGoodsPage from './admin/pages/ReceiveGoodsPage'
-import PurchaseReturnPage from './admin/pages/PurchaseReturnPage'
-import ContactCentrePage from './admin/pages/ContactCentrePage'
-import PromotionListPage from './admin/pages/PromotionListPage'
-import PromotionFormPage from './admin/pages/PromotionFormPage'
-import ReviewModerationPage from './admin/pages/ReviewModerationPage'
-import ReviewManagerPage from './admin/pages/ReviewManagerPage'
+
+// The three layouts plus the two storefront entry screens stay eager: they are what a
+// first-time visitor lands on, so splitting them would only cost a round trip. Every
+// other screen is a separate chunk, which keeps the whole back office out of the
+// storefront's initial download. Each layout wraps its <Outlet /> in <Suspense>.
+const CheckoutShippingPage = lazy(() => import('./pages/CheckoutShippingPage'))
+const CheckoutPaymentPage = lazy(() => import('./pages/CheckoutPaymentPage'))
+const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'))
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const SignUpPage = lazy(() => import('./pages/SignUpPage'))
+
+const DashboardPage = lazy(() => import('./admin/pages/DashboardPage'))
+const BookListPage = lazy(() => import('./admin/pages/BookListPage'))
+const BookFormPage = lazy(() => import('./admin/pages/BookFormPage'))
+// The storefront has a BookDetailPage too; this one is the back-office view.
+const AdminBookDetailPage = lazy(() => import('./admin/pages/BookDetailPage'))
+const StockListPage = lazy(() => import('./admin/pages/StockListPage'))
+const StockAdjustPage = lazy(() => import('./admin/pages/StockAdjustPage'))
+const StockCountListPage = lazy(() => import('./admin/pages/StockCountListPage'))
+const StockCountFormPage = lazy(() => import('./admin/pages/StockCountFormPage'))
+const StockCountDetailPage = lazy(() => import('./admin/pages/StockCountDetailPage'))
+const StockDiscrepancyPage = lazy(() => import('./admin/pages/StockDiscrepancyPage'))
+const OrdersListPage = lazy(() => import('./admin/pages/OrdersListPage'))
+const CustomerOrderDetailPage = lazy(() => import('./admin/pages/CustomerOrderDetailPage'))
+const DeliverySummaryReportPage = lazy(() => import('./admin/pages/DeliverySummaryReportPage'))
+const SupplierListPage = lazy(() => import('./admin/pages/SupplierListPage'))
+const SupplierDetailPage = lazy(() => import('./admin/pages/SupplierDetailPage'))
+const SupplierFormPage = lazy(() => import('./admin/pages/SupplierFormPage'))
+const ReorderAlertsPage = lazy(() => import('./admin/pages/ReorderAlertsPage'))
+const PurchasingListPage = lazy(() => import('./admin/pages/PurchasingListPage'))
+const RequisitionFormPage = lazy(() => import('./admin/pages/RequisitionFormPage'))
+const ApproveRequisitionPage = lazy(() => import('./admin/pages/ApproveRequisitionPage'))
+const OrderDetailPage = lazy(() => import('./admin/pages/OrderDetailPage'))
+const ReceiptsListPage = lazy(() => import('./admin/pages/ReceiptsListPage'))
+const ReceiveGoodsPage = lazy(() => import('./admin/pages/ReceiveGoodsPage'))
+const PurchaseReturnPage = lazy(() => import('./admin/pages/PurchaseReturnPage'))
+const ContactCentrePage = lazy(() => import('./admin/pages/ContactCentrePage'))
+const PromotionListPage = lazy(() => import('./admin/pages/PromotionListPage'))
+const PromotionFormPage = lazy(() => import('./admin/pages/PromotionFormPage'))
+const ReviewModerationPage = lazy(() => import('./admin/pages/ReviewModerationPage'))
+const ReviewManagerPage = lazy(() => import('./admin/pages/ReviewManagerPage'))
 
 export default function App() {
   return (
@@ -46,10 +64,26 @@ export default function App() {
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
 
+        <Route path="delivery-report" element={<DeliverySummaryReportPage />} />
+
+        <Route path="books" element={<BookListPage />} />
+        <Route path="books/new" element={<BookFormPage />} />
+        <Route path="books/:id" element={<AdminBookDetailPage />} />
+        <Route path="books/:id/edit" element={<BookFormPage />} />
+
         <Route path="suppliers" element={<SupplierListPage />} />
         <Route path="suppliers/new" element={<SupplierFormPage />} />
         <Route path="suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
+
+        {/* stock and stock/low are the same screen; it reads the pathname itself. */}
+        <Route path="stock" element={<StockListPage />} />
+        <Route path="stock/low" element={<StockListPage />} />
+        <Route path="stock/adjust" element={<StockAdjustPage />} />
+        <Route path="stock/counts" element={<StockCountListPage />} />
+        <Route path="stock/counts/new" element={<StockCountFormPage />} />
+        <Route path="stock/counts/:id" element={<StockCountDetailPage />} />
+        <Route path="stock/discrepancies" element={<StockDiscrepancyPage />} />
 
         <Route path="alerts" element={<ReorderAlertsPage />} />
 

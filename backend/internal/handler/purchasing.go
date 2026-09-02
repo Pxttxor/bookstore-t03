@@ -10,16 +10,53 @@ import (
 	"bookstore-t03/internal/service"
 )
 
-// ── หนังสือและสินค้าคงคลัง (U5) ─────────────────────────────────────────
-
-func (h *Handler) listBooks(w http.ResponseWriter, r *http.Request) {
-	books, err := h.inventory.ListBooks(r.URL.Query().Get("q"))
-	if err != nil {
-		httpx.Error(w, err)
-		return
-	}
-	httpx.OK(w, books)
+// registerCatalogueRoutes — สินค้าคงคลัง (ตารางประกอบ รองรับ U5)
+// เส้นทางของหนังสืออยู่ที่ registerBookRoutes ใน book.go
+func (h *Handler) registerCatalogueRoutes(register registrar) {
+	register("GET /api/inventory", roleOffice, h.listInventory)                             // can.viewStock
+	register("GET /api/inventory/alerts", roleWarehouse, h.reorderAlerts)                   // U5 · can.viewAlerts
+	register("PUT /api/inventory/{bookId}/reorder-point", roleWarehouse, h.setReorderPoint) // U5 · can.setReorderPoint
 }
+
+// registerPurchasingRoutes — U6–U10 จัดซื้อจากผู้จัดจำหน่าย
+func (h *Handler) registerPurchasingRoutes(register registrar) {
+	// ใบขอสั่งซื้อ U6–U7
+	register("GET /api/requisitions", rolePurchasing, h.listRequisitions) // can.viewPurchasing
+	register("GET /api/requisitions/{id}", rolePurchasing, h.getRequisition)
+	register("POST /api/requisitions", roleWarehouse, h.createRequisition)             // U6 · can.createRequisition
+	register("PUT /api/requisitions/{id}", roleWarehouse, h.updateRequisition)         // U6
+	register("POST /api/requisitions/{id}/submit", roleWarehouse, h.submitRequisition) // U6
+	register("POST /api/requisitions/{id}/approve", roleManager, h.approveRequisition) // U7 · can.approveRequisition
+	register("POST /api/requisitions/{id}/reject", roleManager, h.rejectRequisition)   // U7
+
+	// ใบสั่งซื้อ U8 · รับสินค้า U9 · ส่งคืน U10
+	// ใช้ /api/purchase-orders ไม่ใช่ /api/orders เพราะ Order ของลูกค้าเป็นคนละคลาสใน class diagram
+	register("GET /api/purchase-orders", rolePurchasing, h.listPurchaseOrders)
+	register("GET /api/purchase-orders/{id}", rolePurchasing, h.getPurchaseOrder)
+	register("POST /api/purchase-orders/{id}/send", roleWarehouse, h.sendOrder)       // U8 · can.sendOrder
+	register("POST /api/purchase-orders/{id}/confirm", roleWarehouse, h.confirmOrder) // U8
+	register("GET /api/purchase-orders/{id}/receipts", rolePurchasing, h.listOrderReceipts)
+	register("POST /api/purchase-orders/{id}/receipts", roleWarehouse, h.receiveGoods) // U9 · can.receiveGoods
+	register("GET /api/purchase-orders/{id}/returns", rolePurchasing, h.listOrderReturns)
+	register("POST /api/purchase-orders/{id}/returns", roleWarehouse, h.createReturn) // U10 · can.createReturn
+
+	register("GET /api/receipts", rolePurchasing, h.listReceipts)
+	register("GET /api/returns", rolePurchasing, h.listReturns)
+	register("GET /api/returns/{id}", rolePurchasing, h.getReturn)
+	register("POST /api/returns/{id}/escalate", roleWarehouse, h.escalateReturn)         // U10
+	register("POST /api/returns/{id}/compensation", roleWarehouse, h.recordCompensation) // U10
+
+	register("GET /api/purchasing/budget", rolePurchasing, h.budget) // U7 · แถบงบบน SCR-23
+}
+
+// registerNotificationRoutes — SCR-27 ศูนย์ติดต่อและการแจ้งเตือน
+func (h *Handler) registerNotificationRoutes(register registrar) {
+	register("GET /api/notifications", roleStaff, h.listNotifications)
+	register("POST /api/notifications/{id}/read", roleStaff, h.markNotificationRead)
+	register("POST /api/notifications/read-all", roleStaff, h.markAllNotificationsRead)
+}
+
+// ── สินค้าคงคลัง (U5) ───────────────────────────────────────────────────
 
 func (h *Handler) listInventory(w http.ResponseWriter, _ *http.Request) {
 	items, err := h.inventory.ListInventory()
@@ -177,7 +214,7 @@ func (h *Handler) approveRequisition(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.Created(w, toOrderDTO(*order))
+	httpx.Created(w, toPurchaseOrderDTO(*order))
 }
 
 func (h *Handler) rejectRequisition(w http.ResponseWriter, r *http.Request) {
@@ -210,8 +247,8 @@ func (h *Handler) budget(w http.ResponseWriter, _ *http.Request) {
 
 // ── ใบสั่งซื้อ (U8) ─────────────────────────────────────────────────────
 
-func (h *Handler) listOrders(w http.ResponseWriter, r *http.Request) {
-	filter := repository.OrderFilter{
+func (h *Handler) listPurchaseOrders(w http.ResponseWriter, r *http.Request) {
+	filter := repository.PurchaseOrderFilter{
 		Status:     model.POStatus(r.URL.Query().Get("status")),
 		SupplierID: httpx.QueryInt(r, "supplierId", 0),
 	}
@@ -225,10 +262,10 @@ func (h *Handler) listOrders(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTOs(orders))
+	httpx.OK(w, toPurchaseOrderDTOs(orders))
 }
 
-func (h *Handler) getOrder(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	poID, err := httpx.PathInt(r, "id")
 	if err != nil {
 		httpx.Error(w, err)
@@ -239,7 +276,7 @@ func (h *Handler) getOrder(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTO(*order))
+	httpx.OK(w, toPurchaseOrderDTO(*order))
 }
 
 func (h *Handler) sendOrder(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +290,7 @@ func (h *Handler) sendOrder(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTO(*order))
+	httpx.OK(w, toPurchaseOrderDTO(*order))
 }
 
 func (h *Handler) confirmOrder(w http.ResponseWriter, r *http.Request) {
@@ -272,7 +309,7 @@ func (h *Handler) confirmOrder(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTO(*order))
+	httpx.OK(w, toPurchaseOrderDTO(*order))
 }
 
 // ── รับสินค้าเข้าคลัง (U9) ──────────────────────────────────────────────

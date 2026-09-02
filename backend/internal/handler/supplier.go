@@ -10,6 +10,16 @@ import (
 	"bookstore-t03/internal/service"
 )
 
+// registerSupplierRoutes — U1–U4 จัดการข้อมูลผู้จัดจำหน่าย
+func (h *Handler) registerSupplierRoutes(register registrar) {
+	register("GET /api/suppliers", roleOffice, h.listSuppliers)                        // U4 · can.viewSuppliers
+	register("GET /api/suppliers/{id}", roleOffice, h.getSupplier)                     // U4
+	register("GET /api/suppliers/{id}/orders", roleOffice, h.supplierOrders)           // U4 · SCR-11
+	register("POST /api/suppliers", roleWarehouse, h.createSupplier)                   // U1 · can.editSuppliers
+	register("PUT /api/suppliers/{id}", roleWarehouse, h.updateSupplier)               // U2 · can.editSuppliers
+	register("POST /api/suppliers/{id}/deactivate", roleManager, h.deactivateSupplier) // U3 · can.deactivateSupplier
+}
+
 // ── เข้าสู่ระบบ ─────────────────────────────────────────────────────────
 
 type loginRequest struct {
@@ -37,7 +47,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	fresh, err := h.auth.Me(current.EmployeeID)
+	fresh, err := h.auth.Me(*current)
 	if err != nil {
 		httpx.Error(w, err)
 		return
@@ -91,7 +101,7 @@ func (h *Handler) supplierOrders(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	httpx.OK(w, toOrderDTOs(orders))
+	httpx.OK(w, toPurchaseOrderDTOs(orders))
 }
 
 // ── U1 เพิ่ม / U2 แก้ไข / U3 ปิดใช้งาน ───────────────────────────────────

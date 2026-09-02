@@ -46,7 +46,7 @@ export default function BookDetailPage() {
       <div className="detail__bento">
         <div className="detail__cover-cell">
           <div className="detail__cover">
-            <img src={book.cover} alt={book.title} />
+            <img src={book.cover} alt={book.title} decoding="async" />
           </div>
           <div className="detail__quick-meta">
             <div className="detail__meta-box">

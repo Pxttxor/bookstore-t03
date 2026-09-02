@@ -2,11 +2,14 @@ import { Link } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import { ROLE_LABELS } from '../../auth/roles'
-import EmptyState from '../components/EmptyState'
 import Meter from '../components/Meter'
 import StatTile from '../components/StatTile'
 import StatusBadge from '../components/StatusBadge'
+import { useBooks } from '../books/BookContext'
+import { buildDeliveryRecords, summaryDates } from '../delivery/delivery'
 import { useInventory } from '../inventory/InventoryContext'
+import { stockLevel } from '../inventory/inventory'
+import { useOrders } from '../orders/OrderContext'
 import { can } from '../permissions'
 import { usePurchasing } from '../purchasing/PurchasingContext'
 import {
@@ -16,6 +19,7 @@ import {
   poDisplayStatus,
   PURCHASE_BUDGET,
 } from '../purchasing/purchasing'
+import { useReviews } from '../reviews/ReviewContext'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatBaht, formatSupplierCode } from '../suppliers/suppliers'
 import './DashboardPage.css'
@@ -23,10 +27,16 @@ import './DashboardPage.css'
 export default function DashboardPage() {
   const { user } = useAuth()
   const { suppliers } = useSuppliers()
-  const { belowReorder } = useInventory()
+  const { books } = useBooks()
+  const { belowReorder, items, pendingReports } = useInventory()
   const { requisitions, orders, returns } = usePurchasing()
+  const { orders: customerOrders } = useOrders()
+  const { unrepliedCount, reportedCount } = useReviews()
 
   const role = user!.role
+
+  const outOfStock = items.filter((item) => stockLevel(item) === 'OUT').length
+  const lowStock = items.filter((item) => stockLevel(item) === 'LOW').length
 
   const pending = requisitions.filter((pr) => pr.status === 'SUBMITTED')
   const rejected = requisitions.filter((pr) => pr.status === 'REJECTED')
@@ -37,6 +47,24 @@ export default function DashboardPage() {
     return display === 'CONFIRMED' || display === 'RECEIVED_PARTIAL'
   })
   const openReturns = returns.filter((entry) => entry.status !== 'CLOSED')
+
+  // Customer order aggregations
+  const ordersToPack = customerOrders.filter(
+    (o) => o.status === 'PAID' || o.status === 'PACKING',
+  )
+  const salesPendingOrders = customerOrders.filter(
+    (o) => o.status === 'PENDING_CONFIRM' || o.status === 'VERIFYING_PAYMENT',
+  )
+  const deliveryReadyOrders = customerOrders.filter(
+    (o) => o.status === 'READY_TO_SHIP' || o.status === 'SHIPPED',
+  )
+
+  // Same reading as the delivery summary report, which also opens on the latest day.
+  const deliveryRecords = buildDeliveryRecords(customerOrders)
+  const latestSummaryDate = summaryDates(deliveryRecords)[0]
+  const latestSummaryParcels = deliveryRecords.filter(
+    (record) => record.date === latestSummaryDate,
+  ).length
 
   const remaining = PURCHASE_BUDGET - committedAmount(orders)
   const remainingPercent = (remaining / PURCHASE_BUDGET) * 100
@@ -61,6 +89,32 @@ export default function DashboardPage() {
         <>
           <section className="dash__row">
             <StatTile
+              label="จัดการรีวิวที่มีปัญหา"
+              value={reportedCount}
+              note={
+                reportedCount > 0
+                  ? `พบรีวิวที่ถูกรายงาน ${reportedCount} รายการ`
+                  : 'ไม่มีรีวิวที่มีปัญหา'
+              }
+              icon="alert-triangle"
+              tone={reportedCount > 0 ? 'danger' : 'default'}
+              to="/admin/reviews/manage"
+              linkLabel="จัดการรีวิว"
+            />
+            <StatTile
+              label="ตรวจสอบรีวิว"
+              value={unrepliedCount}
+              note={
+                unrepliedCount > 0
+                  ? `รอการตรวจสอบและตอบกลับ ${unrepliedCount} รายการ`
+                  : 'ไม่มีรีวิวค้างตรวจสอบ'
+              }
+              icon="star"
+              tone={unrepliedCount > 0 ? 'warning' : 'default'}
+              to="/admin/reviews"
+              linkLabel="ตรวจสอบรีวิว"
+            />
+            <StatTile
               label="ใบสั่งซื้อรออนุมัติ"
               value={pending.length}
               note="รอการพิจารณาของผู้จัดการร้าน"
@@ -70,12 +124,29 @@ export default function DashboardPage() {
               linkLabel="เปิดกล่องงานรออนุมัติ"
             />
             <StatTile
+              label="คำสั่งซื้อลูกค้า"
+              value={customerOrders.length}
+              note="คำสั่งซื้อทั้งหมดในระบบ"
+              icon="shopping-bag"
+              to="/admin/orders"
+              linkLabel="ดูคำสั่งซื้อลูกค้า"
+            />
+            <StatTile
               label="ผู้จัดจำหน่ายที่ใช้งานอยู่"
               value={activeSuppliers.length}
               note={`จากทั้งหมด ${suppliers.length} ราย`}
               icon="building"
               to="/admin/suppliers"
               linkLabel="ดูรายการผู้จัดจำหน่าย"
+            />
+            <StatTile
+              label="รายงานผลต่างรออนุมัติ"
+              value={pendingReports.length}
+              note="ยอดหนังสือไม่ตรงจากการตรวจนับ"
+              icon="alert-triangle"
+              tone={pendingReports.length > 0 ? 'warning' : 'default'}
+              to="/admin/stock/discrepancies"
+              linkLabel="เปิดรายงานผลต่าง"
             />
             <article className="dash__budget">
               <header className="dash__budget-head">
@@ -139,6 +210,19 @@ export default function DashboardPage() {
               linkLabel="ดูรายการแจ้งเตือน"
             />
             <StatTile
+              label="คำสั่งซื้อลูกค้า"
+              value={ordersToPack.length}
+              note={
+                ordersToPack.length > 0
+                  ? `รอจัดเตรียมและแพ็กสินค้า ${ordersToPack.length} รายการ`
+                  : 'ไม่มีคำสั่งซื้อที่ต้องจัดเตรียม'
+              }
+              icon="shopping-bag"
+              tone={ordersToPack.length > 0 ? 'accent' : 'default'}
+              to="/admin/orders"
+              linkLabel="ดูคำสั่งซื้อลูกค้า"
+            />
+            <StatTile
               label="ใบสั่งซื้อรอส่ง"
               value={awaitingSend.length}
               note={`รอผู้จัดจำหน่ายยืนยันอีก ${awaitingConfirm.length} ใบ`}
@@ -164,6 +248,24 @@ export default function DashboardPage() {
               tone={openReturns.length > 0 ? 'warning' : 'default'}
               to="/admin/purchasing"
               linkLabel="ดูเอกสารจัดซื้อ"
+            />
+            <StatTile
+              label="หนังสือหมดสต็อก"
+              value={outOfStock}
+              note="ยอดคงเหลือเป็น 0"
+              icon="alert-triangle"
+              tone={outOfStock > 0 ? 'danger' : 'default'}
+              to="/admin/stock/low"
+              linkLabel="ดูรายงานหนังสือใกล้หมด"
+            />
+            <StatTile
+              label="หนังสือใกล้หมด"
+              value={lowStock}
+              note="เหลือน้อยแต่ยังไม่หมด"
+              icon="trending-down"
+              tone={lowStock > 0 ? 'warning' : 'default'}
+              to="/admin/stock/low"
+              linkLabel="ดูรายงานหนังสือใกล้หมด"
             />
           </section>
 
@@ -195,6 +297,10 @@ export default function DashboardPage() {
                 <Icon name="plus" size={18} />
                 สร้างใบขอสั่งซื้อ
               </Link>
+              <Link to="/admin/orders" className="btn btn-ghost btn-sm">
+                <Icon name="shopping-bag" size={18} />
+                คำสั่งซื้อลูกค้า
+              </Link>
               <Link to="/admin/contacts" className="btn btn-ghost btn-sm">
                 <Icon name="mail" size={18} />
                 ศูนย์การติดต่อ
@@ -212,6 +318,28 @@ export default function DashboardPage() {
       {can.viewSuppliers(role) && !can.viewPurchasing(role) && (
         <section className="dash__row">
           <StatTile
+            label="คำสั่งซื้อลูกค้า"
+            value={salesPendingOrders.length}
+            note="รอยืนยันสต็อกและตรวจสอบชำระเงิน"
+            icon="shopping-bag"
+            tone={salesPendingOrders.length > 0 ? 'warning' : 'default'}
+            to="/admin/orders"
+            linkLabel="ดูคำสั่งซื้อลูกค้า"
+          />
+          <StatTile
+            label="ตรวจสอบรีวิว"
+            value={unrepliedCount}
+            note={
+              unrepliedCount > 0
+                ? `รอการตรวจสอบและตอบกลับ ${unrepliedCount} รายการ`
+                : 'ไม่มีรีวิวค้างตรวจสอบ'
+            }
+            icon="star"
+            tone={unrepliedCount > 0 ? 'warning' : 'default'}
+            to="/admin/reviews"
+            linkLabel="ตรวจสอบรีวิว"
+          />
+          <StatTile
             label="ผู้จัดจำหน่ายที่ใช้งานอยู่"
             value={activeSuppliers.length}
             note={`จากทั้งหมด ${suppliers.length} ราย`}
@@ -221,10 +349,10 @@ export default function DashboardPage() {
           />
           <StatTile
             label="รายการหนังสือในระบบ"
-            value={suppliers.reduce((sum, entry) => sum + entry.books.length, 0)}
-            note="ใช้ตอบคำถามลูกค้าเรื่องหนังสือและผู้จัดจำหน่าย"
+            value={books.length}
+            note="ใช้ตอบคำถามลูกค้าและแก้ไขข้อมูลหนังสือ"
             icon="book"
-            to="/admin/suppliers"
+            to="/admin/books"
             linkLabel="ดูรายการหนังสือ"
           />
           <StatTile
@@ -238,14 +366,31 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* พนักงานจัดส่ง appears in no screen list in §2 of the spec, so the back office
-          has nothing for them beyond this explanation. */}
+      {/* พนักงานจัดส่ง — the only role outside the supplier screens. It gets the two
+          things it acts on: parcels waiting to go out, and the daily summary report. */}
       {!can.viewSuppliers(role) && (
-        <section className="admin-card">
-          <EmptyState
+        <section className="dash__row">
+          <StatTile
+            label="คำสั่งซื้อลูกค้า"
+            value={deliveryReadyOrders.length}
+            note="พัสดุพร้อมจัดส่งและนำจ่าย"
             icon="truck"
-            title="ตำแหน่งงานของคุณยังไม่มีเมนูในระบบหลังร้าน"
-            description="ระบบหลังร้านครอบคลุมงานผู้จัดจำหน่ายและงานจัดซื้อ หากต้องการสิทธิ์เพิ่มเติม กรุณาติดต่อผู้จัดการร้าน"
+            tone={deliveryReadyOrders.length > 0 ? 'accent' : 'default'}
+            to="/admin/orders"
+            linkLabel="ดูคำสั่งซื้อที่ต้องจัดส่ง"
+          />
+          <StatTile
+            label="รายงานสรุปพัสดุจัดส่ง"
+            value={latestSummaryParcels}
+            note={
+              latestSummaryDate
+                ? `สรุปพัสดุจัดส่งประจำวันที่ ${latestSummaryDate}`
+                : 'ยังไม่มีพัสดุที่จัดส่ง'
+            }
+            icon="file-text"
+            tone="default"
+            to="/admin/delivery-report"
+            linkLabel="เปิดรายงานสรุปพัสดุ"
           />
         </section>
       )}

@@ -34,6 +34,8 @@ func (d Date) AddDays(days int) Date { return NewDate(d.AddDate(0, 0, days)) }
 // Before — เทียบวันที่ (ใช้ตรวจว่าวันที่คาดว่าจะได้รับไม่ย้อนหลัง)
 func (d Date) Before(other Date) bool { return d.Time.Before(other.Time) }
 
+func (d Date) After(other Date) bool { return d.Time.After(other.Time) }
+
 // ParseDate — อ่านค่าจาก body ของ request
 func ParseDate(value string) (Date, error) {
 	t, err := time.Parse(DateLayout, strings.TrimSpace(value))

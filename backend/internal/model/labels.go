@@ -65,6 +65,7 @@ var RoleLabels = map[Role]string{
 	RoleManager:   "ผู้จัดการร้าน",
 	RoleSales:     "พนักงานฝ่ายขาย",
 	RoleDelivery:  "พนักงานจัดส่ง",
+	RoleCustomer:  "ลูกค้า",
 }
 
 // Label — ป้ายไทยของสถานะ ใช้ประกอบข้อความแจ้งเตือนและข้อความ error
@@ -78,6 +79,7 @@ func (s GRStatus) Label() string       { return lookup(GRStatusLabels, s) }
 func (s ReturnStatus) Label() string   { return lookup(ReturnStatusLabels, s) }
 func (c ItemCondition) Label() string  { return lookup(ItemConditionLabels, c) }
 func (t StockTxnType) Label() string   { return lookup(StockTxnTypeLabels, t) }
+func (s BookStatus) Label() string     { return lookup(BookStatusLabels, s) }
 func (r Role) Label() string           { return lookup(RoleLabels, r) }
 
 // lookup — คืนป้ายไทย ถ้าไม่พบคืนค่า enum ดิบ (ไม่ให้ข้อความว่างหลุดไปหน้าจอ)
