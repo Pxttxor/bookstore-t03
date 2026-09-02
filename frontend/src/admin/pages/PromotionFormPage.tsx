@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import { useToast } from '../components/ToastContext'
 import { usePromotions, type PromotionDraft } from '../promotions/PromotionContext'
 import {
@@ -24,6 +26,31 @@ const TYPES: PromotionType[] = ['FESTIVAL_DISCOUNT', 'COUPON', 'BUY_X_QTY']
 // when the route switches to a different id.
 export default function PromotionFormPage() {
   const { id } = useParams()
+  const { loading, error, reload } = usePromotions()
+
+  // ต้องกันไว้ที่ตัวห่อ ไม่ใช่ในฟอร์ม — ฟอร์มตั้งค่าเริ่มต้นของช่องกรอกด้วย useState
+  // ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
+  // หน้าแก้ไขจะเปิดมาเป็นช่องว่างทั้งใบและไม่เติมค่าให้ทีหลัง
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลโปรโมชั่น…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
+
   return <PromotionForm key={id ?? 'new'} id={id} />
 }
 
@@ -55,6 +82,7 @@ function PromotionForm({ id }: { id?: string }) {
   const [startDate, setStartDate] = useState(existing?.startDate ?? today)
   const [endDate, setEndDate] = useState(existing?.endDate ?? today)
   const [errors, setErrors] = useState<Errors>({})
+  const [saving, setSaving] = useState(false)
 
   const draft: PromotionDraft = useMemo(
     () => ({
@@ -134,8 +162,9 @@ function PromotionForm({ id }: { id?: string }) {
     return Object.keys(found).length === 0
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (saving) return
     if (!validate()) return
 
     const duplicate = findByName(draft.name, existing?.promotionId)
@@ -144,14 +173,21 @@ function PromotionForm({ id }: { id?: string }) {
       return
     }
 
-    if (existing) {
-      update(existing.promotionId, draft)
-      notify('success', `บันทึกการแก้ไขโปรโมชั่น "${draft.name}" เรียบร้อยแล้ว`)
-    } else {
-      const created = add(draft)
-      notify('success', `เพิ่มโปรโมชั่นสำเร็จ (รหัส ${formatPromotionCode(created.promotionId)})`)
+    setSaving(true)
+    try {
+      if (existing) {
+        await update(existing.promotionId, draft)
+        notify('success', `บันทึกการแก้ไขโปรโมชั่น "${draft.name}" เรียบร้อยแล้ว`)
+      } else {
+        const created = await add(draft)
+        notify('success', `เพิ่มโปรโมชั่นสำเร็จ (รหัส ${formatPromotionCode(created.promotionId)})`)
+      }
+      navigate('/admin/promotions')
+    } catch (err) {
+      // ข้อความไทยจาก backend (ชื่อซ้ำ · ช่วงวันที่ไม่ถูกต้อง ฯลฯ)
+      notify('error', err instanceof Error ? err.message : 'บันทึกโปรโมชั่นไม่สำเร็จ')
+      setSaving(false)
     }
-    navigate('/admin/promotions')
   }
 
   const title = existing ? 'แก้ไขโปรโมชั่น' : 'เพิ่มโปรโมชั่น'
@@ -324,7 +360,7 @@ function PromotionForm({ id }: { id?: string }) {
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate(-1)}>
             ยกเลิก
           </button>
-          <button type="submit" className="btn btn-primary btn-sm">
+          <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
             บันทึก
           </button>
         </div>

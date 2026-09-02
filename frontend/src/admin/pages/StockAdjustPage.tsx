@@ -6,6 +6,8 @@ import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import BookPicker from '../components/BookPicker'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import { useToast } from '../components/ToastContext'
 import type { Book } from '../books/books'
 import { useOrders } from '../orders/OrderContext'
@@ -27,7 +29,7 @@ interface Row {
 
 export default function StockAdjustPage() {
   const { user } = useAuth()
-  const { findByBookId, adjustStock } = useInventory()
+  const { findByBookId, adjustStock, loading, error, reload } = useInventory()
   const { orders } = useOrders()
   const { notify } = useToast()
   const navigate = useNavigate()
@@ -35,6 +37,7 @@ export default function StockAdjustPage() {
   const [rows, setRows] = useState<Row[]>([])
   const [orderRef, setOrderRef] = useState('')
   const [picking, setPicking] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const role = user!.role
 
@@ -48,6 +51,28 @@ export default function StockAdjustPage() {
             description="การแก้ไขจำนวนหนังสือเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
             action={{ label: 'กลับไปหน้ายอดคงเหลือ', onClick: () => navigate('/admin/stock') }}
           />
+        </section>
+      </div>
+    )
+  }
+
+  // ยอดในระบบของแต่ละเล่มมาจาก useInventory() — ถ้ายังโหลดไม่เสร็จจะอ่านได้ 0 ทุกเล่ม
+  // แล้วผลต่างที่คำนวณได้จะผิดทั้งใบ จึงต้องรอให้ข้อมูลมาครบก่อนเปิดฟอร์ม
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดยอดคงเหลือ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
         </section>
       </div>
     )
@@ -81,7 +106,8 @@ export default function StockAdjustPage() {
       ? 'ยังไม่มีรายการที่มีการเปลี่ยนแปลงจำนวน'
       : undefined
 
-  const save = () => {
+  const save = async () => {
+    if (saving) return
     if (blockedReason) {
       notify('error', blockedReason)
       return
@@ -98,10 +124,15 @@ export default function StockAdjustPage() {
         referenceDoc: orderRef,
       }))
 
+    // ต้อง await — abnormal flow "ยอดคงเหลือติดลบ → ไม่อนุญาตให้บันทึก" ตัดสินฝั่งเซิร์ฟเวอร์แล้ว
+    // (`ApplyStrictStockChanges` + `assertNoNegativeStock`) ถ้าไม่รอผล error จะหายเงียบ
+    // แล้วหน้าจอจะขึ้น "บันทึกเสร็จสิ้น" ทั้งที่เซิร์ฟเวอร์ปฏิเสธ
+    setSaving(true)
     try {
-      adjustStock(lines)
+      await adjustStock(lines)
     } catch (error) {
       notify('error', error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ')
+      setSaving(false)
       return
     }
 
@@ -134,9 +165,9 @@ export default function StockAdjustPage() {
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            disabled={blockedReason !== undefined}
+            disabled={blockedReason !== undefined || saving}
             title={blockedReason}
-            onClick={save}
+            onClick={() => void save()}
           >
             บันทึก
           </button>

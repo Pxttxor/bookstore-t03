@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { apiGet } from '../../api/client'
+import { useResource } from '../../api/useResource'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import { ROLE_LABELS, type Role } from '../../auth/roles'
 import { formatPrice } from '../../data/books'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
 import { can } from '../permissions'
 import { useOrders } from '../orders/OrderContext'
 import {
-  CARRIERS,
   CHANNEL_LABELS,
   formatOrderCode,
   isClosedOrder,
@@ -43,20 +46,49 @@ const OWNER_ROLE: Partial<Record<OrderStatus, Role | 'customer'>> = {
   SHIPPED: 'delivery',
 }
 
+interface CarrierOption {
+  carrierId: number
+  name: string
+}
+
+const loadCarriers = () => apiGet<CarrierOption[]>('/api/carriers')
+
 export default function CustomerOrderDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const { findOrder, updateStatus } = useOrders()
+  const { findOrder, updateStatus, loading, error, reload } = useOrders()
+  // บริษัทขนส่งอยู่ในตาราง shipping_company · พัสดุเป็นคนละ endpoint กับใบสั่งซื้อ
+  const { data: carrierRows } = useResource(loadCarriers)
   const { notify } = useToast()
   const navigate = useNavigate()
 
   const [shipOpen, setShipOpen] = useState(false)
   const [tracking, setTracking] = useState('')
-  const [carrier, setCarrier] = useState<string>(CARRIERS[0])
+  const [carrierId, setCarrierId] = useState<number>(0)
   const [trackingError, setTrackingError] = useState('')
 
   const role = user!.role
   const order = findOrder(Number(id))
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดคำสั่งซื้อ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
 
   if (!order) {
     return (
@@ -80,9 +112,15 @@ export default function CustomerOrderDetailPage() {
     )
   }
 
-  const advance = (next: OrderStatus, message: string) => {
-    updateStatus(order.orderId, next)
-    notify('success', message)
+  // ต้องรอผลก่อนขึ้น toast — เซิร์ฟเวอร์เป็นคนตัดสินว่าเปลี่ยนสถานะได้จริงไหม
+  // (ตารางการเปลี่ยนสถานะ · สต็อกพอไหมตอนแพ็ก · สิทธิ์ของบทบาท)
+  const advance = async (next: OrderStatus, message: string) => {
+    try {
+      await updateStatus(order.orderId, next)
+      notify('success', message)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'เปลี่ยนสถานะไม่สำเร็จ')
+    }
   }
 
   const recordShipment = () => {
@@ -90,9 +128,28 @@ export default function CustomerOrderDetailPage() {
       setTrackingError('กรุณากรอกหมายเลขติดตามพัสดุ')
       return
     }
-    updateStatus(order.orderId, 'SHIPPED', { tracking, carrier })
-    setShipOpen(false)
-    notify('success', `บันทึกการจัดส่ง ${formatOrderCode(order.orderId)} ทาง${carrier} แล้ว`)
+    const carriers = carrierRows ?? []
+    const chosen = carriers.find((c) => c.carrierId === carrierId) ?? carriers[0]
+    if (!chosen) {
+      notify('error', 'ยังโหลดรายชื่อบริษัทขนส่งไม่สำเร็จ กรุณาลองใหม่')
+      return
+    }
+    void (async () => {
+      try {
+        // เซิร์ฟเวอร์เปิดแถว shipment ในทรานแซกชันเดียวกับการเปลี่ยนสถานะ
+        await updateStatus(order.orderId, 'SHIPPED', {
+          tracking,
+          carrierId: chosen.carrierId,
+        })
+        setShipOpen(false)
+        notify(
+          'success',
+          `บันทึกการจัดส่ง ${formatOrderCode(order.orderId)} ทาง${chosen.name} แล้ว`,
+        )
+      } catch (err) {
+        notify('error', err instanceof Error ? err.message : 'บันทึกการจัดส่งไม่สำเร็จ')
+      }
+    })()
   }
 
   const step = milestoneOf(order.status)
@@ -107,40 +164,40 @@ export default function CustomerOrderDetailPage() {
     actions.push({
       label: 'ยืนยันสต็อก',
       tone: 'primary',
-      run: () => advance('STOCK_CONFIRMED', 'ยืนยันสต็อกแล้ว รอตรวจสอบการชำระเงิน'),
+      run: () => void advance('STOCK_CONFIRMED', 'ยืนยันสต็อกแล้ว รอตรวจสอบการชำระเงิน'),
     })
   }
   if (order.status === 'STOCK_CONFIRMED' && can.verifyPayment(role)) {
     actions.push({
       label: 'ตรวจสอบการชำระเงิน',
       tone: 'primary',
-      run: () => advance('VERIFYING_PAYMENT', 'เริ่มตรวจสอบการชำระเงิน'),
+      run: () => void advance('VERIFYING_PAYMENT', 'เริ่มตรวจสอบการชำระเงิน'),
     })
   }
   if (order.status === 'VERIFYING_PAYMENT' && can.verifyPayment(role)) {
     actions.push({
       label: 'ยืนยันการชำระเงิน',
       tone: 'primary',
-      run: () => advance('PAID', 'ยืนยันการชำระเงินแล้ว รอคลังแพ็กสินค้า'),
+      run: () => void advance('PAID', 'ยืนยันการชำระเงินแล้ว รอคลังแพ็กสินค้า'),
     })
     actions.push({
       label: 'สลิปไม่ถูกต้อง',
       tone: 'danger',
-      run: () => advance('REJECTED', 'ปฏิเสธคำสั่งซื้อ (สลิปไม่ถูกต้อง)'),
+      run: () => void advance('REJECTED', 'ปฏิเสธคำสั่งซื้อ (สลิปไม่ถูกต้อง)'),
     })
   }
   if (order.status === 'PAID' && can.packOrder(role)) {
     actions.push({
       label: 'เริ่มแพ็กสินค้า',
       tone: 'primary',
-      run: () => advance('PACKING', 'เริ่มแพ็กสินค้า'),
+      run: () => void advance('PACKING', 'เริ่มแพ็กสินค้า'),
     })
   }
   if (order.status === 'PACKING' && can.packOrder(role)) {
     actions.push({
       label: 'แพ็กเสร็จ พร้อมส่ง',
       tone: 'primary',
-      run: () => advance('READY_TO_SHIP', 'แพ็กเสร็จแล้ว แจ้งพนักงานจัดส่ง'),
+      run: () => void advance('READY_TO_SHIP', 'แพ็กเสร็จแล้ว แจ้งพนักงานจัดส่ง'),
     })
   }
   if (order.status === 'READY_TO_SHIP' && can.shipOrder(role)) {
@@ -150,14 +207,14 @@ export default function CustomerOrderDetailPage() {
     actions.push({
       label: 'ยืนยันจัดส่งสำเร็จ',
       tone: 'primary',
-      run: () => advance('DELIVERED', 'ยืนยันการจัดส่งสำเร็จแล้ว'),
+      run: () => void advance('DELIVERED', 'ยืนยันการจัดส่งสำเร็จแล้ว'),
     })
   }
   if (!closed && order.status !== 'SHIPPED' && can.cancelOrder(role)) {
     actions.push({
       label: 'ยกเลิกคำสั่งซื้อ',
       tone: 'outline',
-      run: () => advance('CANCELLED', 'ยกเลิกคำสั่งซื้อแล้ว'),
+      run: () => void advance('CANCELLED', 'ยกเลิกคำสั่งซื้อแล้ว'),
     })
   }
 
@@ -369,12 +426,12 @@ export default function CustomerOrderDetailPage() {
             <span className="admin-field__label">บริษัทขนส่ง</span>
             <select
               className="admin-input"
-              value={carrier}
-              onChange={(e) => setCarrier(e.target.value)}
+              value={carrierId || carrierRows?.[0]?.carrierId || ''}
+              onChange={(e) => setCarrierId(Number(e.target.value))}
             >
-              {CARRIERS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {(carrierRows ?? []).map((c) => (
+                <option key={c.carrierId} value={c.carrierId}>
+                  {c.name}
                 </option>
               ))}
             </select>

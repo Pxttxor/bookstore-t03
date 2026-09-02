@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { isEmployee } from '../auth/roles'
 import AdminTopBar from './components/AdminTopBar'
 import AdminSidebar from './components/AdminSidebar'
+import LoadingState from './components/LoadingState'
 import { ToastProvider } from './components/ToastContext'
 import { BookProvider } from './books/BookContext'
 import { InventoryProvider } from './inventory/InventoryContext'
@@ -14,8 +15,18 @@ import { ReviewProvider } from './reviews/ReviewContext'
 import './AdminLayout.css'
 
 export default function AdminLayout() {
-  const { user } = useAuth()
+  const { user, initialising } = useAuth()
   const location = useLocation()
+
+  // มี token ค้างอยู่แต่ยังไม่รู้ผลจาก GET /api/auth/me — ถ้าเด้งออกตอนนี้
+  // ผู้ใช้ที่ยังล็อกอินอยู่จะโดนส่งไปหน้าเข้าสู่ระบบทุกครั้งที่รีเฟรชหน้าหลังร้าน
+  if (initialising) {
+    return (
+      <div className="admin admin--booting">
+        <LoadingState label="กำลังตรวจสอบสิทธิ์การใช้งาน…" />
+      </div>
+    )
+  }
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />

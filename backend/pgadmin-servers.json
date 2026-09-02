@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "bookstore-t03 (db)",
+      "Group": "Servers",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "bookstore_t03",
+      "Username": "bookstore",
+      "SSLMode": "prefer",
+      "Comment": "ลงทะเบียนอัตโนมัติจาก pgadmin-servers.json · Host เป็นชื่อ service ใน compose ไม่ใช่ localhost"
+    }
+  }
+}

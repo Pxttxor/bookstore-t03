@@ -15,18 +15,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated && user) {
     return <Navigate to={isEmployee(user.role) ? '/admin' : from} replace />
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (submitting) return
+    setSubmitting(true)
+    setError('')
     try {
-      const signedIn = login(email, password)
+      const signedIn = await login(email, password)
       navigate(isEmployee(signedIn.role) ? '/admin' : from, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in.')
+      // ApiError.message เป็นภาษาไทยจาก backend อยู่แล้ว (บัญชีถูกระงับ / ยังไม่ยืนยันตัวตน ฯลฯ)
+      setError(err instanceof Error ? err.message : 'เข้าสู่ระบบไม่สำเร็จ')
+      setSubmitting(false)
     }
   }
 
@@ -89,7 +95,7 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <button type="submit" className="btn btn-primary auth-submit">
+          <button type="submit" className="btn btn-primary auth-submit" disabled={submitting}>
             Sign In
           </button>
         </form>

@@ -26,11 +26,50 @@ export type OrderChannel = 'WEBSITE' | 'MESSAGE' | 'PHONE'
 export type ShipmentStatus = 'PREPARING' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED'
 
 export interface OrderItem {
-  /** Storefront slug (Book.id) so the tracking page can resolve the cover via getBook(). */
-  bookId: string
+  /**
+   * รหัสหนังสือในแคตตาล็อกหลัง (`book.book_id`) — เป็นตัวเลขตามที่ตาราง
+   * `customer_order_item` และ `orderItemDTO` ฝั่ง Go ใช้
+   *
+   * เดิมเป็น slug ของหน้าร้านเพราะคำสั่งซื้อเก็บใน localStorage แยกจากแคตตาล็อกหลัง
+   * หน้าติดตามพัสดุที่ต้องการปกหนังสือแปลงกลับเป็น slug ผ่าน `slugForBookId()`
+   */
+  bookId: number
   title: string
   unitPrice: number
   quantity: number
+}
+
+/**
+ * สะพานเชื่อมแคตตาล็อกหน้าร้าน (key ด้วย slug + ไฟล์รูปปก) กับแคตตาล็อกหลัง (key ด้วยตัวเลข)
+ *
+ * `frontend/CLAUDE.md` บันทึกไว้ว่าสองชุดนี้แยกกันโดยตั้งใจ และหน้าร้านยังคงเป็น static
+ * แต่คำสั่งซื้อต้องลงตาราง `customer_order_item` ซึ่งมี FK ชี้ไป `book` จึงต้องมีแผนที่นี้
+ * จับคู่ด้วยชื่อเรื่องที่ตรงกันทุกตัวอักษรระหว่าง `src/data/books.ts` กับ `SEED_BOOKS`
+ */
+export const STOREFRONT_BOOK_IDS: Record<string, number> = {
+  'atomic-habits': 101,
+  'the-alchemist': 102,
+  circe: 103,
+  'project-hail-mary': 104,
+  'klara-and-the-sun': 105,
+  dune: 106,
+  'a-little-life': 107,
+  'normal-people': 108,
+  'the-midnight-library': 109,
+  'the-song-of-achilles': 110,
+  'crying-in-h-mart': 111,
+  'lessons-in-chemistry': 112,
+  'evelyn-hugo': 113,
+  'where-the-crawdads-sing': 114,
+}
+
+const BOOK_ID_SLUGS: Record<number, string> = Object.fromEntries(
+  Object.entries(STOREFRONT_BOOK_IDS).map(([slug, bookId]) => [bookId, slug]),
+)
+
+/** slug ของหน้าร้านสำหรับรหัสหนังสือหนึ่งตัว — คืน undefined ถ้าเล่มนั้นไม่ได้ขายหน้าร้าน */
+export function slugForBookId(bookId: number): string | undefined {
+  return BOOK_ID_SLUGS[bookId]
 }
 
 export interface OrderStatusHistory {
@@ -171,7 +210,7 @@ export const orderItemCount = (order: CustomerOrder) =>
 
 /* ── Seed data ──────────────────────────────────────────────────────────── */
 
-const item = (bookId: string, title: string, unitPrice: number, quantity: number): OrderItem => ({
+const item = (bookId: number, title: string, unitPrice: number, quantity: number): OrderItem => ({
   bookId,
   title,
   unitPrice,
@@ -193,8 +232,8 @@ export const SEED_ORDERS: CustomerOrder[] = [
     netAmount: 50.9,
     slipFileName: 'slip-1001.jpg',
     items: [
-      item('the-midnight-library', 'The Midnight Library', 18.5, 1),
-      item('atomic-habits', 'Atomic Habits', 16.2, 2),
+      item(109, 'The Midnight Library', 18.5, 1),
+      item(101, 'Atomic Habits', 16.2, 2),
     ],
     timeline: [{ status: 'PENDING_CONFIRM', changedDate: '2026-08-04T02:10:00.000Z' }],
   },
@@ -210,8 +249,8 @@ export const SEED_ORDERS: CustomerOrder[] = [
     netAmount: 38.98,
     slipFileName: 'slip-1002.png',
     items: [
-      item('dune', 'Dune', 23.99, 1),
-      item('project-hail-mary', 'Project Hail Mary', 14.99, 1),
+      item(106, 'Dune', 23.99, 1),
+      item(104, 'Project Hail Mary', 14.99, 1),
     ],
     timeline: [
       { status: 'PENDING_CONFIRM', changedDate: '2026-08-03T01:00:00.000Z' },
@@ -233,7 +272,7 @@ export const SEED_ORDERS: CustomerOrder[] = [
     discountAmount: 0,
     netAmount: 13.5,
     slipFileName: 'slip-1003.jpg',
-    items: [item('the-song-of-achilles', 'The Song of Achilles', 13.5, 1)],
+    items: [item(110, 'The Song of Achilles', 13.5, 1)],
     timeline: [
       { status: 'PENDING_CONFIRM', changedDate: '2026-07-30T01:00:00.000Z' },
       { status: 'STOCK_CONFIRMED', changedDate: '2026-07-30T02:00:00.000Z' },

@@ -5,9 +5,12 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import { useToast } from '../components/ToastContext'
 import { getBook } from '../../data/books'
+import { slugForBookId } from '../orders/orders'
 import { useReviews } from '../reviews/ReviewContext'
 import {
   formatThaiRelativeTime,
@@ -31,6 +34,9 @@ export default function ReviewManagerPage() {
     hideReview,
     removeReview,
     reply,
+    loading,
+    error,
+    reload,
   } = useReviews()
   const { notify } = useToast()
 
@@ -120,45 +126,48 @@ export default function ReviewManagerPage() {
   const rows = filteredReviews.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // Manager Actions
-  const handleApprove = (review: Review) => {
-    approveReview(review.reviewId)
-    notify('success', `อนุมัติรีวิวของคุณ ${review.customerName} เรียบร้อยแล้ว`)
+  //
+  // การตัดสินรายงานที่ยังค้างเกิดพร้อมกันในทรานแซกชันเดียวฝั่งเซิร์ฟเวอร์
+  // (เผยแพร่ = รายงานไม่เป็นผล · ซ่อน/ลบ = รายงานเป็นผล) หน้าจอไม่ต้องแตะรายงานเอง
+  const handleApprove = async (review: Review) => {
+    try {
+      await approveReview(review.reviewId)
+      notify('success', `อนุมัติรีวิวของคุณ ${review.customerName} เรียบร้อยแล้ว`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'อนุมัติรีวิวไม่สำเร็จ')
+    }
   }
 
-  const handleHide = (review: Review) => {
-    hideReview(review.reviewId)
-    notify('warning', `ซ่อนรีวิวของคุณ ${review.customerName} ถาวรแล้ว`)
+  const handleHide = async (review: Review) => {
+    try {
+      await hideReview(review.reviewId)
+      notify('warning', `ซ่อนรีวิวของคุณ ${review.customerName} ถาวรแล้ว`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ซ่อนรีวิวไม่สำเร็จ')
+    }
   }
 
-  const handleRemove = (review: Review) => {
-    removeReview(review.reviewId)
-    notify('error', `ลบรีวิวของคุณ ${review.customerName} เรียบร้อยแล้ว`)
+  const handleRemove = async (review: Review) => {
+    try {
+      await removeReview(review.reviewId)
+      notify('error', `ลบรีวิวของคุณ ${review.customerName} เรียบร้อยแล้ว`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ลบรีวิวไม่สำเร็จ')
+    }
   }
 
-  const handleReplySubmit = (text: string) => {
+  // ผู้ตอบกลับมาจาก JWT · เซิร์ฟเวอร์ดันสถานะเป็น PUBLISHED และออก replyId ให้เอง
+  // จึงไม่ประกอบแถวคำตอบกลับเองอีก รอ reload() แทน
+  const handleReplySubmit = async (text: string) => {
     const target = replyReview || detailReview
     if (!target) return
-    reply(target.reviewId, {
-      replyText: text,
-      repliedBy: user?.name || 'ผู้จัดการร้าน',
-    })
-    notify('success', `บันทึกคำตอบกลับถึงคุณ ${target.customerName} เรียบร้อยแล้ว`)
-    setReplyReview(null)
-    if (detailReview?.reviewId === target.reviewId) {
-      setDetailReview((prev) =>
-        prev
-          ? {
-            ...prev,
-            status: 'PUBLISHED',
-            reply: {
-              replyId: (prev.reply?.replyId || 0) + 1,
-              replyText: text,
-              repliedDate: new Date().toISOString(),
-              repliedBy: user?.name || 'ผู้จัดการร้าน',
-            },
-          }
-          : null,
-      )
+    try {
+      await reply(target.reviewId, { replyText: text })
+      notify('success', `บันทึกคำตอบกลับถึงคุณ ${target.customerName} เรียบร้อยแล้ว`)
+      setReplyReview(null)
+      setDetailReview(null)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกคำตอบกลับไม่สำเร็จ')
     }
   }
 
@@ -396,7 +405,11 @@ export default function ReviewManagerPage() {
 
       {/* Review Cards List */}
       <section className="review-cards-container">
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดรีวิว…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon="star"
             title="ไม่พบรายการรีวิวในหมวดนี้"
@@ -404,7 +417,10 @@ export default function ReviewManagerPage() {
           />
         ) : (
           rows.map((review) => {
-            const bookCover = review.coverUrl || getBook(review.bookId)?.cover
+            // รหัสหนังสือเป็นของแคตตาล็อกหลัง · รูปปกอยู่ในแคตตาล็อกหน้าร้านที่ key ด้วย slug
+            const bookSlug = slugForBookId(review.bookId)
+            const bookCover =
+              review.coverUrl || (bookSlug ? getBook(bookSlug)?.cover : undefined)
             const report = review.report
             const isSpam = report?.category === 'spam' || report?.reason?.includes('สแปม')
             const isService = report?.category === 'service' || report?.reason?.includes('บริการ') || report?.reason?.includes('ขนส่ง')
@@ -528,7 +544,7 @@ export default function ReviewManagerPage() {
                       <button
                         type="button"
                         className="btn-card-action btn-action--delete"
-                        onClick={() => handleRemove(review)}
+                        onClick={() => void handleRemove(review)}
                       >
                         <Icon name="trash-x" size={16} />
                         <span>ลบรีวิว</span>
@@ -537,7 +553,7 @@ export default function ReviewManagerPage() {
                       <button
                         type="button"
                         className="btn-card-action btn-action--hide"
-                        onClick={() => handleHide(review)}
+                        onClick={() => void handleHide(review)}
                       >
                         <Icon name="eye-off" size={16} />
                         <span>ซ่อนถาวร</span>
@@ -546,7 +562,7 @@ export default function ReviewManagerPage() {
                       <button
                         type="button"
                         className="btn-card-action btn-action--approve"
-                        onClick={() => handleApprove(review)}
+                        onClick={() => void handleApprove(review)}
                       >
                         <Icon name="check-check" size={16} />
                         <span>อนุมัติ</span>
@@ -589,7 +605,7 @@ export default function ReviewManagerPage() {
         <ReviewDetailDrawer
           review={detailReview}
           onClose={() => setDetailReview(null)}
-          onReply={handleReplySubmit}
+          onReply={(text) => void handleReplySubmit(text)}
         />
       )}
 
@@ -598,7 +614,7 @@ export default function ReviewManagerPage() {
         <ReviewReplyModal
           review={replyReview}
           onClose={() => setReplyReview(null)}
-          onSubmit={handleReplySubmit}
+          onSubmit={(text) => void handleReplySubmit(text)}
         />
       )}
     </div>

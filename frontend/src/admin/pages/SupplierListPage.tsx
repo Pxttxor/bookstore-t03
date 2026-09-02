@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { useSuppliers } from '../suppliers/SupplierContext'
@@ -20,7 +22,7 @@ type StatusFilter = SupplierStatus | 'ALL'
 
 export default function SupplierListPage() {
   const { user } = useAuth()
-  const { suppliers } = useSuppliers()
+  const { suppliers, loading, error, reload } = useSuppliers()
   const navigate = useNavigate()
 
   const [term, setTerm] = useState('')
@@ -146,7 +148,11 @@ export default function SupplierListPage() {
           )}
         </div>
 
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดรายชื่อผู้จัดจำหน่าย…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             title="ไม่พบข้อมูลที่ตรงกับคำค้น"
             description="ลองปรับคำค้นหรือล้างตัวกรองเพื่อดูรายการทั้งหมดอีกครั้ง"

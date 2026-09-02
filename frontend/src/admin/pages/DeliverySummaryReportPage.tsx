@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { formatPrice } from '../../data/books'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
@@ -116,7 +118,7 @@ export default function DeliverySummaryReportPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { notify } = useToast()
-  const { orders } = useOrders()
+  const { orders, loading, error, reload } = useOrders()
 
   const [selectedDate, setSelectedDate] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
@@ -501,7 +503,19 @@ export default function DeliverySummaryReportPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={8}>
+                    <LoadingState label="กำลังโหลดข้อมูลพัสดุ…" />
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={8}>
+                    <ErrorState message={error} onRetry={() => void reload()} />
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="parcel-table__empty">
                     ไม่พบข้อมูลพัสดุตรงกับเงื่อนไขการค้นหา

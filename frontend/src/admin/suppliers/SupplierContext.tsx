@@ -1,16 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
-import { SEED_SUPPLIERS, type Deactivation, type Supplier } from './suppliers'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost, apiPut } from '../../api/client'
+import { useResource } from '../../api/useResource'
+import type { Deactivation, Supplier } from './suppliers'
 
-// v2 dropped Supplier.purchaseOrders — orders now live in the purchasing subsystem.
-// A blob written under the old key would deserialise into a shape that no longer
-// matches, so the key is bumped rather than migrated.
-const STORAGE_KEY = 'bookhaven.suppliers.v2'
+// ข้อมูลอยู่ในตาราง supplier / supplier_book / supplier_edit_log / supplier_deactivation
+// ของ PostgreSQL แล้ว · เดิมเก็บใน localStorage คีย์ bookhaven.suppliers.v2
+//
+// ประกาศไว้ระดับโมดูลเพื่อให้ useResource ได้ฟังก์ชันที่อ้างอิงคงที่
+const loadSuppliers = () => apiGet<Supplier[]>('/api/suppliers')
 
 export type SupplierDraft = Omit<
   Supplier,
@@ -19,112 +16,97 @@ export type SupplierDraft = Omit<
 
 interface SupplierValue {
   suppliers: Supplier[]
+  loading: boolean
+  error: string | null
+  reload: () => Promise<void>
   findById: (supplierId: number) => Supplier | undefined
   findByCompanyName: (companyName: string, ignoreId?: number) => Supplier | undefined
-  add: (draft: SupplierDraft) => Supplier
-  update: (supplierId: number, draft: SupplierDraft, by: string) => Supplier
-  deactivate: (supplierId: number, deactivation: Deactivation) => void
+  add: (draft: SupplierDraft) => Promise<Supplier>
+  /** ผู้แก้ไขมาจาก JWT ฝั่งเซิร์ฟเวอร์ หน้าจอไม่ต้องส่งชื่อมาเอง */
+  update: (supplierId: number, draft: SupplierDraft) => Promise<Supplier>
+  deactivate: (supplierId: number, deactivation: Deactivation) => Promise<void>
 }
 
 const SupplierContext = createContext<SupplierValue | null>(null)
 
-function read(): Supplier[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return SEED_SUPPLIERS
-    const parsed = JSON.parse(raw) as Supplier[]
-    return Array.isArray(parsed) && parsed.length ? parsed : SEED_SUPPLIERS
-  } catch {
-    return SEED_SUPPLIERS
-  }
-}
-
-function write(suppliers: Supplier[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(suppliers))
-}
-
 const key = (name: string) => name.trim().toLowerCase()
 
+// SupplierInput ฝั่ง Go รับรายการหนังสือแค่สามฟิลด์ — ชื่อ/ผู้แต่ง/สำนักพิมพ์/ISBN
+// เป็นของตาราง book ซึ่ง DTO ดึงมาเติมให้ตอนอ่าน · handler เปิด DisallowUnknownFields ไว้
+// ถ้าส่งฟิลด์เกินไปจะได้ 422 INVALID_BODY ทันที
+const toBody = (draft: SupplierDraft) => ({
+  companyName: draft.companyName,
+  contactName: draft.contactName,
+  phone: draft.phone,
+  email: draft.email,
+  address: draft.address,
+  tradeTerms: draft.tradeTerms,
+  creditTerms: draft.creditTerms,
+  books: draft.books.map((book) => ({
+    bookId: book.bookId,
+    supplyPrice: book.supplyPrice,
+    leadTimeDays: book.leadTimeDays,
+  })),
+})
+
 export function SupplierProvider({ children }: { children: ReactNode }) {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(read)
+  const { data, loading, error, reload, apply } = useResource(loadSuppliers)
 
   const value = useMemo<SupplierValue>(() => {
-    const persist = (next: Supplier[]) => {
-      write(next)
-      setSuppliers(next)
-    }
+    const suppliers = data ?? []
 
     const findById = (supplierId: number) =>
       suppliers.find((s) => s.supplierId === supplierId)
 
+    // ตรวจชื่อซ้ำจากรายการที่โหลดมาแล้ว เพื่อเตือนผู้ใช้ก่อนกดบันทึก
+    // เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น (SUPPLIER_DUPLICATE) และถือเป็นคำตัดสินสุดท้าย
     const findByCompanyName = (companyName: string, ignoreId?: number) =>
       suppliers.find(
         (s) => key(s.companyName) === key(companyName) && s.supplierId !== ignoreId,
       )
 
-    const add = (draft: SupplierDraft) => {
-      const nextId = suppliers.reduce((max, s) => Math.max(max, s.supplierId), 0) + 1
-      const supplier: Supplier = {
-        ...draft,
-        supplierId: nextId,
-        status: 'ACTIVE',
-        editHistory: [],
-      }
-      persist([...suppliers, supplier])
-      return supplier
+    // แถวที่เซิร์ฟเวอร์คืนมาคือความจริงล่าสุดของรายนั้น (ผ่าน toSupplierDTO เหมือนตอน
+    // อ่านลิสต์ทุกประการ) จึงต่อลงชุดเดิมได้เลย ไม่ต้องถาม GET /api/suppliers ซ้ำ
+    const replace = (updated: Supplier) => (list: Supplier[]) =>
+      list.map((row) => (row.supplierId === updated.supplierId ? updated : row))
+
+    // id มาจาก sequence ของ PostgreSQL — ห้ามคำนวณ max+1 ฝั่งนี้อีก
+    const add = async (draft: SupplierDraft) => {
+      const created = await apiPost<Supplier>('/api/suppliers', toBody(draft))
+      // เรียงตามรหัสให้ตรงกับ ORDER BY supplier_id ของ repository
+      apply((list) => [...list, created].sort((a, b) => a.supplierId - b.supplierId))
+      return created
     }
 
-    const update = (supplierId: number, draft: SupplierDraft, by: string) => {
-      const current = suppliers.find((s) => s.supplierId === supplierId)
-      if (!current) throw new Error('ไม่พบข้อมูลผู้จัดจำหน่าย')
-
-      const updated: Supplier = {
-        ...current,
-        ...draft,
-        editHistory: [
-          ...current.editHistory,
-          { at: new Date().toISOString(), by, summary: describeChanges(current, draft) },
-        ],
-      }
-      persist(suppliers.map((s) => (s.supplierId === supplierId ? updated : s)))
+    const update = async (supplierId: number, draft: SupplierDraft) => {
+      const updated = await apiPut<Supplier>(`/api/suppliers/${supplierId}`, toBody(draft))
+      apply(replace(updated))
       return updated
     }
 
-    const deactivate = (supplierId: number, deactivation: Deactivation) => {
-      persist(
-        suppliers.map((s) =>
-          s.supplierId === supplierId
-            ? { ...s, status: 'CANCELLED' as const, deactivation }
-            : s,
-        ),
-      )
+    // at / by ของ Deactivation เซิร์ฟเวอร์เติมเอง ส่งไปด้วยจะโดน DisallowUnknownFields ปฏิเสธ
+    const deactivate = async (supplierId: number, deactivation: Deactivation) => {
+      const updated = await apiPost<Supplier>(`/api/suppliers/${supplierId}/deactivate`, {
+        reason: deactivation.reason,
+        note: deactivation.note,
+      })
+      apply(replace(updated))
     }
 
-    return { suppliers, findById, findByCompanyName, add, update, deactivate }
-  }, [suppliers])
+    return {
+      suppliers,
+      loading,
+      error,
+      reload,
+      findById,
+      findByCompanyName,
+      add,
+      update,
+      deactivate,
+    }
+  }, [data, loading, error, reload, apply])
 
   return <SupplierContext.Provider value={value}>{children}</SupplierContext.Provider>
-}
-
-const FIELD_LABELS: Record<string, string> = {
-  companyName: 'ชื่อบริษัท',
-  contactName: 'ผู้ติดต่อ',
-  phone: 'เบอร์โทร',
-  email: 'อีเมล',
-  address: 'ที่อยู่',
-  tradeTerms: 'เงื่อนไขการค้า',
-  creditTerms: 'เงื่อนไขเครดิต',
-}
-
-function describeChanges(before: Supplier, after: SupplierDraft) {
-  const changed = Object.keys(FIELD_LABELS).filter(
-    (field) =>
-      before[field as keyof Supplier] !== after[field as keyof SupplierDraft],
-  )
-  if (before.books.length !== after.books.length) changed.push('books')
-
-  const labels = changed.map((field) => FIELD_LABELS[field] ?? 'รายการหนังสือ')
-  return labels.length ? `แก้ไข ${labels.join(', ')}` : 'บันทึกข้อมูลโดยไม่มีการเปลี่ยนแปลง'
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

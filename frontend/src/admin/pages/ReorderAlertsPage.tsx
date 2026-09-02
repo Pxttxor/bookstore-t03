@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import { useToast } from '../components/ToastContext'
 import { formatBookCode, isBelowReorder } from '../inventory/inventory'
 import { useInventory } from '../inventory/InventoryContext'
@@ -21,7 +23,7 @@ function suggestedQuantity(onHand: number, reorderPoint: number | undefined) {
 
 export default function ReorderAlertsPage() {
   const { user } = useAuth()
-  const { items, setReorderPoint } = useInventory()
+  const { items, setReorderPoint, loading, error, reload } = useInventory()
   const { suppliers } = useSuppliers()
   const { notify } = useToast()
   const navigate = useNavigate()
@@ -75,15 +77,19 @@ export default function ReorderAlertsPage() {
     setDraftPoint(current === undefined ? '' : String(current))
   }
 
-  const saveReorderPoint = (bookId: number) => {
+  const saveReorderPoint = async (bookId: number) => {
     const value = Number(draftPoint)
     if (!Number.isFinite(value) || value < 0) {
       notify('error', 'จุดสั่งซื้อต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป')
       return
     }
-    setReorderPoint(bookId, value)
-    setEditing(null)
-    notify('success', `ตั้งจุดสั่งซื้อ ${formatBookCode(bookId)} เป็น ${value} เล่มแล้ว`)
+    try {
+      await setReorderPoint(bookId, value)
+      setEditing(null)
+      notify('success', `ตั้งจุดสั่งซื้อ ${formatBookCode(bookId)} เป็น ${value} เล่มแล้ว`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ตั้งจุดสั่งซื้อไม่สำเร็จ')
+    }
   }
 
   const createRequisition = () => {
@@ -139,7 +145,11 @@ export default function ReorderAlertsPage() {
       )}
 
       <section className="admin-card">
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดรายการที่ถึงจุดสั่งซื้อ…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon="check-circle"
             title="ยังไม่มีสินค้าถึงจุดสั่งซื้อ"
@@ -200,13 +210,15 @@ export default function ReorderAlertsPage() {
                               className="admin-input alerts__input"
                               value={draftPoint}
                               onChange={(e) => setDraftPoint(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && saveReorderPoint(item.bookId)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') void saveReorderPoint(item.bookId)
+                              }}
                             />
                             <button
                               type="button"
                               className="icon-btn"
                               title="บันทึก"
-                              onClick={() => saveReorderPoint(item.bookId)}
+                              onClick={() => void saveReorderPoint(item.bookId)}
                             >
                               <Icon name="check" size={17} />
                             </button>

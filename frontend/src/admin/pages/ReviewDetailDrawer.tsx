@@ -3,6 +3,7 @@ import { getBook } from '../../data/books'
 import Icon from '../../components/Icon'
 import RatingStars from '../../components/RatingStars'
 import StatusBadge from '../components/StatusBadge'
+import { slugForBookId } from '../orders/orders'
 import type { Review } from '../reviews/reviews'
 import './ReviewDetailDrawer.css'
 
@@ -19,6 +20,10 @@ export default function ReviewDetailDrawer({
 }: ReviewDetailDrawerProps) {
   const [replyText, setReplyText] = useState('')
   const [isReplying, setIsReplying] = useState(false)
+
+  // review.bookId เป็นรหัสของแคตตาล็อกหลัง ส่วนรูปปกอยู่ในแคตตาล็อกหน้าร้านที่ key ด้วย slug
+  const slug = slugForBookId(review.bookId)
+  const coverFromCatalogue = slug ? getBook(slug)?.cover : undefined
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -72,9 +77,9 @@ export default function ReviewDetailDrawer({
             </h3>
             <div className="drawer-book-card">
               <div className="drawer-book-cover">
-                {(review.coverUrl || getBook(review.bookId)?.cover) ? (
+                {(review.coverUrl || coverFromCatalogue) ? (
                   <img
-                    src={review.coverUrl || getBook(review.bookId)?.cover}
+                    src={review.coverUrl || coverFromCatalogue}
                     alt={review.bookTitle}
                     loading="lazy"
                     decoding="async"

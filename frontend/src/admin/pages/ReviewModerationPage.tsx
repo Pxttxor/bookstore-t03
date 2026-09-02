@@ -5,9 +5,12 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import { useToast } from '../components/ToastContext'
 import { getBook } from '../../data/books'
+import { slugForBookId } from '../orders/orders'
 import { useReviews } from '../reviews/ReviewContext'
 import type { Review } from '../reviews/reviews'
 import ReviewDetailDrawer from './ReviewDetailDrawer'
@@ -28,6 +31,9 @@ export default function ReviewModerationPage() {
     reportedCount,
     reply,
     reportToManager,
+    loading,
+    error,
+    reload,
   } = useReviews()
   const { notify } = useToast()
 
@@ -92,41 +98,31 @@ export default function ReviewModerationPage() {
   const currentPage = Math.min(page, pageCount)
   const rows = filteredReviews.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  const handleReplySubmit = (text: string) => {
+  // ผู้ตอบกลับมาจาก JWT ฝั่งเซิร์ฟเวอร์แล้ว หน้าจอไม่ต้องส่ง repliedBy ไปเอง
+  // และไม่ต้องประกอบแถวคำตอบกลับเองเพื่อ optimistic update — รอ reload() แทน
+  // ไม่งั้นตัวเลข replyId ที่เดาขึ้นมาจะไม่ตรงกับที่ฐานข้อมูลออกให้จริง
+  const handleReplySubmit = async (text: string) => {
     const targetReview = replyReview || detailReview
     if (!targetReview) return
-    reply(targetReview.reviewId, {
-      replyText: text,
-      repliedBy: user?.name || 'ฝ่ายขาย',
-    })
-    notify('success', `บันทึกคำตอบกลับถึง ${targetReview.customerName} เรียบร้อยแล้ว`)
-    setReplyReview(null)
-    if (detailReview?.reviewId === targetReview.reviewId) {
-      setDetailReview((prev) =>
-        prev
-          ? {
-              ...prev,
-              reply: {
-                replyId: (prev.reply?.replyId || 0) + 1,
-                replyText: text,
-                repliedDate: new Date().toISOString(),
-                repliedBy: user?.name || 'ฝ่ายขาย',
-              },
-            }
-          : null,
-      )
+    try {
+      await reply(targetReview.reviewId, { replyText: text })
+      notify('success', `บันทึกคำตอบกลับถึง ${targetReview.customerName} เรียบร้อยแล้ว`)
+      setReplyReview(null)
+      setDetailReview(null)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกคำตอบกลับไม่สำเร็จ')
     }
   }
 
-  const handleReportSubmit = (reason: string, detailText: string) => {
+  const handleReportSubmit = async (reason: string, detailText: string) => {
     if (!reportReview) return
-    reportToManager(reportReview.reviewId, {
-      reason,
-      detail: detailText,
-      reportedBy: user?.name || 'ฝ่ายขาย',
-    })
-    notify('warning', `ส่งรายงานรีวิวของคุณ ${reportReview.customerName} ให้ผู้จัดการแล้ว`)
-    setReportReview(null)
+    try {
+      await reportToManager(reportReview.reviewId, { reason, detail: detailText })
+      notify('warning', `ส่งรายงานรีวิวของคุณ ${reportReview.customerName} ให้ผู้จัดการแล้ว`)
+      setReportReview(null)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ส่งรายงานไม่สำเร็จ')
+    }
   }
 
   const getInitials = (name: string) => {
@@ -208,7 +204,11 @@ export default function ReviewModerationPage() {
 
       {/* Review Cards */}
       <section className="review-cards-container-sales">
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดรีวิว…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon="star"
             title="ไม่พบข้อมูลรีวิว"
@@ -216,7 +216,10 @@ export default function ReviewModerationPage() {
           />
         ) : (
           rows.map((review) => {
-            const bookCover = review.coverUrl || getBook(review.bookId)?.cover
+            // รหัสหนังสือเป็นของแคตตาล็อกหลัง · รูปปกอยู่ในแคตตาล็อกหน้าร้านที่ key ด้วย slug
+            const bookSlug = slugForBookId(review.bookId)
+            const bookCover =
+              review.coverUrl || (bookSlug ? getBook(bookSlug)?.cover : undefined)
             const isReported = !!review.report?.isReported
             const isFlagged = review.flagged
 
@@ -385,13 +388,13 @@ export default function ReviewModerationPage() {
       )}
 
       {detailReview && (
-        <ReviewDetailDrawer review={detailReview} onClose={() => setDetailReview(null)} onReply={handleReplySubmit} />
+        <ReviewDetailDrawer review={detailReview} onClose={() => setDetailReview(null)} onReply={(text) => void handleReplySubmit(text)} />
       )}
       {replyReview && (
-        <ReviewReplyModal review={replyReview} onClose={() => setReplyReview(null)} onSubmit={handleReplySubmit} />
+        <ReviewReplyModal review={replyReview} onClose={() => setReplyReview(null)} onSubmit={(text) => void handleReplySubmit(text)} />
       )}
       {reportReview && (
-        <ReportToManagerModal review={reportReview} onClose={() => setReportReview(null)} onSubmit={handleReportSubmit} />
+        <ReportToManagerModal review={reportReview} onClose={() => setReportReview(null)} onSubmit={(reason, detail) => void handleReportSubmit(reason, detail)} />
       )}
       {statusReview && (
         <ReportStatusModal review={statusReview} onClose={() => setStatusReview(null)} />

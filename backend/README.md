@@ -59,6 +59,44 @@ go run ./cmd/api -migrate -seed
 
 ---
 
+## ดูข้อมูลในฐานด้วย pgAdmin
+
+`docker-compose.yml` มี pgAdmin มาให้แล้ว ไม่ต้องลง `psql` บนเครื่อง
+
+```bash
+docker compose up -d          # เปิด PostgreSQL (5433) + pgAdmin (5050)
+docker compose up -d db       # เอาเฉพาะฐานข้อมูล
+```
+
+เปิด `http://localhost:5050` (ถ้ารันบน Pi ใช้ `http://<ip ของ Pi>:5050`)
+
+| | ค่าปริยาย | เปลี่ยนด้วย |
+|---|---|---|
+| อีเมลเข้า pgAdmin | `admin@bookhaven.co.th` | `PGADMIN_EMAIL` |
+| รหัสผ่านเข้า pgAdmin | `bookstore` | `PGADMIN_PASSWORD` |
+| รหัสผ่านของ role `bookstore` | `bookstore` | `POSTGRES_PASSWORD` |
+
+เซิร์ฟเวอร์ **bookstore-t03 (db)** ถูกลงทะเบียนไว้ให้แล้วจาก
+[`pgadmin-servers.json`](pgadmin-servers.json) — กดเข้าไปแล้วใส่รหัสผ่านของ role `bookstore`
+ครั้งเดียว (ติ๊ก *Save Password* ไว้ได้)
+
+**ข้อควรรู้**
+
+- ในหน้าตั้งค่าเซิร์ฟเวอร์ host คือ **`db`** พอร์ต **`5432`** ไม่ใช่ `localhost:5433` —
+  สองคอนเทนเนอร์คุยกันในเครือข่ายของ compose ส่วน `5433` เป็นพอร์ตที่ map ออกมาให้เครื่องข้างนอก
+- แก้ `pgadmin-servers.json` แล้วต้องลบ volume ของ pgAdmin ก่อนถึงจะมีผล
+  (`docker compose down -v` หรือ `docker volume rm bookstore-t03_bookstore_t03_pgadmin`)
+  เพราะไฟล์นี้ถูกอ่านตอนสร้างฐานข้อมูลของ pgAdmin ครั้งแรกครั้งเดียว
+- **ฐานข้อมูลของทีมที่ใช้อยู่จริงคือ compose ชุดนี้เอง ที่รันอยู่บน Pi 5**
+  (`DATABASE_URL` ใน `.env` ชี้ไป `192.168.8.190:5433` ซึ่งตรงกับ `5433:5432` ข้างบน)
+  → สั่ง `docker compose up -d` **บน Pi** ทั้งทีมจะได้ pgAdmin ที่ `http://192.168.8.190:5050`
+  ต่อเข้าฐานเดียวกันทันที ไม่ต้องตั้งค่าอะไรเพิ่ม
+- pgAdmin เปิดพอร์ต 5050 ให้ทั้งวง LAN เข้าถึงได้ · **ตั้ง `PGADMIN_PASSWORD` ให้ไม่ใช่ค่าปริยาย
+  ถ้ารันบน Pi** ไม่งั้นใครในวงเดียวกันก็เข้ามาแก้ฐานได้ (หัวข้อ *ติดตั้งบน Pi* ข้างล่างจำกัด
+  ฐานข้อมูลไว้ที่ subnet เดียว แต่พอร์ตของ pgAdmin ไม่ได้ถูกจำกัดด้วย)
+
+---
+
 ## ติดตั้ง PostgreSQL บน Raspberry Pi
 
 ```bash
@@ -518,4 +556,7 @@ SELECT status, count(*) FROM purchase_order GROUP BY status;
 - การส่งอีเมลจริง — บันทึกลงตาราง `notification` ช่อง `email` ไว้ให้ SCR-27 แสดงเส้นทางเอกสาร
   แต่ไม่ได้ส่งออกไปจริง (เหมือนที่ frontend ทำ)
 - การเก็บไฟล์แนบ — หลักฐานการส่งคืนเก็บเป็น data URL ในคอลัมน์ `text`
-- การต่อ frontend เข้ากับ API — ยังเป็น `localStorage` อยู่ เป็นงานรอบถัดไป
+- deploy / CI — รันบนเครื่องกับ Pi เท่านั้น
+
+> **การต่อ frontend เข้ากับ API ไม่ใช่ของนอกขอบเขตอีกแล้ว** — ทำเสร็จเมื่อ 2 ก.ย. 69
+> ทุกหน้าจอใน `../frontend/` อ่าน/เขียนผ่าน REST ลง PostgreSQL แล้ว

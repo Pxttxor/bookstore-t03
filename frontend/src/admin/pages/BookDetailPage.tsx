@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useResource } from '../../api/useResource'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import StatTile from '../components/StatTile'
 import StatusBadge from '../components/StatusBadge'
 import { useBooks } from '../books/BookContext'
@@ -37,13 +40,48 @@ const whenText = (iso: string) => new Date(iso).toLocaleString('th-TH')
 export default function BookDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const { findById, categoryName } = useBooks()
+  const { findById, categoryName, changeLogs, loading, error, reload } = useBooks()
   const { findByBookId, transactionsForBook } = useInventory()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState<Tab>('changes')
 
-  const book = findById(Number(id))
+  const bookId = Number(id)
+
+  // ประวัติการแก้ไขไม่ได้ติดมากับ GET /api/books — เป็น endpoint ของตัวเอง
+  // (`bookDTO` ฝั่ง Go ไม่มีฟิลด์นี้) จึงโหลดแยกตรงนี้
+  const loadChanges = useCallback(() => changeLogs(bookId), [changeLogs, bookId])
+  const { data: changeRows } = useResource(loadChanges, Number.isInteger(bookId))
+
+  // รายการเคลื่อนไหวสต็อกก็เป็น endpoint ของตัวเองเช่นกัน — ไม่มีลิสต์รวมทั้งระบบให้ดึง
+  const loadMovements = useCallback(
+    () => transactionsForBook(bookId),
+    [transactionsForBook, bookId],
+  )
+  const { data: movementRows } = useResource(loadMovements, Number.isInteger(bookId))
+
+  const book = findById(bookId)
+
+  // ต้องมาก่อนการเช็ค "ไม่พบข้อมูล" ไม่งั้นระหว่างโหลดจะขึ้นว่าไม่พบทุกครั้งที่เปิดหน้า
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลหนังสือ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
 
   if (!book) {
     return (
@@ -68,8 +106,8 @@ export default function BookDetailPage() {
   }
 
   const item = findByBookId(book.bookId)
-  const movements = transactionsForBook(book.bookId)
-  const changes = [...book.changeLogs].reverse()
+  const movements = movementRows ?? []
+  const changes = [...(changeRows ?? [])].reverse()
   const level = item ? stockLevel(item) : undefined
 
   return (

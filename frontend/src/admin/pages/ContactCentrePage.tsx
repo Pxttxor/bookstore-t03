@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import ContactCard from '../components/ContactCard'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import StatusBadge from '../components/StatusBadge'
 import { useNotifications } from '../notifications/NotificationContext'
 import { can } from '../permissions'
@@ -79,8 +81,14 @@ const ROUTING = [
 
 export default function ContactCentrePage() {
   const { user } = useAuth()
-  const { suppliers } = useSuppliers()
-  const { listFor } = useNotifications()
+  const { suppliers, loading: supplierLoading, error: supplierError, reload: reloadSuppliers } =
+    useSuppliers()
+  const {
+    listFor,
+    loading: notificationLoading,
+    error: notificationError,
+    reload: reloadNotifications,
+  } = useNotifications()
   const [tab, setTab] = useState<Tab>('directory')
 
   const role = user!.role
@@ -150,7 +158,12 @@ export default function ContactCentrePage() {
             </div>
 
             <h2 className="contacts__heading">ผู้จัดจำหน่าย</h2>
-            {activeSuppliers.length === 0 ? (
+            {/* ต้องเช็คก่อน activeSuppliers.length ไม่งั้นระหว่างโหลดจะขึ้นว่ายังไม่มีผู้จัดจำหน่าย */}
+            {supplierLoading ? (
+              <LoadingState label="กำลังโหลดรายชื่อผู้จัดจำหน่าย…" />
+            ) : supplierError ? (
+              <ErrorState message={supplierError} onRetry={() => void reloadSuppliers()} />
+            ) : activeSuppliers.length === 0 ? (
               <EmptyState
                 icon="building"
                 title="ยังไม่มีผู้จัดจำหน่ายในระบบ"
@@ -214,10 +227,17 @@ export default function ContactCentrePage() {
             <p className="contacts__note">
               <Icon name="help" size={16} />
               รายการนี้แสดงทั้งการแจ้งเตือนในระบบและสำเนาอีเมลที่ระบบบันทึกไว้
-              โปรเจกต์นี้ยังไม่มีระบบหลังบ้าน อีเมลจึงเป็นการจำลองเท่านั้น
+              ระบบบันทึกเส้นทางเอกสารลงฐานข้อมูลจริง แต่ยังไม่ได้ส่งอีเมลออกจริง
             </p>
 
-            {notifications.length === 0 ? (
+            {notificationLoading ? (
+              <LoadingState label="กำลังโหลดการแจ้งเตือน…" />
+            ) : notificationError ? (
+              <ErrorState
+                message={notificationError}
+                onRetry={() => void reloadNotifications()}
+              />
+            ) : notifications.length === 0 ? (
               <EmptyState
                 icon="bell"
                 title="ยังไม่มีการแจ้งเตือน"

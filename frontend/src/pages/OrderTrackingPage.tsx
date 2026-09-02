@@ -8,6 +8,7 @@ import {
   formatOrderCode,
   milestoneOf,
   ORDER_STATUS_LABELS,
+  slugForBookId,
   type CustomerOrder,
 } from '../admin/orders/orders'
 import './OrderTrackingPage.css'
@@ -180,7 +181,10 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
             <h3 className="track__panel-title">Items Ordered</h3>
             <ul className="track__items">
               {order.items.map((line) => {
-                const book = getBook(line.bookId)
+                // รายการในใบเก็บเป็นรหัสหนังสือของแคตตาล็อกหลัง ส่วนปกอยู่ในแคตตาล็อก
+                // หน้าร้านที่ key ด้วย slug — แปลงกลับก่อนหา
+                const slug = slugForBookId(line.bookId)
+                const book = slug ? getBook(slug) : undefined
                 return (
                   <li key={line.bookId} className="track__item">
                     {book && (
@@ -206,9 +210,11 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 <Icon name="star" size={18} filled /> Review &amp; Rate
               </h3>
               <div className="track__reviews">
-                {order.items.map((line) => (
-                  <ReviewForm key={line.bookId} id={line.bookId} />
-                ))}
+                {order.items.map((line) => {
+                  const reviewSlug = slugForBookId(line.bookId)
+                  if (!reviewSlug) return null
+                  return <ReviewForm key={line.bookId} id={reviewSlug} />
+                })}
               </div>
             </section>
           )}

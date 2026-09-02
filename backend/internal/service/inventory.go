@@ -121,6 +121,18 @@ func (s *InventoryService) stockRows() ([]StockRow, error) {
 	return rows, nil
 }
 
+// TransactionsForBook — ประวัติการเคลื่อนไหวสต็อกของหนังสือเล่มหนึ่ง ล่าสุดขึ้นก่อน
+//
+// หน้ารายละเอียดหนังสือหลังร้านแสดงตารางนี้ (แท็บการเคลื่อนไหว) · อ่านอย่างเดียว
+// รายการถูกเขียนโดย U9 (RECEIVE_IN) · U10 (RETURN) · การปรับยอดด้วยมือ · การแพ็กคำสั่งซื้อลูกค้า
+// ตรวจว่ามีหนังสือเล่มนี้จริงก่อน เพื่อให้ id มั่วได้ 404 แทนที่จะได้ลิสต์ว่างที่ดูเหมือนปกติ
+func (s *InventoryService) TransactionsForBook(bookID int) ([]model.StockTransaction, error) {
+	if _, err := s.books.Find(s.db, bookID); err != nil {
+		return nil, err
+	}
+	return s.inventory.TransactionsForBook(bookID)
+}
+
 // ── ปรับยอดด้วยมือ ──────────────────────────────────────────────────────
 
 // AdjustStock — พนักงานคลังปรับยอดคงเหลือเอง (`InventoryItem.adjust(qty, reason)`)

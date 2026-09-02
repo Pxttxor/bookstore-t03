@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
@@ -27,7 +29,16 @@ type Tab = 'PENDING' | 'ALL'
 export default function StockDiscrepancyPage() {
   const { user } = useAuth()
   const { findById } = useBooks()
-  const { reports, findByBookId, findCount, resolveDiscrepancy, rejectDiscrepancy } = useInventory()
+  const {
+    reports,
+    findByBookId,
+    findCount,
+    resolveDiscrepancy,
+    rejectDiscrepancy,
+    loading,
+    error,
+    reload,
+  } = useInventory()
   const { notify } = useToast()
   const navigate = useNavigate()
 
@@ -35,6 +46,7 @@ export default function StockDiscrepancyPage() {
   const [openId, setOpenId] = useState<number | null>(null)
   const [note, setNote] = useState('')
   const [noteError, setNoteError] = useState<string>()
+  const [deciding, setDeciding] = useState(false)
 
   const role = user!.role
 
@@ -70,19 +82,28 @@ export default function StockDiscrepancyPage() {
     setNoteError(undefined)
   }
 
-  const decide = (approve: boolean) => {
-    if (!open) return
+  const decide = async (approve: boolean) => {
+    if (!open || deciding) return
     if (!note.trim()) {
       setNoteError('กรุณาระบุสาเหตุก่อนบันทึก')
       return
     }
-    if (approve) {
-      resolveDiscrepancy(open.reportId, note.trim(), user!.name)
-    } else {
-      rejectDiscrepancy(open.reportId, note.trim(), user!.name)
+    setDeciding(true)
+    try {
+      // ผู้ตัดสินมาจาก JWT · การอนุมัติ = ตั้งยอดเท่าที่นับได้ (เซิร์ฟเวอร์คำนวณสด
+      // ไม่ใช่บวก variance ที่เก็บไว้ ซึ่งอาจล้าสมัยไปแล้ว)
+      if (approve) {
+        await resolveDiscrepancy(open.reportId, note.trim())
+      } else {
+        await rejectDiscrepancy(open.reportId, note.trim())
+      }
+      notify('success', 'แก้ไขเสร็จสิ้น')
+      close()
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกผลการตัดสินไม่สำเร็จ')
+    } finally {
+      setDeciding(false)
     }
-    notify('success', 'แก้ไขเสร็จสิ้น')
-    close()
   }
 
   return (
@@ -120,7 +141,11 @@ export default function StockDiscrepancyPage() {
           </div>
         </div>
 
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดรายงานผลต่าง…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon="check-circle"
             title="ไม่มีรายงานผลต่างที่รอดำเนินการ"
@@ -219,14 +244,16 @@ export default function StockDiscrepancyPage() {
               <button
                 type="button"
                 className="btn btn-danger btn-sm"
-                onClick={() => decide(false)}
+                disabled={deciding}
+                onClick={() => void decide(false)}
               >
                 ปฏิเสธรายงาน
               </button>
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
-                onClick={() => decide(true)}
+                disabled={deciding}
+                onClick={() => void decide(true)}
               >
                 <Icon name="check" size={17} />
                 รับทราบและอัพเดทจำนวน

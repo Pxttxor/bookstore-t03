@@ -64,6 +64,7 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodGet, "/api/books"},
 		{http.MethodGet, "/api/books/101"},
 		{http.MethodGet, "/api/books/101/change-logs"},
+		{http.MethodGet, "/api/books/101/stock-transactions"},
 		{http.MethodPost, "/api/books"},
 		{http.MethodPut, "/api/books/101"},
 		{http.MethodPost, "/api/books/101/status"},

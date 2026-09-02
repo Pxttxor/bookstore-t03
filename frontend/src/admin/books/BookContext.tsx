@@ -1,127 +1,116 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost, apiPut } from '../../api/client'
+import { useResource } from '../../api/useResource'
 import {
-  BOOK_FIELD_LABELS,
-  BOOK_STATUS_LABELS,
-  SEED_BOOKS,
-  SEED_CATEGORIES,
   searchBook,
   type Book,
-  type BookField,
+  type BookChangeLog,
   type BookStatus,
   type Category,
 } from './books'
 
-const STORAGE_KEY = 'bookhaven.books.v1'
+// ข้อมูลอยู่ในตาราง book / category / book_change_log ของ PostgreSQL แล้ว
+// เดิมเก็บใน localStorage คีย์ bookhaven.books.v1
+//
+// หมวดหมู่โหลดคู่กันเพราะทุกหน้าที่แสดงหนังสือต้องใช้ชื่อหมวดหมู่ และเปลี่ยนแปลงน้อยมาก
+// (`GET /api/categories` เป็น read-only — ตารางนี้ backfill จาก migrate.go)
+const loadCatalogue = async () => {
+  const [books, categories] = await Promise.all([
+    apiGet<Book[]>('/api/books'),
+    apiGet<Category[]>('/api/categories'),
+  ])
+  return { books, categories }
+}
 
 export type BookDraft = Omit<Book, 'bookId' | 'changeLogs'>
 
 interface BookValue {
   books: Book[]
   categories: Category[]
+  loading: boolean
+  error: string | null
+  reload: () => Promise<void>
   findById: (bookId: number) => Book | undefined
   /** Backs the "พบ ISBN ซ้ำ" check; ignoreId lets a book keep its own ISBN on edit. */
   findByIsbn: (isbn: string, ignoreId?: number) => Book | undefined
   categoryName: (categoryId: number) => string
   /** Book.search() plus the category filter of the search use case. */
   search: (keyword: string, categoryId?: number) => Book[]
-  /** Book.add() — allocates the next bookId. */
-  add: (draft: BookDraft) => Book
-  /** Book.update() — writes one BookChangeLog row per field that actually changed. */
-  update: (bookId: number, draft: BookDraft, by: string) => Book
-  setStatus: (bookId: number, status: BookStatus, by: string) => void
+  /** Book.add() — bookId มาจาก sequence ของ PostgreSQL ไม่ใช่ max+1 ฝั่งนี้ */
+  add: (draft: BookDraft) => Promise<Book>
+  /** Book.update() — เซิร์ฟเวอร์เขียน book_change_log ให้เองทีละฟิลด์ที่เปลี่ยนจริง */
+  update: (bookId: number, draft: BookDraft) => Promise<Book>
+  setStatus: (bookId: number, status: BookStatus) => Promise<void>
+  /**
+   * ประวัติการแก้ไขของเล่มหนึ่ง — ไม่ได้ติดมากับ `GET /api/books` เพราะเป็นคนละ endpoint
+   * (`bookDTO` ไม่มีฟิลด์นี้) หน้ารายละเอียดจึงต้องเรียกเอง
+   */
+  changeLogs: (bookId: number) => Promise<BookChangeLog[]>
 }
 
 const BookContext = createContext<BookValue | null>(null)
 
-function read(): Book[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return SEED_BOOKS
-    const parsed = JSON.parse(raw) as Book[]
-    return Array.isArray(parsed) && parsed.length ? parsed : SEED_BOOKS
-  } catch {
-    return SEED_BOOKS
-  }
-}
-
-function write(books: Book[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(books))
-}
-
 const isbnKey = (isbn: string) => isbn.trim().toLowerCase()
 
-const CHANGE_FIELDS = Object.keys(BOOK_FIELD_LABELS) as BookField[]
-
-// The diagram types oldValue / newValue as plain strings, so the history reads better
-// with the label a user would recognise rather than the raw foreign key.
-function fieldValue(source: BookDraft, field: BookField, categories: Category[]) {
-  if (field === 'categoryId') {
-    return categories.find((c) => c.categoryId === source.categoryId)?.name ?? String(source.categoryId)
-  }
-  if (field === 'status') return BOOK_STATUS_LABELS[source.status]
-  return String(source[field] ?? '')
-}
+// ฟิลด์ที่ BookDraft ฝั่ง Go รับ — handler เปิด DisallowUnknownFields ส่งเกินได้ 422
+const toBody = (draft: BookDraft) => ({
+  isbn: draft.isbn,
+  title: draft.title,
+  author: draft.author,
+  publisher: draft.publisher,
+  price: draft.price,
+  description: draft.description,
+  categoryId: draft.categoryId,
+  status: draft.status,
+})
 
 export function BookProvider({ children }: { children: ReactNode }) {
-  const [books, setBooks] = useState<Book[]>(read)
+  const { data, loading, error, reload, apply } = useResource(loadCatalogue)
 
   const value = useMemo<BookValue>(() => {
-    const persist = (next: Book[]) => {
-      write(next)
-      setBooks(next)
-    }
+    const books = data?.books ?? []
+    const categories = data?.categories ?? []
 
     const findById = (bookId: number) => books.find((b) => b.bookId === bookId)
 
     const categoryName = (categoryId: number) =>
-      SEED_CATEGORIES.find((c) => c.categoryId === categoryId)?.name ?? 'ไม่ระบุหมวดหมู่'
+      categories.find((c) => c.categoryId === categoryId)?.name ?? 'ไม่ระบุหมวดหมู่'
 
-    // Appends the change log rows for every field that differs, newest last.
-    const logChanges = (current: Book, draft: BookDraft, by: string) => {
-      let nextLogId = current.changeLogs.reduce((max, log) => Math.max(max, log.logId), 0) + 1
-      const changedDate = new Date().toISOString()
+    // ทั้งสามเส้นทางคืนเล่มที่อัปเดตแล้วผ่าน toBookDTO ตัวเดียวกับตอนอ่านลิสต์
+    // จึงต่อลงชุดเดิมได้เลย · หมวดหมู่เป็น read-only ไม่ต้องแตะ
+    const replace = (updated: Book) => (current: { books: Book[]; categories: Category[] }) => ({
+      ...current,
+      books: current.books.map((row) => (row.bookId === updated.bookId ? updated : row)),
+    })
 
-      const rows = CHANGE_FIELDS.filter(
-        (field) => fieldValue(current, field, SEED_CATEGORIES) !== fieldValue(draft, field, SEED_CATEGORIES),
-      ).map((field) => ({
-        logId: nextLogId++,
-        changedField: field,
-        oldValue: fieldValue(current, field, SEED_CATEGORIES),
-        newValue: fieldValue(draft, field, SEED_CATEGORIES),
-        changedDate,
-        changedBy: by,
+    const add = async (draft: BookDraft) => {
+      const created = await apiPost<Book>('/api/books', toBody(draft))
+      // เรียงตามรหัสให้ตรงกับ ORDER BY book_id ของ repository
+      apply((current) => ({
+        ...current,
+        books: [...current.books, created].sort((a, b) => a.bookId - b.bookId),
       }))
-
-      return [...current.changeLogs, ...rows]
-    }
-
-    const add = (draft: BookDraft) => {
-      // Seeded ids run 101-123, so a new title continues from 124.
-      const nextId = books.reduce((max, b) => Math.max(max, b.bookId), 100) + 1
-      // BookChangeLog is an edit history, so a brand new title starts with none.
-      const created: Book = { ...draft, bookId: nextId, changeLogs: [] }
-      persist([...books, created])
       return created
     }
 
-    const update = (bookId: number, draft: BookDraft, by: string) => {
-      const current = books.find((b) => b.bookId === bookId)
-      if (!current) throw new Error('ไม่พบข้อมูลหนังสือ')
-
-      const updated: Book = { ...current, ...draft, changeLogs: logChanges(current, draft, by) }
-      persist(books.map((b) => (b.bookId === bookId ? updated : b)))
+    // ผู้แก้ไขมาจาก JWT ฝั่งเซิร์ฟเวอร์ — เดิมหน้าจอคำนวณ change log เองแล้วส่งมาทั้งก้อน
+    const update = async (bookId: number, draft: BookDraft) => {
+      const updated = await apiPut<Book>(`/api/books/${bookId}`, toBody(draft))
+      apply(replace(updated))
       return updated
     }
 
-    const setStatus = (bookId: number, status: BookStatus, by: string) => {
-      const current = books.find((b) => b.bookId === bookId)
-      if (!current || current.status === status) return
-      update(bookId, { ...current, status }, by)
+    const setStatus = async (bookId: number, status: BookStatus) => {
+      const updated = await apiPost<Book>(`/api/books/${bookId}/status`, { status })
+      apply(replace(updated))
     }
 
     return {
       books,
-      categories: SEED_CATEGORIES,
+      categories,
+      loading,
+      error,
+      reload,
       findById,
       findByIsbn: (isbn: string, ignoreId?: number) =>
         books.find((b) => isbnKey(b.isbn) === isbnKey(isbn) && b.bookId !== ignoreId),
@@ -133,8 +122,10 @@ export function BookProvider({ children }: { children: ReactNode }) {
       add,
       update,
       setStatus,
+      changeLogs: (bookId: number) =>
+        apiGet<BookChangeLog[]>(`/api/books/${bookId}/change-logs`),
     }
-  }, [books])
+  }, [data, loading, error, reload, apply])
 
   return <BookContext.Provider value={value}>{children}</BookContext.Provider>
 }

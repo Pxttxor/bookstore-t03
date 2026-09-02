@@ -3,6 +3,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import StatusBadge from '../components/StatusBadge'
 import { can } from '../permissions'
 import { usePurchasing } from '../purchasing/PurchasingContext'
@@ -21,7 +23,7 @@ import './ReceiptsListPage.css'
 
 export default function ReceiptsListPage() {
   const { user } = useAuth()
-  const { orders, receipts } = usePurchasing()
+  const { orders, receipts, loading, error, reload } = usePurchasing()
   const { suppliers } = useSuppliers()
 
   const role = user!.role
@@ -67,7 +69,11 @@ export default function ReceiptsListPage() {
 
       <section className="admin-card receipts__section">
         <h2 className="receipts__title">รอตรวจรับ</h2>
-        {pending.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดใบรับสินค้า…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : pending.length === 0 ? (
           <EmptyState
             icon="check-circle"
             title="ไม่มีใบสั่งซื้อรอตรวจรับ"

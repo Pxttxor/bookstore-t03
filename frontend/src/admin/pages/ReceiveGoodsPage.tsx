@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import { useToast } from '../components/ToastContext'
 import { formatBookCode } from '../inventory/inventory'
 import { can } from '../permissions'
@@ -29,7 +31,36 @@ interface DraftLine {
   note: string
 }
 
+// ตัวห่อกันไว้ก่อนให้ฟอร์ม mount — ฟอร์มตั้งค่าเริ่มต้นของรายการด้วย useState
+// ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
+// รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function ReceiveGoodsPage() {
+  const { loading, error, reload } = usePurchasing()
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลใบสั่งซื้อ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
+
+  return <ReceiveGoodsForm />
+}
+
+function ReceiveGoodsForm() {
   const { id } = useParams()
   const { user } = useAuth()
   const { suppliers } = useSuppliers()
@@ -41,6 +72,7 @@ export default function ReceiveGoodsPage() {
   const order = findOrder(Number(id))
 
   const [deliveryNoteNo, setDeliveryNoteNo] = useState('')
+  const [saving, setSaving] = useState(false)
   const [lines, setLines] = useState<DraftLine[]>(() =>
     (order?.items ?? []).map((line) => ({
       bookId: line.bookId,
@@ -114,25 +146,32 @@ export default function ReceiveGoodsPage() {
   const totalReceiving = lines.reduce((sum, line) => sum + line.receivedQty, 0)
   const damaged = lines.filter((line) => line.condition === 'DAMAGED' && line.receivedQty > 0)
 
-  const save = () => {
+  const save = async () => {
     if (totalReceiving === 0) {
       notify('error', 'กรุณาระบุจำนวนที่รับจริงอย่างน้อยหนึ่งรายการ')
       return
     }
-    receiveGoods(order.poId, {
-      deliveryNoteNo: deliveryNoteNo.trim(),
-      receivedBy: user!.name,
-      lines: lines
-        .filter((line) => line.receivedQty > 0)
-        .map((line) => ({
-          bookId: line.bookId,
-          receivedQty: line.receivedQty,
-          condition: line.condition,
-          note: line.note.trim(),
-        })),
-    })
-    notify('success', `บันทึกรับสินค้าของ ${formatPOCode(order.poId)} แล้ว · ปรับสต็อกอัตโนมัติ`)
-    navigate(`/admin/purchasing/po/${order.poId}`)
+    if (saving) return
+    setSaving(true)
+    try {
+      // ผู้รับของมาจาก JWT · เซิร์ฟเวอร์เพิ่มยอดสต็อกและแจ้งเตือนในทรานแซกชันเดียวกัน
+      await receiveGoods(order.poId, {
+        deliveryNoteNo: deliveryNoteNo.trim(),
+        lines: lines
+          .filter((line) => line.receivedQty > 0)
+          .map((line) => ({
+            bookId: line.bookId,
+            receivedQty: line.receivedQty,
+            condition: line.condition,
+            note: line.note.trim(),
+          })),
+      })
+      notify('success', `บันทึกรับสินค้าของ ${formatPOCode(order.poId)} แล้ว · ปรับสต็อกอัตโนมัติ`)
+      navigate(`/admin/purchasing/po/${order.poId}`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกรับสินค้าไม่สำเร็จ')
+      setSaving(false)
+    }
   }
 
   return (

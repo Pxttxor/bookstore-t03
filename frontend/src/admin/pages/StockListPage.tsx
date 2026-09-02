@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatTile from '../components/StatTile'
 import StatusBadge from '../components/StatusBadge'
@@ -46,7 +48,7 @@ export default function StockListPage() {
 function StockList({ lowReport }: { lowReport: boolean }) {
   const { user } = useAuth()
   const { books, categories, categoryName } = useBooks()
-  const { items } = useInventory()
+  const { items, loading, error, reload } = useInventory()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState<Tab>(lowReport ? 'LOW' : 'ALL')
@@ -224,7 +226,11 @@ function StockList({ lowReport }: { lowReport: boolean }) {
           )}
         </div>
 
-        {pageRows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดยอดคงเหลือ…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : pageRows.length === 0 ? (
           <EmptyState
             icon="check-circle"
             title={

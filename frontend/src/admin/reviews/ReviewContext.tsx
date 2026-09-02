@@ -1,32 +1,106 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
-import {
-  MODERATE_ACTION_STATUS,
-  SEED_REVIEWS,
-  type ModerateAction,
-  type Review,
-} from './reviews'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost } from '../../api/client'
+import { useResource } from '../../api/useResource'
+import type { ModerateAction, Review, ReviewReply, ReviewStatus } from './reviews'
 
-const STORAGE_KEY = 'bookhaven.reviews.v5'
+// ข้อมูลอยู่ในตาราง review / review_reply / review_report ของ PostgreSQL แล้ว
+// เดิมเก็บใน localStorage คีย์ bookhaven.reviews.v5
+//
+// `reviewDTO` ฝั่ง Go มีเฉพาะฟิลด์ที่ฐานข้อมูลถือจริง ส่วนฟิลด์ตกแต่งของหน้าจอ
+// (รูปปก · avatar · ราคา · ผู้แต่ง) หน้าจอไปหาจากแคตตาล็อกหน้าร้านเองอยู่แล้ว
+// จึงปล่อยว่างไว้ ทุกตัวประกาศเป็น optional อยู่แล้ว
+interface ReviewApiReply {
+  replyId: number
+  replyText: string
+  repliedDate: string
+  repliedBy: string
+}
+
+interface ReviewApiReport {
+  reportId: number
+  reviewId: number
+  reason: string
+  detail?: string
+  reportedBy: string
+  reportedDate: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+}
+
+interface ReviewApiRow {
+  reviewId: number
+  customerName: string
+  bookId: number
+  bookTitle: string
+  orderCode?: string
+  verifiedPurchase: boolean
+  rating: number
+  headline?: string
+  comment: string
+  status: ReviewStatus
+  flagged: boolean
+  createdDate: string
+  replies: ReviewApiReply[]
+  report?: ReviewApiReport
+}
+
+// เก็บคำตอบกลับล่าสุดเป็น `reply` ตัวเดียวตามที่หน้าจอออกแบบไว้
+// (ฐานข้อมูลเก็บได้หลายแถวตาม 1..* ใน class diagram)
+const latestReply = (replies: ReviewApiReply[]): ReviewReply | undefined => {
+  if (!replies.length) return undefined
+  const last = replies[replies.length - 1]
+  return {
+    replyId: last.replyId,
+    replyText: last.replyText,
+    repliedDate: last.repliedDate,
+    repliedBy: last.repliedBy,
+  }
+}
+
+const toReview = (row: ReviewApiRow): Review => ({
+  reviewId: row.reviewId,
+  bookId: row.bookId,
+  bookTitle: row.bookTitle,
+  customerName: row.customerName,
+  verifiedPurchase: row.verifiedPurchase,
+  rating: row.rating,
+  headline: row.headline,
+  comment: row.comment,
+  status: row.status,
+  createdDate: row.createdDate,
+  flagged: row.flagged,
+  reply: latestReply(row.replies),
+  orderId: row.orderCode,
+  report: row.report
+    ? {
+        isReported: true,
+        reason: row.report.reason,
+        detail: row.report.detail,
+        reportedDate: row.report.reportedDate,
+        reportedBy: row.report.reportedBy,
+        managerStatus: row.report.status,
+      }
+    : undefined,
+})
+
+const loadReviews = async () => {
+  const rows = await apiGet<ReviewApiRow[]>('/api/reviews')
+  return rows.map(toReview)
+}
 
 export interface ReplyDraft {
   replyText: string
-  repliedBy: string
 }
 
 export interface ReportDraft {
   reason: string
   detail?: string
-  reportedBy: string
 }
 
 interface ReviewValue {
   reviews: Review[]
+  loading: boolean
+  error: string | null
+  reload: () => Promise<void>
   pendingCount: number
   approvedCount: number
   deletedCount: number
@@ -34,136 +108,76 @@ interface ReviewValue {
   repliedCount: number
   reportedCount: number
   findById: (reviewId: number) => Review | undefined
-  moderate: (reviewId: number, action: ModerateAction) => void
-  approveReview: (reviewId: number) => void
-  hideReview: (reviewId: number) => void
-  removeReview: (reviewId: number) => void
-  reply: (reviewId: number, draft: ReplyDraft) => void
-  reportToManager: (reviewId: number, draft: ReportDraft) => void
+  /**
+   * Review.moderate()
+   *
+   * การตัดสินรายงานที่ยังค้างเกิดพร้อมกันในทรานแซกชันเดียวฝั่งเซิร์ฟเวอร์
+   * (เผยแพร่ = รายงานไม่เป็นผล · ซ่อน/ลบ = รายงานเป็นผล) — ห้ามแยกเป็นสองปุ่ม
+   */
+  moderate: (reviewId: number, action: ModerateAction) => Promise<void>
+  approveReview: (reviewId: number) => Promise<void>
+  hideReview: (reviewId: number) => Promise<void>
+  removeReview: (reviewId: number) => Promise<void>
+  /** ผู้ตอบกลับมาจาก JWT · เซิร์ฟเวอร์ดันสถานะรีวิวเป็น PUBLISHED ให้ด้วย */
+  reply: (reviewId: number, draft: ReplyDraft) => Promise<void>
+  reportToManager: (reviewId: number, draft: ReportDraft) => Promise<void>
 }
 
 const ReviewContext = createContext<ReviewValue | null>(null)
 
-function read(): Review[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return SEED_REVIEWS
-    const parsed = JSON.parse(raw) as Review[]
-    return Array.isArray(parsed) && parsed.length ? parsed : SEED_REVIEWS
-  } catch {
-    return SEED_REVIEWS
-  }
-}
-
-function write(reviews: Review[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reviews))
-}
-
 export function ReviewProvider({ children }: { children: ReactNode }) {
-  const [reviews, setReviews] = useState<Review[]>(read)
+  const { data, loading, error, reload, apply } = useResource(loadReviews)
 
   const value = useMemo<ReviewValue>(() => {
-    const persist = (next: Review[]) => {
-      write(next)
-      setReviews(next)
+    const reviews = data ?? []
+
+    // ตรวจสอบและตอบกลับคืน reviewDTO แถวเดิมที่อัปเดตแล้ว (ตัวเดียวกับที่ลิสต์ใช้)
+    // แปลงด้วย toReview ตัวเดียวกันแล้วต่อลงชุดเดิม — รวมผลของรายงานที่ปิดไปพร้อมกันด้วย
+    const replace = (row: ReviewApiRow) => {
+      const updated = toReview(row)
+      return (list: Review[]) =>
+        list.map((entry) => (entry.reviewId === updated.reviewId ? updated : entry))
     }
 
-    const findById = (reviewId: number) => reviews.find((r) => r.reviewId === reviewId)
-
-    const moderate = (reviewId: number, action: ModerateAction) => {
-      persist(
-        reviews.map((r) => {
-          if (r.reviewId !== reviewId) return r
-          const newStatus = MODERATE_ACTION_STATUS[action]
-          return {
-            ...r,
-            status: newStatus,
-            report: r.report
-              ? {
-                  ...r.report,
-                  managerStatus: action === 'PUBLISH' ? 'APPROVED' : r.report.managerStatus,
-                }
-              : undefined,
-          }
-        }),
-      )
+    const moderate = async (reviewId: number, action: ModerateAction) => {
+      const row = await apiPost<ReviewApiRow>(`/api/reviews/${reviewId}/moderate`, { action })
+      apply(replace(row))
     }
-
-    const approveReview = (reviewId: number) => {
-      moderate(reviewId, 'PUBLISH')
-    }
-
-    const hideReview = (reviewId: number) => {
-      moderate(reviewId, 'HIDE')
-    }
-
-    const removeReview = (reviewId: number) => {
-      moderate(reviewId, 'REMOVE')
-    }
-
-    const reply = (reviewId: number, draft: ReplyDraft) => {
-      persist(
-        reviews.map((r) =>
-          r.reviewId === reviewId
-            ? {
-                ...r,
-                status: 'PUBLISHED' as const,
-                reply: {
-                  replyId: (r.reply?.replyId ?? 0) + 1,
-                  replyText: draft.replyText.trim(),
-                  repliedDate: new Date().toISOString(),
-                  repliedBy: draft.repliedBy,
-                },
-              }
-            : r,
-        ),
-      )
-    }
-
-    const reportToManager = (reviewId: number, draft: ReportDraft) => {
-      persist(
-        reviews.map((r) =>
-          r.reviewId === reviewId
-            ? {
-                ...r,
-                report: {
-                  isReported: true,
-                  reason: draft.reason,
-                  detail: draft.detail,
-                  reportedDate: new Date().toISOString(),
-                  reportedBy: draft.reportedBy,
-                  managerStatus: 'PENDING',
-                },
-              }
-            : r,
-        ),
-      )
-    }
-
-    const pendingCount = reviews.filter((r) => r.status === 'PENDING').length
-    const approvedCount = reviews.filter((r) => r.status === 'PUBLISHED').length
-    const deletedCount = reviews.filter((r) => r.status === 'REMOVED' || r.status === 'HIDDEN').length
-    const unrepliedCount = reviews.filter((r) => !r.reply).length
-    const repliedCount = reviews.filter((r) => !!r.reply).length
-    const reportedCount = reviews.filter((r) => r.report?.isReported).length
 
     return {
       reviews,
-      pendingCount,
-      approvedCount,
-      deletedCount,
-      unrepliedCount,
-      repliedCount,
-      reportedCount,
-      findById,
+      loading,
+      error,
+      reload,
+      pendingCount: reviews.filter((r) => r.status === 'PENDING').length,
+      approvedCount: reviews.filter((r) => r.status === 'PUBLISHED').length,
+      deletedCount: reviews.filter((r) => r.status === 'REMOVED' || r.status === 'HIDDEN')
+        .length,
+      unrepliedCount: reviews.filter((r) => !r.reply).length,
+      repliedCount: reviews.filter((r) => !!r.reply).length,
+      reportedCount: reviews.filter((r) => r.report?.isReported).length,
+      findById: (reviewId: number) => reviews.find((r) => r.reviewId === reviewId),
       moderate,
-      approveReview,
-      hideReview,
-      removeReview,
-      reply,
-      reportToManager,
+      approveReview: (reviewId: number) => moderate(reviewId, 'PUBLISH'),
+      hideReview: (reviewId: number) => moderate(reviewId, 'HIDE'),
+      removeReview: (reviewId: number) => moderate(reviewId, 'REMOVE'),
+      reply: async (reviewId: number, draft: ReplyDraft) => {
+        const row = await apiPost<ReviewApiRow>(`/api/reviews/${reviewId}/replies`, {
+          replyText: draft.replyText.trim(),
+        })
+        apply(replace(row))
+      },
+      // เส้นทางนี้คืน reportDTO ไม่ใช่ reviewDTO — ประกอบฟิลด์ report เองมีโอกาสไม่ตรง
+      // กับที่เซิร์ฟเวอร์เห็น จึงโหลดลิสต์ใหม่ตามเดิม
+      reportToManager: async (reviewId: number, draft: ReportDraft) => {
+        await apiPost(`/api/reviews/${reviewId}/report`, {
+          reason: draft.reason,
+          detail: draft.detail ?? '',
+        })
+        await reload()
+      },
     }
-  }, [reviews])
+  }, [data, loading, error, reload, apply])
 
   return <ReviewContext.Provider value={value}>{children}</ReviewContext.Provider>
 }

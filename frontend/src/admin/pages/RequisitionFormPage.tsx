@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import LineItemsTable, { type LineRow } from '../components/LineItemsTable'
 import StatusBadge from '../components/StatusBadge'
 import Stepper from '../components/Stepper'
@@ -23,7 +25,36 @@ import '../components/AdminForm.css'
 import '../components/DataTable.css'
 import './RequisitionFormPage.css'
 
+// ตัวห่อกันไว้ก่อนให้ฟอร์ม mount — ฟอร์มตั้งค่าเริ่มต้นของรายการด้วย useState
+// ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
+// รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function RequisitionFormPage() {
+  const { loading, error, reload } = usePurchasing()
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลใบขอสั่งซื้อ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
+
+  return <RequisitionForm />
+}
+
+function RequisitionForm() {
   const { id } = useParams()
   const { state } = useLocation() as { state: RequisitionSeedState | null }
   const { user } = useAuth()
@@ -39,6 +70,7 @@ export default function RequisitionFormPage() {
     existing?.supplierId ?? state?.supplierId ?? '',
   )
   const [lines, setLines] = useState<LineRow[]>(existing?.items ?? state?.lines ?? [])
+  const [working, setWorking] = useState(false)
 
   const role = user!.role
   const supplier = suppliers.find((entry) => entry.supplierId === supplierId)
@@ -112,32 +144,47 @@ export default function RequisitionFormPage() {
         ? 'ยอดรวมต้องมากกว่า 0 ก่อนส่งขออนุมัติ'
         : undefined
 
-  const onSaveDraft = () => {
+  // ผู้ขอซื้อมาจาก JWT ฝั่งเซิร์ฟเวอร์ ไม่ต้องส่ง user.name ไปแล้ว
+  const onSaveDraft = async () => {
     if (supplier === undefined) {
       notify('error', 'กรุณาเลือกผู้จัดจำหน่ายก่อนบันทึกร่าง')
       return
     }
-    const saved = saveDraft(
-      { supplierId: supplier.supplierId, items: lines },
-      user!.name,
-      existing?.prId,
-    )
-    notify('success', `บันทึกร่าง ${formatPRCode(saved.prId)} แล้ว`)
-    navigate(`/admin/purchasing/pr/${saved.prId}`, { replace: true })
+    if (working) return
+    setWorking(true)
+    try {
+      const saved = await saveDraft(
+        { supplierId: supplier.supplierId, items: lines },
+        existing?.prId,
+      )
+      notify('success', `บันทึกร่าง ${formatPRCode(saved.prId)} แล้ว`)
+      navigate(`/admin/purchasing/pr/${saved.prId}`, { replace: true })
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกร่างไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (supplier === undefined) return
-    const saved = submitRequisition(
-      { supplierId: supplier.supplierId, items: lines },
-      user!.name,
-      existing?.prId,
-    )
-    notify(
-      'success',
-      `ส่ง ${formatPRCode(saved.prId)} ขออนุมัติแล้ว · แจ้งผู้จัดการร้านอัตโนมัติ`,
-    )
-    navigate('/admin/purchasing')
+    if (working) return
+    setWorking(true)
+    try {
+      // เซิร์ฟเวอร์แจ้งผู้จัดการร้านให้เองในทรานแซกชันเดียวกับการส่งขออนุมัติ
+      const saved = await submitRequisition(
+        { supplierId: supplier.supplierId, items: lines },
+        existing?.prId,
+      )
+      notify(
+        'success',
+        `ส่ง ${formatPRCode(saved.prId)} ขออนุมัติแล้ว · แจ้งผู้จัดการร้านอัตโนมัติ`,
+      )
+      navigate('/admin/purchasing')
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ส่งขออนุมัติไม่สำเร็จ')
+      setWorking(false)
+    }
   }
 
   const title = existing ? `ใบขอสั่งซื้อ ${formatPRCode(existing.prId)}` : 'สร้างใบขอสั่งซื้อ'

@@ -4,6 +4,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import { useToast } from '../components/ToastContext'
 import { useBooks, type BookDraft } from '../books/BookContext'
 import {
@@ -14,6 +16,7 @@ import {
   type BookStatus,
 } from '../books/books'
 import { formatBookCode } from '../inventory/inventory'
+import { useInventory } from '../inventory/InventoryContext'
 import '../components/AdminForm.css'
 import './BookFormPage.css'
 
@@ -23,12 +26,42 @@ type Values = Record<BookField, string>
 // the route switches to a different id.
 export default function BookFormPage() {
   const { id } = useParams()
+  const { loading, error, reload } = useBooks()
+
+  // ต้องกันไว้ที่ตัวห่อ ไม่ใช่ในฟอร์ม — ฟอร์มตั้งค่าเริ่มต้นของช่องกรอกด้วย useState
+  // ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
+  // หน้าแก้ไขจะเปิดมาเป็นช่องว่างทั้งใบและไม่เติมค่าให้ทีหลัง
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลหนังสือ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
+
   return <BookForm key={id ?? 'new'} id={id} />
 }
 
 function BookForm({ id }: { id?: string }) {
   const { user } = useAuth()
   const { findById, findByIsbn, categories, add, update } = useBooks()
+  // เพิ่มหนังสือหนึ่งเล่ม เซิร์ฟเวอร์เปิดแถว inventory_item ยอด 0 ให้ในทรานแซกชันเดียวกัน
+  // (composition Book *-- InventoryItem) หน้าจอสต็อกจึงต้องรู้ด้วย ไม่งั้นเล่มใหม่จะหาย
+  // จากยอดคงเหลือจนกว่าจะรีเฟรชทั้งหน้า · BookProvider อยู่นอก InventoryProvider
+  // จึงเรียกข้ามกันเองไม่ได้ ต้องสั่งจากหน้าจอที่อยู่ในทั้งสองตัว
+  const { reload: reloadInventory } = useInventory()
   const { notify } = useToast()
   const navigate = useNavigate()
 
@@ -46,6 +79,7 @@ function BookForm({ id }: { id?: string }) {
     status: existing?.status ?? 'ACTIVE',
   })
   const [errors, setErrors] = useState<Partial<Record<BookField, string>>>({})
+  const [saving, setSaving] = useState(false)
 
   if (!can.editBooks(user!.role)) {
     return (
@@ -102,7 +136,7 @@ function BookForm({ id }: { id?: string }) {
     return Object.keys(found).length === 0
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     // The flow validates completeness first, then the duplicate ISBN.
     if (!validate()) {
@@ -130,14 +164,23 @@ function BookForm({ id }: { id?: string }) {
       categoryId: Number(values.categoryId),
     }
 
-    if (existing) {
-      update(existing.bookId, draft, user!.name)
-      notify('success', 'บันทึกเสร็จสิ้น')
-      navigate(`/admin/books/${existing.bookId}`)
-    } else {
-      const created = add(draft)
-      notify('success', `บันทึกเสร็จสิ้น (รหัส ${formatBookCode(created.bookId)})`)
-      navigate(`/admin/books/${created.bookId}`)
+    setSaving(true)
+    try {
+      if (existing) {
+        // ผู้แก้ไขมาจาก JWT · เซิร์ฟเวอร์เขียน book_change_log ให้เองทีละฟิลด์ที่เปลี่ยนจริง
+        await update(existing.bookId, draft)
+        notify('success', 'บันทึกเสร็จสิ้น')
+        navigate(`/admin/books/${existing.bookId}`)
+      } else {
+        const created = await add(draft)
+        await reloadInventory()
+        notify('success', `บันทึกเสร็จสิ้น (รหัส ${formatBookCode(created.bookId)})`)
+        navigate(`/admin/books/${created.bookId}`)
+      }
+    } catch (err) {
+      // ข้อความไทยจาก backend เช่น ISBN ซ้ำ (เซิร์ฟเวอร์ตรวจอีกชั้นเสมอ)
+      notify('error', err instanceof Error ? err.message : 'บันทึกข้อมูลไม่สำเร็จ')
+      setSaving(false)
     }
   }
 
@@ -285,7 +328,7 @@ function BookForm({ id }: { id?: string }) {
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate(-1)}>
             ยกเลิก
           </button>
-          <button type="submit" className="btn btn-primary btn-sm">
+          <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
             บันทึก
           </button>
         </div>

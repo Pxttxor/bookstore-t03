@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import LineItemsTable from '../components/LineItemsTable'
 import StatusBadge from '../components/StatusBadge'
 import Stepper from '../components/Stepper'
@@ -51,20 +53,50 @@ export default function OrderDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { suppliers } = useSuppliers()
-  const { findOrder, receiptsForOrder, returnsForOrder, sendOrder, confirmOrder } =
-    usePurchasing()
+  const {
+    findOrder,
+    receiptsForOrder,
+    returnsForOrder,
+    sendOrder,
+    confirmOrder,
+    loading,
+    error,
+    reload,
+  } = usePurchasing()
   const { notify } = useToast()
   const navigate = useNavigate()
 
   const [channel, setChannel] = useState<string>(SEND_CHANNELS[0])
   const [deliveryDate, setDeliveryDate] = useState('')
   const [dateError, setDateError] = useState('')
+  const [working, setWorking] = useState(false)
   // The clock is captured once on mount: how long the supplier has been silent only
   // needs to be right when the screen opens, and reading it during render is impure.
   const [now] = useState(() => Date.now())
 
   const role = user!.role
   const order = findOrder(Number(id))
+
+  // ต้องมาก่อนการเช็ค "ไม่พบข้อมูล" ไม่งั้นระหว่างโหลดจะขึ้นว่าไม่พบทุกครั้งที่เปิดหน้า
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลใบสั่งซื้อ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
 
   if (!order) {
     return (
@@ -102,18 +134,35 @@ export default function OrderDetailPage() {
     : 0
   const chaseConfirmation = display === 'AWAITING_CONFIRM' && daysSinceSent >= CONFIRM_GRACE_DAYS
 
-  const send = () => {
-    sendOrder(order.poId)
-    notify('success', `ส่ง ${formatPOCode(order.poId)} ให้ผู้จัดจำหน่ายทาง${channel}แล้ว`)
+  // ต้องรอผล — เซิร์ฟเวอร์ตรวจสถานะใบสั่งซื้อก่อนว่าส่ง/ยืนยันซ้ำได้ไหม
+  const send = async () => {
+    if (working) return
+    setWorking(true)
+    try {
+      await sendOrder(order.poId)
+      notify('success', `ส่ง ${formatPOCode(order.poId)} ให้ผู้จัดจำหน่ายทาง${channel}แล้ว`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ส่งใบสั่งซื้อไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!deliveryDate) {
       setDateError('กรุณาระบุกำหนดวันส่งที่ผู้จัดจำหน่ายยืนยัน')
       return
     }
-    confirmOrder(order.poId, deliveryDate)
-    notify('success', `บันทึกการยืนยันของผู้จัดจำหน่ายแล้ว กำหนดส่ง ${deliveryDate}`)
+    if (working) return
+    setWorking(true)
+    try {
+      await confirmOrder(order.poId, deliveryDate)
+      notify('success', `บันทึกการยืนยันของผู้จัดจำหน่ายแล้ว กำหนดส่ง ${deliveryDate}`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกการยืนยันไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
 
   return (
@@ -183,7 +232,12 @@ export default function OrderDetailPage() {
                 ส่งถึง {supplier?.email ?? '—'} พร้อมแนบไฟล์ใบสั่งซื้อ
               </span>
             </label>
-            <button type="button" className="btn btn-primary btn-sm" onClick={send}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={working}
+              onClick={() => void send()}
+            >
               <Icon name="mail" size={18} />
               ส่งให้ผู้จัดจำหน่าย
             </button>
@@ -216,7 +270,12 @@ export default function OrderDetailPage() {
                 />
                 {dateError && <span className="admin-field__error">{dateError}</span>}
               </label>
-              <button type="button" className="btn btn-primary btn-sm" onClick={confirm}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={working}
+                onClick={() => void confirm()}
+              >
                 <Icon name="check" size={18} />
                 บันทึกการยืนยัน
               </button>

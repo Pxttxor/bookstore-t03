@@ -1,10 +1,13 @@
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
+import { apiGet, apiPost, setUnauthorizedHandler, tokenStore } from '../api/client'
 import type { Role } from './roles'
 
 export interface AuthUser {
@@ -13,141 +16,113 @@ export interface AuthUser {
   role: Role
 }
 
+// Identity ที่ backend ส่งกลับ (service.Identity) — มีมากกว่าที่หน้าจอใช้
+// personId / customerId / employeeId ยังไม่มีหน้าจอไหนต้องใช้ จึงไม่ประกาศไว้ที่นี่
+interface LoginResult {
+  token: string
+  user: AuthUser
+}
+
+export interface RegisterInput {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  address: string
+  password: string
+}
+
 interface AuthValue {
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (email: string, password: string) => AuthUser
-  register: (name: string, email: string, password: string) => void
+  /** ยืนยัน token เดิมกับเซิร์ฟเวอร์อยู่ — ยังไม่รู้ว่าล็อกอินอยู่หรือเปล่า */
+  initialising: boolean
+  login: (email: string, password: string) => Promise<AuthUser>
+  register: (input: RegisterInput) => Promise<void>
+  verifyOtp: (email: string, otp: string) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
 
-// No backend in this project, so accounts and the session live in localStorage.
-// Passwords are kept as plain text because this is a demo only.
-const ACCOUNTS_KEY = 'bookhaven.accounts'
-const SESSION_KEY = 'bookhaven.user'
-
-interface Account {
-  name: string
-  email: string
-  password: string
-  role: Role
-}
-
-const STAFF_ACCOUNTS: Account[] = [
-  {
-    name: 'สมชาย ใจดี',
-    email: 'warehouse@bookhaven.co.th',
-    password: 'staff1234',
-    role: 'warehouse',
-  },
-  {
-    name: 'ปิยะพร วงศ์ทอง',
-    email: 'manager@bookhaven.co.th',
-    password: 'staff1234',
-    role: 'manager',
-  },
-  {
-    name: 'ณัฐวุฒิ แสงจันทร์',
-    email: 'sales@bookhaven.co.th',
-    password: 'staff1234',
-    role: 'sales',
-  },
-  {
-    name: 'อรทัย พรมมา',
-    email: 'delivery@bookhaven.co.th',
-    password: 'staff1234',
-    role: 'delivery',
-  },
-]
-
-const normalise = (email: string) => email.trim().toLowerCase()
-
-function parseAccounts(): Record<string, Account> {
-  try {
-    return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
-
-function readAccounts(): Record<string, Account> {
-  const accounts = parseAccounts()
-
-  // Staff cannot sign up through the site, so their accounts are seeded here.
-  let seeded = false
-  for (const staff of STAFF_ACCOUNTS) {
-    const key = normalise(staff.email)
-    if (!accounts[key]) {
-      accounts[key] = staff
-      seeded = true
-    }
-  }
-  if (seeded) writeAccounts(accounts)
-
-  return accounts
-}
-
-function writeAccounts(accounts: Record<string, Account>) {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
-}
-
-function readSession(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as AuthUser
-    return { ...parsed, role: parsed.role ?? 'customer' }
-  } catch {
-    return null
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(readSession)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  // ถ้ามี token ค้างอยู่ต้องถามเซิร์ฟเวอร์ก่อนว่ายังใช้ได้ไหม (อายุ 12 ชม.)
+  // ระหว่างนั้น AdminLayout ต้องไม่เด้งออกไปหน้าเข้าสู่ระบบ
+  const [initialising, setInitialising] = useState(() => tokenStore.get() !== null)
+
+  const signOut = useCallback(() => {
+    tokenStore.clear()
+    setUser(null)
+  }, [])
+
+  // token หมดอายุกลางทาง — client.ts เรียกตัวนี้เมื่อ API ตอบ 401
+  useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null))
+    return () => setUnauthorizedHandler(null)
+  }, [])
+
+  useEffect(() => {
+    if (!tokenStore.get()) return
+
+    let cancelled = false
+    // GET /api/auth/me อ่านแถวจริง ไม่ใช่ค่าใน token — ชื่อหรือบทบาทที่เปลี่ยนไปจะได้ตรง
+    apiGet<AuthUser>('/api/auth/me')
+      .then((current) => {
+        if (!cancelled) setUser(current)
+      })
+      .catch(() => {
+        // token เสียหรือหมดอายุ — client.ts ล้างให้แล้วตอนได้ 401
+        tokenStore.clear()
+      })
+      .finally(() => {
+        if (!cancelled) setInitialising(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const value = useMemo<AuthValue>(() => {
-    const persist = (next: AuthUser | null) => {
-      if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next))
-      else localStorage.removeItem(SESSION_KEY)
-      setUser(next)
-    }
-
-    const login = (email: string, password: string) => {
-      const key = normalise(email)
-      const account = readAccounts()[key]
-      if (!account) throw new Error('No account found for that email.')
-      if (account.password !== password)
-        throw new Error('Incorrect password. Please try again.')
-      const signedIn: AuthUser = {
-        name: account.name,
-        email: account.email,
-        role: account.role ?? 'customer',
-      }
-      persist(signedIn)
-      return signedIn
-    }
-
-    const register = (name: string, email: string, password: string) => {
-      const key = normalise(email)
-      const accounts = readAccounts()
-      if (accounts[key]) throw new Error('An account with that email already exists.')
-      const account: Account = {
-        name: name.trim(),
-        email: key,
+    const login = async (email: string, password: string) => {
+      const result = await apiPost<LoginResult>('/api/auth/login', {
+        email: email.trim(),
         password,
-        role: 'customer',
-      }
-      accounts[key] = account
-      writeAccounts(accounts)
-      persist({ name: account.name, email: account.email, role: account.role })
+      })
+      tokenStore.set(result.token)
+      setUser(result.user)
+      return result.user
     }
 
-    const logout = () => persist(null)
+    // สมัครแล้วบัญชียังเป็น UNVERIFIED — ต้องยืนยัน OTP ก่อนจึงจะล็อกอินได้
+    // username ใช้อีเมลไปเลย หน้าจอไม่ได้ถามแยก
+    const register = async (input: RegisterInput) => {
+      await apiPost('/api/auth/register', {
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        email: input.email.trim(),
+        phone: input.phone.trim(),
+        address: input.address.trim(),
+        username: input.email.trim(),
+        password: input.password,
+      })
+    }
 
-    return { user, isAuthenticated: user !== null, login, register, logout }
-  }, [user])
+    const verifyOtp = async (email: string, otp: string) => {
+      await apiPost('/api/auth/verify-otp', { email: email.trim(), otp: otp.trim() })
+    }
+
+    return {
+      user,
+      isAuthenticated: user !== null,
+      initialising,
+      login,
+      register,
+      verifyOtp,
+      logout: signOut,
+    }
+  }, [user, initialising, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

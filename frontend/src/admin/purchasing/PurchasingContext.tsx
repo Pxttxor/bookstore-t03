@@ -1,20 +1,9 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import { useInventory, type StockChange } from '../inventory/InventoryContext'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost, apiPut } from '../../api/client'
+import { useResource } from '../../api/useResource'
+import { useInventory } from '../inventory/InventoryContext'
+import { useNotifications } from '../notifications/NotificationContext'
 import {
-  useNotifications,
-  type NotificationDraft,
-} from '../notifications/NotificationContext'
-import { useSuppliers } from '../suppliers/SupplierContext'
-import { formatBaht } from '../suppliers/suppliers'
-import {
-  documentTotal,
-  formatPOCode,
-  formatPRCode,
-  receivedInFull,
-  SEED_GOODS_RECEIPTS,
-  SEED_PURCHASE_ORDERS,
-  SEED_PURCHASE_RETURNS,
-  SEED_REQUISITIONS,
   type Compensation,
   type GoodsReceipt,
   type ItemCondition,
@@ -25,11 +14,30 @@ import {
   type PurchaseReturnItem,
 } from './purchasing'
 
-const STORAGE_KEY = 'bookhaven.purchasing.v1'
+// ข้อมูลอยู่ในตาราง purchase_requisition / purchase_order / goods_receipt /
+// purchase_return (+ ตารางลูก) ของ PostgreSQL แล้ว
+// เดิมเป็น blob ก้อนเดียวใน localStorage คีย์ bookhaven.purchasing.v1
+//
+// **สี่ขั้นตอนของ U7/U9/U10 อยู่ในทรานแซกชันเดียวฝั่งเซิร์ฟเวอร์แล้ว** — การออกใบสั่งซื้อ
+// ตอนอนุมัติ · การเพิ่มยอดสต็อกตอนรับสินค้า · การตัดสต็อกตอนส่งคืน · การแจ้งเตือน
+// หน้าจอจึงห้ามทำซ้ำ แค่ `reload()` ทั้งสามชุดหลังทำรายการสำเร็จ
+const loadPurchasing = async () => {
+  const [requisitions, orders, receipts, returns, budget] = await Promise.all([
+    apiGet<PurchaseRequisition[]>('/api/requisitions'),
+    apiGet<PurchaseOrder[]>('/api/purchase-orders'),
+    apiGet<GoodsReceipt[]>('/api/receipts'),
+    apiGet<PurchaseReturn[]>('/api/returns'),
+    apiGet<BudgetSummary>('/api/purchasing/budget'),
+  ])
+  return { requisitions, orders, receipts, returns, budget }
+}
 
-// Suppliers normally quote two to three weeks; U8 replaces this with the date the
-// supplier actually confirms.
-const DEFAULT_LEAD_DAYS = 14
+/** แถบงบประมาณบน SCR-23 — เดิมเป็นค่าคงที่ `PURCHASE_BUDGET` ฝั่งหน้าจอ */
+export interface BudgetSummary {
+  budget: number
+  committed: number
+  remaining: number
+}
 
 export interface RequisitionDraft {
   supplierId: number
@@ -38,7 +46,6 @@ export interface RequisitionDraft {
 
 export interface GoodsReceiptDraft {
   deliveryNoteNo: string
-  receivedBy: string
   lines: { bookId: number; receivedQty: number; condition: ItemCondition; note: string }[]
 }
 
@@ -47,14 +54,16 @@ export interface ReturnDraft {
   items: PurchaseReturnItem[]
 }
 
-interface Stored {
+interface PurchasingValue {
   requisitions: PurchaseRequisition[]
   orders: PurchaseOrder[]
   receipts: GoodsReceipt[]
   returns: PurchaseReturn[]
-}
+  budget: BudgetSummary
+  loading: boolean
+  error: string | null
+  reload: () => Promise<void>
 
-interface PurchasingValue extends Stored {
   findRequisition: (prId: number) => PurchaseRequisition | undefined
   findOrder: (poId: number) => PurchaseOrder | undefined
   findReturn: (returnId: number) => PurchaseReturn | undefined
@@ -62,400 +71,167 @@ interface PurchasingValue extends Stored {
   receiptsForOrder: (poId: number) => GoodsReceipt[]
   returnsForOrder: (poId: number) => PurchaseReturn[]
 
-  // Saving and submitting are one operation each: a save followed by a submit in the
-  // same tick would read this provider's state before the save landed.
-  saveDraft: (draft: RequisitionDraft, by: string, prId?: number) => PurchaseRequisition
-  submitRequisition: (draft: RequisitionDraft, by: string, prId?: number) => PurchaseRequisition
-  approveRequisition: (prId: number, overBudgetNote?: string) => PurchaseOrder
-  rejectRequisition: (prId: number, reason: string) => void
-  sendOrder: (poId: number) => void
-  confirmOrder: (poId: number, expectedDeliveryDate: string) => void
-  receiveGoods: (poId: number, draft: GoodsReceiptDraft) => GoodsReceipt
-  createReturn: (poId: number, draft: ReturnDraft, by: string) => PurchaseReturn
-  escalateReturn: (returnId: number, note: string) => void
-  recordCompensation: (returnId: number, compensation: Compensation) => void
+  // ผู้ทำรายการมาจาก JWT ทุกเส้นทาง หน้าจอไม่ต้องส่งชื่อไปเอง
+  saveDraft: (draft: RequisitionDraft, prId?: number) => Promise<PurchaseRequisition>
+  submitRequisition: (draft: RequisitionDraft, prId?: number) => Promise<PurchaseRequisition>
+  /** U7 — เซิร์ฟเวอร์ออกใบสั่งซื้อและแจ้งเตือนให้ในทรานแซกชันเดียวกัน แล้วคืนใบที่ออก */
+  approveRequisition: (prId: number, overBudgetNote?: string) => Promise<PurchaseOrder>
+  rejectRequisition: (prId: number, reason: string) => Promise<void>
+  sendOrder: (poId: number) => Promise<void>
+  confirmOrder: (poId: number, expectedDeliveryDate: string) => Promise<void>
+  /** U9 — เซิร์ฟเวอร์เพิ่มยอดสต็อกให้เอง หน้าจอไม่ต้องเรียกปรับสต็อกซ้ำ */
+  receiveGoods: (poId: number, draft: GoodsReceiptDraft) => Promise<GoodsReceipt>
+  /** U10 — เซิร์ฟเวอร์ตัดสต็อกให้เอง */
+  createReturn: (poId: number, draft: ReturnDraft) => Promise<PurchaseReturn>
+  escalateReturn: (returnId: number, note: string) => Promise<void>
+  recordCompensation: (returnId: number, compensation: Compensation) => Promise<void>
 }
 
 const PurchasingContext = createContext<PurchasingValue | null>(null)
 
-const SEED: Stored = {
-  requisitions: SEED_REQUISITIONS,
-  orders: SEED_PURCHASE_ORDERS,
-  receipts: SEED_GOODS_RECEIPTS,
-  returns: SEED_PURCHASE_RETURNS,
-}
+const EMPTY_BUDGET: BudgetSummary = { budget: 0, committed: 0, remaining: 0 }
 
-function read(): Stored {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return SEED
-    const parsed = JSON.parse(raw) as Stored
-    return Array.isArray(parsed?.orders) ? parsed : SEED
-  } catch {
-    return SEED
-  }
-}
-
-function write(stored: Stored) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
-}
-
-const today = () => new Date().toISOString().slice(0, 10)
-
-function addDays(days: number) {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-
-const nextId = <T,>(rows: T[], pick: (row: T) => number, floor: number) =>
-  rows.reduce((max, row) => Math.max(max, pick(row)), floor) + 1
+const toRequisitionBody = (draft: RequisitionDraft, submit: boolean) => ({
+  supplierId: draft.supplierId,
+  items: draft.items.map((item) => ({
+    bookId: item.bookId,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+  })),
+  submit,
+})
 
 export function PurchasingProvider({ children }: { children: ReactNode }) {
-  const [stored, setStored] = useState<Stored>(read)
-  const { findById: findSupplier } = useSuppliers()
-  const { applyStockChanges } = useInventory()
-  const { push } = useNotifications()
+  const { data, loading, error, reload } = useResource(loadPurchasing)
+  const { reload: reloadInventory } = useInventory()
+  const { reload: reloadNotifications } = useNotifications()
 
   const value = useMemo<PurchasingValue>(() => {
-    const persist = (next: Stored) => {
-      write(next)
-      setStored(next)
+    const requisitions = data?.requisitions ?? []
+    const orders = data?.orders ?? []
+    const receipts = data?.receipts ?? []
+    const returns = data?.returns ?? []
+
+    // งานจัดซื้อแต่ละอย่างมีผลข้างเคียงฝั่งเซิร์ฟเวอร์ไม่เท่ากัน — โหลดใหม่เฉพาะชุดที่เปลี่ยนจริง
+    //
+    // เดิมเรียกทั้งสามชุดทุกครั้ง ทำให้กดรับสินค้าหนึ่งครั้งได้คำขอตามหลังเก้าอัน
+    // ทั้งที่บางงาน (ส่งใบสั่งซื้อ · ยืนยันวันส่ง) ไม่แตะสต็อกและไม่ออกแจ้งเตือนเลย
+    //
+    // เอกสารจัดซื้อต้องโหลดใหม่เสมอ เพราะทุกงานเปลี่ยนสถานะเอกสารอย่างน้อยหนึ่งใบ
+    // และ `/api/purchasing/budget` คิดจากใบที่ยังคงค้างอยู่
+    const refresh = async (also: { stock?: boolean; alerts?: boolean } = {}) => {
+      await Promise.all([
+        reload(),
+        ...(also.stock ? [reloadInventory()] : []),
+        ...(also.alerts ? [reloadNotifications()] : []),
+      ])
     }
 
-    const findRequisition = (prId: number) =>
-      stored.requisitions.find((pr) => pr.prId === prId)
-    const findOrder = (poId: number) => stored.orders.find((po) => po.poId === poId)
-    const findReturn = (returnId: number) =>
-      stored.returns.find((entry) => entry.returnId === returnId)
-
-    const supplierName = (supplierId: number) =>
-      findSupplier(supplierId)?.companyName ?? 'ผู้จัดจำหน่าย'
-
-    const replaceOrder = (orders: PurchaseOrder[], updated: PurchaseOrder) =>
-      orders.map((po) => (po.poId === updated.poId ? updated : po))
-
-    const buildRequisition = (
+    const saveRequisition = async (
       draft: RequisitionDraft,
-      by: string,
-      prId: number | undefined,
-      status: PurchaseRequisition['status'],
-    ): PurchaseRequisition => {
-      const existing = prId !== undefined ? findRequisition(prId) : undefined
-      return existing
-        ? { ...existing, ...draft, status }
-        : {
-            prId: nextId(stored.requisitions, (pr) => pr.prId, 100),
-            supplierId: draft.supplierId,
-            createdDate: today(),
-            status,
-            requestedBy: by,
-            items: draft.items,
-          }
-    }
-
-    const commitRequisition = (requisition: PurchaseRequisition) =>
-      persist({
-        ...stored,
-        requisitions: stored.requisitions.some((pr) => pr.prId === requisition.prId)
-          ? stored.requisitions.map((pr) =>
-              pr.prId === requisition.prId ? requisition : pr,
-            )
-          : [...stored.requisitions, requisition],
-      })
-
-    const saveDraft = (draft: RequisitionDraft, by: string, prId?: number) => {
-      const requisition = buildRequisition(draft, by, prId, 'DRAFT')
-      commitRequisition(requisition)
-      return requisition
-    }
-
-    // U6 postcondition: the requisition moves to รออนุมัติ and the manager is notified
-    // automatically, in-app and by email (Figma spec SCR-27 §C).
-    const submitRequisition = (draft: RequisitionDraft, by: string, prId?: number) => {
-      const requisition = buildRequisition(draft, by, prId, 'SUBMITTED')
-      commitRequisition(requisition)
-
-      notifyBoth(
-        'manager',
-        'PR_SUBMITTED',
-        'ใบขอสั่งซื้อรออนุมัติ',
-        `${formatPRCode(requisition.prId)} · ${supplierName(requisition.supplierId)} · ` +
-          `฿${formatBaht(documentTotal(requisition.items))} · ผู้ขอ ${requisition.requestedBy}`,
-        `/admin/purchasing/pr/${requisition.prId}/approve`,
-      )
-      return requisition
-    }
-
-    // U7 postcondition: approving issues the purchase order automatically.
-    const approveRequisition = (prId: number, overBudgetNote?: string) => {
-      const current = findRequisition(prId)
-      if (!current) throw new Error('ไม่พบใบขอสั่งซื้อ')
-
-      const order: PurchaseOrder = {
-        poId: nextId(stored.orders, (po) => po.poId, 2435),
-        prId,
-        supplierId: current.supplierId,
-        orderDate: today(),
-        expectedDeliveryDate: addDays(DEFAULT_LEAD_DAYS),
-        status: 'APPROVED',
-        items: current.items.map((line) => ({ ...line, receivedQty: 0 })),
-      }
-
-      persist({
-        ...stored,
-        requisitions: stored.requisitions.map((pr) =>
-          pr.prId === prId ? { ...pr, status: 'APPROVED' as const, overBudgetNote } : pr,
-        ),
-        orders: [...stored.orders, order],
-      })
-
-      notifyBoth(
-        'warehouse',
-        'PR_APPROVED',
-        'ใบขอสั่งซื้อได้รับอนุมัติ',
-        `${formatPRCode(prId)} อนุมัติแล้ว ระบบออก ${formatPOCode(order.poId)} พร้อมส่งให้ผู้จัดจำหน่าย`,
-        `/admin/purchasing/po/${order.poId}`,
-      )
-      return order
-    }
-
-    const rejectRequisition = (prId: number, reason: string) => {
-      persist({
-        ...stored,
-        requisitions: stored.requisitions.map((pr) =>
-          pr.prId === prId ? { ...pr, status: 'REJECTED' as const, rejectionReason: reason } : pr,
-        ),
-      })
-
-      notifyBoth(
-        'warehouse',
-        'PR_REJECTED',
-        'ใบขอสั่งซื้อถูกตีกลับ',
-        `${formatPRCode(prId)} ถูกตีกลับให้แก้ไข · เหตุผล: ${reason}`,
-        `/admin/purchasing/pr/${prId}`,
-      )
-    }
-
-    // U8: sending leaves the order at APPROVED with sentAt set, which reads as
-    // "รอยืนยัน" until the supplier confirms. See poDisplayStatus().
-    const sendOrder = (poId: number) => {
-      const current = findOrder(poId)
-      if (!current) throw new Error('ไม่พบใบสั่งซื้อ')
-      persist({
-        ...stored,
-        orders: replaceOrder(stored.orders, { ...current, sentAt: new Date().toISOString() }),
-      })
-    }
-
-    const confirmOrder = (poId: number, expectedDeliveryDate: string) => {
-      const current = findOrder(poId)
-      if (!current) throw new Error('ไม่พบใบสั่งซื้อ')
-      persist({
-        ...stored,
-        orders: replaceOrder(stored.orders, {
-          ...current,
-          status: 'CONFIRMED',
-          confirmedAt: new Date().toISOString(),
-          expectedDeliveryDate,
-        }),
-      })
-    }
-
-    // U9: records the receipt, tops up the line quantities and adjusts stock in one go.
-    const receiveGoods = (poId: number, draft: GoodsReceiptDraft) => {
-      const current = findOrder(poId)
-      if (!current) throw new Error('ไม่พบใบสั่งซื้อ')
-
-      const receipt: GoodsReceipt = {
-        grId: nextId(stored.receipts, (gr) => gr.grId, 5000),
-        poId,
-        receivedDate: today(),
-        status: 'PARTIAL',
-        deliveryNoteNo: draft.deliveryNoteNo,
-        receivedBy: draft.receivedBy,
-        items: draft.lines.map((line) => ({
-          bookId: line.bookId,
-          orderedQty: current.items.find((i) => i.bookId === line.bookId)?.quantity ?? 0,
-          receivedQty: line.receivedQty,
-          condition: line.condition,
-          note: line.note,
-        })),
-      }
-
-      const order: PurchaseOrder = {
-        ...current,
-        items: current.items.map((line) => {
-          const received = draft.lines.find((entry) => entry.bookId === line.bookId)
-          return received
-            ? { ...line, receivedQty: line.receivedQty + received.receivedQty }
-            : line
-        }),
-      }
-      order.status = receivedInFull(order) ? 'RECEIVED_FULL' : 'RECEIVED_PARTIAL'
-      receipt.status = order.status === 'RECEIVED_FULL' ? 'FULL' : 'PARTIAL'
-
-      persist({
-        ...stored,
-        orders: replaceOrder(stored.orders, order),
-        receipts: [...stored.receipts, receipt],
-      })
-
-      // Everything that physically arrived enters stock, damaged or not; U10 takes the
-      // damaged units back out again when a return is raised.
-      applyStockChanges(
-        draft.lines
-          .filter((line) => line.receivedQty > 0)
-          .map<StockChange>((line) => ({
-            bookId: line.bookId,
-            type: 'RECEIVE_IN',
-            quantityChange: line.receivedQty,
-            reason: 'รับสินค้าเข้าคลัง',
-            referenceDoc: formatPOCode(poId),
-          })),
-      )
-
-      notifyBoth(
-        'manager',
-        'GR_RECORDED',
-        'บันทึกรับสินค้าเข้าคลัง',
-        `${formatPOCode(poId)} · ${supplierName(current.supplierId)} · รับ ${draft.lines.reduce(
-          (sum, line) => sum + line.receivedQty,
-          0,
-        )} เล่ม`,
-        `/admin/purchasing/po/${poId}`,
-        ['in-app'],
-      )
-
-      return receipt
-    }
-
-    const createReturn = (poId: number, draft: ReturnDraft, by: string) => {
-      const current = findOrder(poId)
-      if (!current) throw new Error('ไม่พบใบสั่งซื้อ')
-
-      const entry: PurchaseReturn = {
-        returnId: nextId(stored.returns, (item) => item.returnId, 7000),
-        poId,
-        returnDate: today(),
-        reason: draft.reason,
-        status: 'TRACKING',
-        createdBy: by,
-        items: draft.items,
-      }
-
-      // The order counts as ส่งคืน only once every received unit has gone back.
-      const returnedByBook = new Map<number, number>()
-      for (const item of [...stored.returns.filter((r) => r.poId === poId), entry].flatMap(
-        (r) => r.items,
-      )) {
-        returnedByBook.set(item.bookId, (returnedByBook.get(item.bookId) ?? 0) + item.quantity)
-      }
-      const fullyReturned = current.items.every(
-        (line) => (returnedByBook.get(line.bookId) ?? 0) >= line.receivedQty && line.receivedQty > 0,
-      )
-
-      persist({
-        ...stored,
-        returns: [...stored.returns, entry],
-        orders: fullyReturned
-          ? replaceOrder(stored.orders, { ...current, status: 'RETURNED' })
-          : stored.orders,
-      })
-
-      applyStockChanges(
-        draft.items.map<StockChange>((item) => ({
-          bookId: item.bookId,
-          type: 'RETURN',
-          quantityChange: -item.quantity,
-          reason: item.reason,
-          referenceDoc: formatPOCode(poId),
-        })),
-      )
-
-      return entry
-    }
-
-    const escalateReturn = (returnId: number, note: string) => {
-      const current = findReturn(returnId)
-      if (!current) throw new Error('ไม่พบใบส่งคืน')
-
-      persist({
-        ...stored,
-        returns: stored.returns.map((entry) =>
-          entry.returnId === returnId
-            ? { ...entry, status: 'ESCALATED' as const, escalationNote: note }
-            : entry,
-        ),
-      })
-
-      notifyBoth(
-        'manager',
-        'RETURN_ESCALATED',
-        'ผู้จัดจำหน่ายปฏิเสธการรับคืน',
-        `${formatPOCode(current.poId)} · ${note}`,
-        `/admin/purchasing/returns/${returnId}`,
-      )
-    }
-
-    const recordCompensation = (returnId: number, compensation: Compensation) => {
-      const current = findReturn(returnId)
-      if (!current) throw new Error('ไม่พบใบส่งคืน')
-
-      persist({
-        ...stored,
-        returns: stored.returns.map((entry) =>
-          entry.returnId === returnId
-            ? { ...entry, status: 'CLOSED' as const, compensation }
-            : entry,
-        ),
-      })
-
-      if (compensation.type === 'REPLACEMENT') {
-        applyStockChanges(
-          current.items.map<StockChange>((item) => ({
-            bookId: item.bookId,
-            type: 'RECEIVE_IN',
-            quantityChange: item.quantity,
-            reason: 'สินค้าทดแทนจากการส่งคืน',
-            referenceDoc: formatPOCode(current.poId),
-          })),
-        )
-      }
-    }
-
-    function notifyBoth(
-      to: NotificationDraft['to'],
-      kind: NotificationDraft['kind'],
-      title: string,
-      body: string,
-      link: string,
-      channels: NotificationDraft['channel'][] = ['in-app', 'email'],
-    ) {
-      push(channels.map((channel) => ({ to, kind, title, body, link, channel })))
+      submit: boolean,
+      prId?: number,
+    ) => {
+      const body = toRequisitionBody(draft, submit)
+      const saved =
+        prId === undefined
+          ? await apiPost<PurchaseRequisition>('/api/requisitions', body)
+          : await apiPut<PurchaseRequisition>(`/api/requisitions/${prId}`, body)
+      // เซิร์ฟเวอร์แจ้งผู้จัดการเฉพาะตอนที่ใบถูกยื่น — บันทึกร่างไว้เฉย ๆ ไม่ออกแจ้งเตือน
+      await refresh({ alerts: submit })
+      return saved
     }
 
     return {
-      ...stored,
-      findRequisition,
-      findOrder,
-      findReturn,
-      ordersForSupplier: (supplierId) =>
-        stored.orders.filter((po) => po.supplierId === supplierId),
-      receiptsForOrder: (poId) => stored.receipts.filter((gr) => gr.poId === poId),
-      returnsForOrder: (poId) => stored.returns.filter((entry) => entry.poId === poId),
-      saveDraft,
-      submitRequisition,
-      approveRequisition,
-      rejectRequisition,
-      sendOrder,
-      confirmOrder,
-      receiveGoods,
-      createReturn,
-      escalateReturn,
-      recordCompensation,
+      requisitions,
+      orders,
+      receipts,
+      returns,
+      budget: data?.budget ?? EMPTY_BUDGET,
+      loading,
+      error,
+      reload,
+
+      findRequisition: (prId: number) => requisitions.find((pr) => pr.prId === prId),
+      findOrder: (poId: number) => orders.find((po) => po.poId === poId),
+      findReturn: (returnId: number) => returns.find((row) => row.returnId === returnId),
+      ordersForSupplier: (supplierId: number) =>
+        orders.filter((po) => po.supplierId === supplierId),
+      receiptsForOrder: (poId: number) => receipts.filter((grn) => grn.poId === poId),
+      returnsForOrder: (poId: number) => returns.filter((row) => row.poId === poId),
+
+      saveDraft: (draft, prId) => saveRequisition(draft, false, prId),
+      submitRequisition: (draft, prId) => saveRequisition(draft, true, prId),
+
+      approveRequisition: async (prId, overBudgetNote) => {
+        const order = await apiPost<PurchaseOrder>(`/api/requisitions/${prId}/approve`, {
+          overBudgetNote: overBudgetNote ?? '',
+        })
+        // ออกใบสั่งซื้อ + แจ้งคลังสินค้า · ของยังไม่เข้าคลัง สต็อกจึงไม่ขยับ
+        await refresh({ alerts: true })
+        return order
+      },
+      rejectRequisition: async (prId, reason) => {
+        await apiPost(`/api/requisitions/${prId}/reject`, { reason })
+        await refresh({ alerts: true })
+      },
+      // ส่งใบและยืนยันวันส่งเปลี่ยนแค่สถานะเอกสาร ไม่แตะสต็อกและไม่ออกแจ้งเตือน
+      sendOrder: async (poId) => {
+        await apiPost(`/api/purchase-orders/${poId}/send`)
+        await refresh()
+      },
+      confirmOrder: async (poId, expectedDeliveryDate) => {
+        await apiPost(`/api/purchase-orders/${poId}/confirm`, { expectedDeliveryDate })
+        await refresh()
+      },
+      receiveGoods: async (poId, draft) => {
+        const receipt = await apiPost<GoodsReceipt>(
+          `/api/purchase-orders/${poId}/receipts`,
+          {
+            deliveryNoteNo: draft.deliveryNoteNo,
+            lines: draft.lines.map((line) => ({
+              bookId: line.bookId,
+              receivedQty: line.receivedQty,
+              condition: line.condition,
+              note: line.note,
+            })),
+          },
+        )
+        // U9 เพิ่มยอดสต็อกและแจ้งผู้จัดการในทรานแซกชันเดียวกับใบรับ
+        await refresh({ stock: true, alerts: true })
+        return receipt
+      },
+      createReturn: async (poId, draft) => {
+        const created = await apiPost<PurchaseReturn>(
+          `/api/purchase-orders/${poId}/returns`,
+          {
+            reason: draft.reason,
+            items: draft.items.map((item) => ({
+              bookId: item.bookId,
+              quantity: item.quantity,
+              reason: item.reason,
+              evidence: item.evidence ?? '',
+            })),
+          },
+        )
+        // U10 ตัดสต็อกให้ในทรานแซกชันเดียวกับใบคืน · ไม่ออกแจ้งเตือนจนกว่าจะยกระดับ
+        await refresh({ stock: true })
+        return created
+      },
+      escalateReturn: async (returnId, note) => {
+        await apiPost(`/api/returns/${returnId}/escalate`, { note })
+        await refresh({ alerts: true })
+      },
+      recordCompensation: async (returnId, compensation) => {
+        await apiPost(`/api/returns/${returnId}/compensation`, {
+          type: compensation.type,
+          note: compensation.note,
+        })
+        // ชดเชยแบบ REPLACEMENT เพิ่มสต็อกคืน · แบบอื่นไม่แตะ แต่แยกไม่ได้จากฝั่งนี้
+        await refresh({ stock: true })
+      },
     }
-  }, [stored, findSupplier, applyStockChanges, push])
+  }, [data, loading, error, reload, reloadInventory, reloadNotifications])
 
   return <PurchasingContext.Provider value={value}>{children}</PurchasingContext.Provider>
 }

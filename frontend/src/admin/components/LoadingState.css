@@ -1,0 +1,41 @@
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 56px 24px;
+  text-align: center;
+  font-family: var(--font-thai);
+}
+
+.loading-state__spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--surface-alt);
+  border-top-color: var(--primary);
+  animation: loading-state-spin 0.7s linear infinite;
+}
+
+.loading-state__text {
+  color: var(--text-muted);
+}
+
+@keyframes loading-state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหวยังต้องรู้ว่าระบบกำลังทำงานอยู่ จึงเปลี่ยนเป็นจางเข้าออกแทนการหมุน */
+@media (prefers-reduced-motion: reduce) {
+  .loading-state__spinner {
+    animation: loading-state-pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes loading-state-pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+}

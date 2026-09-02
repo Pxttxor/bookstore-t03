@@ -6,8 +6,11 @@ import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
 import { useToast } from '../components/ToastContext'
+import { useBooks } from '../books/BookContext'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import { useSuppliers, type SupplierDraft } from '../suppliers/SupplierContext'
-import { formatSupplierCode, type SupplierBook } from '../suppliers/suppliers'
+import { formatSupplierCode } from '../suppliers/suppliers'
 import '../components/AdminForm.css'
 import './SupplierFormPage.css'
 
@@ -34,14 +37,19 @@ const LABELS: Record<FieldName, string> = {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-type BookRow = Omit<SupplierBook, 'bookId'> & { bookId: number }
+// แถวหนึ่งของ supplier_book — ตารางนี้เป็นเจ้าของแค่สามฟิลด์นี้
+//
+// ชื่อ / ผู้แต่ง / สำนักพิมพ์ / ISBN เป็นของตาราง book และเลือกได้จากแคตตาล็อกเท่านั้น
+// (`SupplierBook "*" --> "1" Book` ใน class diagram) · เดิมฟอร์มนี้ให้พิมพ์เองพร้อมสร้าง
+// bookId จาก Date.now() ซึ่งเขียนลงฐานจริงไม่ได้เพราะติด FK supplier_book.book_id -> book
+type BookRow = {
+  bookId: number
+  supplyPrice: number
+  leadTimeDays: number
+}
 
 const emptyBook = (bookId: number): BookRow => ({
   bookId,
-  isbn: '',
-  title: '',
-  author: '',
-  publisher: '',
   supplyPrice: 0,
   leadTimeDays: 0,
 })
@@ -55,7 +63,8 @@ export default function SupplierFormPage() {
 
 function SupplierForm({ id }: { id?: string }) {
   const { user } = useAuth()
-  const { findById, findByCompanyName, add, update } = useSuppliers()
+  const { findById, findByCompanyName, add, update, loading, error, reload } = useSuppliers()
+  const { books: catalogue } = useBooks()
   const { notify } = useToast()
   const navigate = useNavigate()
 
@@ -71,8 +80,16 @@ function SupplierForm({ id }: { id?: string }) {
     tradeTerms: existing?.tradeTerms ?? '',
     creditTerms: existing?.creditTerms ?? '',
   })
-  const [books, setBooks] = useState<BookRow[]>(existing?.books ?? [])
+  const [books, setBooks] = useState<BookRow[]>(
+    () =>
+      existing?.books.map((book) => ({
+        bookId: book.bookId,
+        supplyPrice: book.supplyPrice,
+        leadTimeDays: book.leadTimeDays,
+      })) ?? [],
+  )
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
+  const [saving, setSaving] = useState(false)
 
   if (!can.editSuppliers(user!.role)) {
     return (
@@ -84,6 +101,26 @@ function SupplierForm({ id }: { id?: string }) {
             description="การเพิ่มและแก้ไขข้อมูลเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
             action={{ label: 'กลับไปหน้ารายการ', onClick: () => navigate('/admin/suppliers') }}
           />
+        </section>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลผู้จัดจำหน่าย…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
         </section>
       </div>
     )
@@ -122,6 +159,18 @@ function SupplierForm({ id }: { id?: string }) {
     )
   }
 
+  // เล่มที่ยังไม่ถูกเลือกในฟอร์มนี้ — ใช้ปิดปุ่ม "เพิ่มรายการ" เมื่อเลือกครบแล้ว
+  const availableBooks = catalogue.filter(
+    (book) => !books.some((row) => row.bookId === book.bookId),
+  )
+
+  // รายละเอียดที่ตาราง book เป็นเจ้าของ แสดงอย่างเดียว แก้ที่หน้าข้อมูลหนังสือ
+  const bookMeta = (bookId: number) => {
+    const book = catalogue.find((entry) => entry.bookId === bookId)
+    if (!book) return 'ไม่พบเล่มนี้ในแคตตาล็อก'
+    return `${book.author} · ${book.publisher} · ISBN ${book.isbn}`
+  }
+
   const validate = () => {
     const found: Partial<Record<FieldName, string>> = {}
     for (const field of REQUIRED) {
@@ -134,8 +183,9 @@ function SupplierForm({ id }: { id?: string }) {
     return Object.keys(found).length === 0
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (saving) return
     if (!validate()) return
 
     const duplicate = findByCompanyName(values.companyName, existing?.supplierId)
@@ -155,28 +205,41 @@ function SupplierForm({ id }: { id?: string }) {
       address: values.address.trim(),
       tradeTerms: values.tradeTerms.trim(),
       creditTerms: values.creditTerms.trim(),
+      // ส่งเฉพาะเล่มที่มีอยู่จริงในแคตตาล็อก — FK supplier_book.book_id -> book บังคับไว้
       books: books
-        .filter((row) => row.title.trim() !== '')
+        .filter((row) => catalogue.some((book) => book.bookId === row.bookId))
         .map((row) => ({
-          ...row,
-          isbn: row.isbn.trim(),
-          title: row.title.trim(),
-          author: row.author.trim(),
-          publisher: row.publisher.trim(),
+          bookId: row.bookId,
+          supplyPrice: row.supplyPrice,
+          leadTimeDays: row.leadTimeDays,
+          // SupplierBook ฝั่ง TS ยังประกาศสี่ฟิลด์นี้เพราะ DTO ขาออกส่งกลับมาด้วย
+          // ส่วนขาเข้า toBody() ใน SupplierContext ตัดทิ้งก่อนยิง API
+          isbn: '',
+          title: '',
+          author: '',
+          publisher: '',
         })),
     }
 
-    if (existing) {
-      update(existing.supplierId, draft, user!.name)
-      notify('success', `บันทึกการแก้ไข ${draft.companyName} เรียบร้อยแล้ว`)
-      navigate(`/admin/suppliers/${existing.supplierId}`)
-    } else {
-      const created = add(draft)
-      notify(
-        'success',
-        `เพิ่มผู้จัดจำหน่ายสำเร็จ (รหัส ${formatSupplierCode(created.supplierId)})`,
-      )
-      navigate(`/admin/suppliers/${created.supplierId}`)
+    setSaving(true)
+    try {
+      if (existing) {
+        // ผู้แก้ไขมาจาก JWT ฝั่งเซิร์ฟเวอร์ ไม่ต้องส่ง user.name ไปแล้ว
+        await update(existing.supplierId, draft)
+        notify('success', `บันทึกการแก้ไข ${draft.companyName} เรียบร้อยแล้ว`)
+        navigate(`/admin/suppliers/${existing.supplierId}`)
+      } else {
+        const created = await add(draft)
+        notify(
+          'success',
+          `เพิ่มผู้จัดจำหน่ายสำเร็จ (รหัส ${formatSupplierCode(created.supplierId)})`,
+        )
+        navigate(`/admin/suppliers/${created.supplierId}`)
+      }
+    } catch (err) {
+      // ข้อความจาก backend เป็นภาษาไทยอยู่แล้ว (ชื่อบริษัทซ้ำ ฯลฯ)
+      notify('error', err instanceof Error ? err.message : 'บันทึกข้อมูลไม่สำเร็จ')
+      setSaving(false)
     }
   }
 
@@ -307,11 +370,18 @@ function SupplierForm({ id }: { id?: string }) {
             <button
               type="button"
               className="btn btn-ghost btn-sm"
+              disabled={availableBooks.length === 0}
+              title={
+                availableBooks.length === 0
+                  ? 'เลือกครบทุกเล่มในแคตตาล็อกแล้ว'
+                  : undefined
+              }
               onClick={() =>
-                setBooks((current) => [
-                  ...current,
-                  emptyBook(Date.now() + current.length),
-                ])
+                setBooks((current) => {
+                  const taken = new Set(current.map((row) => row.bookId))
+                  const next = catalogue.find((book) => !taken.has(book.bookId))
+                  return next ? [...current, emptyBook(next.bookId)] : current
+                })
               }
             >
               <Icon name="plus" size={16} />
@@ -328,37 +398,35 @@ function SupplierForm({ id }: { id?: string }) {
               {books.map((row, index) => (
                 <li key={row.bookId} className="supplier-form__book">
                   <label className="admin-field">
-                    <span className="admin-field__label">ชื่อหนังสือ</span>
-                    <input
+                    <span className="admin-field__label">หนังสือ</span>
+                    <select
                       className="admin-input"
-                      value={row.title}
-                      onChange={(e) => setBookField(index, 'title', e.target.value)}
-                    />
+                      value={row.bookId}
+                      onChange={(e) =>
+                        setBookField(index, 'bookId', Number(e.target.value))
+                      }
+                    >
+                      {catalogue.map((book) => (
+                        <option
+                          key={book.bookId}
+                          value={book.bookId}
+                          // กันเลือกเล่มเดียวกันสองแถว — PK ผสม (supplier_id, book_id)
+                          disabled={
+                            book.bookId !== row.bookId &&
+                            books.some((other) => other.bookId === book.bookId)
+                          }
+                        >
+                          {book.title}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-                  <label className="admin-field">
-                    <span className="admin-field__label">ISBN</span>
-                    <input
-                      className="admin-input"
-                      value={row.isbn}
-                      onChange={(e) => setBookField(index, 'isbn', e.target.value)}
-                    />
-                  </label>
-                  <label className="admin-field">
-                    <span className="admin-field__label">ผู้แต่ง</span>
-                    <input
-                      className="admin-input"
-                      value={row.author}
-                      onChange={(e) => setBookField(index, 'author', e.target.value)}
-                    />
-                  </label>
-                  <label className="admin-field">
-                    <span className="admin-field__label">สำนักพิมพ์</span>
-                    <input
-                      className="admin-input"
-                      value={row.publisher}
-                      onChange={(e) => setBookField(index, 'publisher', e.target.value)}
-                    />
-                  </label>
+                  <div className="admin-field">
+                    <span className="admin-field__label">รายละเอียดจากแคตตาล็อก</span>
+                    <p className="admin-field__hint supplier-form__book-meta">
+                      {bookMeta(row.bookId)}
+                    </p>
+                  </div>
                   <label className="admin-field">
                     <span className="admin-field__label">ราคาส่ง (บาท)</span>
                     <input
@@ -422,7 +490,7 @@ function SupplierForm({ id }: { id?: string }) {
           >
             ยกเลิก
           </button>
-          <button type="submit" className="btn btn-primary btn-sm">
+          <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
             บันทึก
           </button>
         </div>

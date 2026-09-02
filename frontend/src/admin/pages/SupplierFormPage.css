@@ -104,3 +104,10 @@
     align-self: flex-start;
   }
 }
+
+/* รายละเอียดหนังสือที่ดึงมาจากแคตตาล็อก แสดงอย่างเดียว แก้ที่หน้าข้อมูลหนังสือ */
+.supplier-form__book-meta {
+  margin-top: 6px;
+  line-height: 1.5;
+  word-break: break-word;
+}

@@ -181,3 +181,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ข้อผิดพลาดตอนสั่งซื้อ เช่น ยังไม่ได้เข้าสู่ระบบ หรือของไม่พอ */
+.pay__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--danger, #d64545);
+}

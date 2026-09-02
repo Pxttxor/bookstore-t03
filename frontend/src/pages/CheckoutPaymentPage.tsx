@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { formatPrice } from '../data/books'
 import { useCart } from '../cart/CartContext'
-import { useAuth } from '../auth/AuthContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import './CheckoutPaymentPage.css'
 
@@ -46,31 +45,33 @@ export default function CheckoutPaymentPage() {
   const navigate = useNavigate()
   const { state } = useLocation()
   const { subtotal, lines, clear } = useCart()
-  const { user } = useAuth()
   const { placeOrder } = useOrders()
   const fileRef = useRef<HTMLInputElement>(null)
   const [fileName, setFileName] = useState<string>('')
+  const [placing, setPlacing] = useState(false)
+  const [error, setError] = useState('')
 
   const amount = subtotal
 
-  const confirm = () => {
+  const confirm = async () => {
+    if (placing) return
+    setPlacing(true)
+    setError('')
     const shipping = (state ?? {}) as ShippingState
-    const order = placeOrder({
-      customerName: shipping.customerName?.trim() || user?.name || 'ลูกค้าออนไลน์',
-      customerEmail: user?.email,
-      shippingAddress: shipping.shippingAddress?.trim() || '—',
-      items: lines.map((line) => ({
-        bookId: line.book.id,
-        title: line.book.title,
-        unitPrice: line.book.price,
-        quantity: line.qty,
-      })),
-      subtotal,
-      netAmount: subtotal,
-      slipFileName: fileName || undefined,
-    })
-    clear()
-    navigate(`/order/${order.orderId}`)
+    try {
+      // ชื่อลูกค้าและยอดเงินเซิร์ฟเวอร์คิดเอง (จากบัญชีที่ล็อกอินและราคาในตาราง book)
+      // หน้าจอส่งแค่ที่อยู่จัดส่ง รายการหนังสือ และชื่อไฟล์สลิป
+      const order = await placeOrder({
+        shippingAddress: shipping.shippingAddress?.trim() || '—',
+        items: lines.map((line) => ({ slug: line.book.id, quantity: line.qty })),
+        slipFileName: fileName || undefined,
+      })
+      clear()
+      navigate(`/order/${order.orderId}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'สั่งซื้อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      setPlacing(false)
+    }
   }
 
   return (
@@ -130,10 +131,17 @@ export default function CheckoutPaymentPage() {
         </section>
       </div>
 
+      {error && (
+        <p className="pay__error" role="alert">
+          <Icon name="help" size={16} />
+          {error}
+        </p>
+      )}
+
       <button
         className="btn btn-primary pay__confirm"
-        onClick={confirm}
-        disabled={lines.length === 0}
+        onClick={() => void confirm()}
+        disabled={lines.length === 0 || placing}
       >
         <Icon name="check" size={18} />
         Confirm Payment

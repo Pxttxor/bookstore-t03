@@ -87,7 +87,7 @@ export interface PurchaseReturnItem {
   bookId: number
   quantity: number
   reason: string
-  /** Data URL of the attached photo. Kept small — it goes into localStorage. */
+  /** Data URL of the attached photo. Kept small — it goes into a `text` column. */
   evidence?: string
 }
 
@@ -233,16 +233,10 @@ export function receivedInFull(po: PurchaseOrder) {
   return po.items.every((line) => line.receivedQty >= line.quantity)
 }
 
-// The spec shows a remaining-budget bar on SCR-23 but never says where the figure comes
-// from. This is the fiscal budget for the period; remaining is what is left after every
-// order that has not been cancelled. 500,000 reproduces the spec's ฿340,000 / 68% example.
-export const PURCHASE_BUDGET = 500000
-
-export function committedAmount(orders: PurchaseOrder[]) {
-  return orders
-    .filter((po) => po.status !== 'CANCELLED')
-    .reduce((sum, po) => sum + documentTotal(po.items), 0)
-}
+// งบประมาณของ SCR-23 ย้ายไปฝั่งเซิร์ฟเวอร์แล้ว — อ่านผ่าน `GET /api/purchasing/budget`
+// ซึ่งคืน { budget, committed, remaining } และคิด committed จากใบสั่งซื้อที่ยังไม่ถูกยกเลิกทั้งหมด
+// (เดิมเป็นค่าคงที่ `PURCHASE_BUDGET = 500000` กับ `committedAmount()` ที่คำนวณฝั่งหน้าจอ
+// จากเฉพาะใบที่โหลดมาแล้ว ซึ่งไม่ตรงกับตัวเลขที่เซิร์ฟเวอร์ใช้ตัดสินตอนอนุมัติ)
 
 /* ── Seed data ──────────────────────────────────────────────────────────── */
 

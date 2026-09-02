@@ -93,9 +93,13 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 
+	// ลำดับจากนอกเข้าใน: กัน panic → บันทึก log → บีบอัด → CORS → ตารางเส้นทาง
+	// Compress อยู่ในชั้น RequestLog เพื่อให้ statusRecorder ยังอ่านสถานะจริงได้
+	// และอยู่นอก CORS เพื่อครอบทุกเส้นทาง (OPTIONS ที่ CORS ตัดจบเป็น 204 ไม่ถูกบีบอัด)
 	return middleware.Chain(mux,
 		middleware.Recover,
 		middleware.RequestLog,
+		middleware.Compress,
 		middleware.CORS(cfg.CORSOrigins),
 	)
 }

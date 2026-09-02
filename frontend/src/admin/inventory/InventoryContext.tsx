@@ -1,33 +1,26 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import { useNotifications } from '../notifications/NotificationContext'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost, apiPut } from '../../api/client'
+import { useResource } from '../../api/useResource'
 import {
-  computeVariance,
-  formatCountCode,
-  formatReportCode,
   isBelowReorder,
-  SEED_DISCREPANCY_REPORTS,
-  SEED_INVENTORY,
-  SEED_STOCK_COUNTS,
-  SEED_STOCK_TRANSACTIONS,
   type InventoryItem,
   type StockCount,
   type StockDiscrepancyReport,
   type StockTransaction,
-  type StockTxnType,
 } from './inventory'
 
-// v3 restores the stock-count rounds and their discrepancy reports to the persisted
-// shape after 634200d cut them. Blobs written under v1 (the trimmed shape) and v2 (an
-// earlier build of this same shape) may both be sitting in a browser already, so the key
-// is bumped rather than migrated.
-const STORAGE_KEY = 'bookhaven.inventory.v3'
-
-export interface StockChange {
-  bookId: number
-  type: StockTxnType
-  quantityChange: number
-  reason: string
-  referenceDoc: string
+// ข้อมูลอยู่ในตาราง inventory_item / stock_transaction / stock_count / stock_count_item
+// / stock_discrepancy_report ของ PostgreSQL แล้ว · เดิมเป็น blob ก้อนเดียวใน localStorage
+// คีย์ bookhaven.inventory.v3
+//
+// สามชุดนี้เป็นคนละ endpoint จึงยิงขนานกันแล้วรวมเป็นก้อนเดียวให้หน้าจอเหมือนเดิม
+const loadInventory = async () => {
+  const [items, counts, reports] = await Promise.all([
+    apiGet<InventoryItem[]>('/api/inventory'),
+    apiGet<StockCount[]>('/api/stock-counts'),
+    apiGet<StockDiscrepancyReport[]>('/api/discrepancies'),
+  ])
+  return { items, counts, reports }
 }
 
 /** One line of a manual stock adjustment. quantityChange is signed. */
@@ -38,295 +31,120 @@ export interface AdjustLine {
   referenceDoc: string
 }
 
+/** ผู้ตรวจนับมาจาก JWT และยอดในระบบเซิร์ฟเวอร์อ่านเอง หน้าจอส่งแค่ยอดที่นับได้ */
 export interface StockCountDraft {
-  countedBy: string
-  items: { bookId: number; systemQty: number; countedQty: number }[]
-}
-
-interface Stored {
-  items: InventoryItem[]
-  transactions: StockTransaction[]
-  counts: StockCount[]
-  reports: StockDiscrepancyReport[]
+  items: { bookId: number; countedQty: number }[]
 }
 
 interface InventoryValue {
   items: InventoryItem[]
-  transactions: StockTransaction[]
-  findByBookId: (bookId: number) => InventoryItem | undefined
-  belowReorder: InventoryItem[]
-  /** Applies several movements as one write so a whole GRN lands together. */
-  applyStockChanges: (changes: StockChange[]) => void
-  setReorderPoint: (bookId: number, reorderPoint: number) => void
-
   counts: StockCount[]
   reports: StockDiscrepancyReport[]
+  loading: boolean
+  error: string | null
+  /** เรียกหลังงานที่ทำให้สต็อกขยับฝั่งเซิร์ฟเวอร์ เช่นการรับสินค้าเข้าคลัง (U9) */
+  reload: () => Promise<void>
+  findByBookId: (bookId: number) => InventoryItem | undefined
+  belowReorder: InventoryItem[]
   findCount: (countId: number) => StockCount | undefined
-  /** The movement history of one title, newest first. */
-  transactionsForBook: (bookId: number) => StockTransaction[]
+  /**
+   * ประวัติการเคลื่อนไหวของหนังสือเล่มหนึ่ง ล่าสุดขึ้นก่อน
+   *
+   * ไม่มี endpoint ที่คืนรายการเคลื่อนไหวทั้งระบบ (ตารางโตเร็วเกินจะดึงมาทั้งก้อน)
+   * จึงอ่านทีละเล่มผ่าน `GET /api/books/{id}/stock-transactions`
+   */
+  transactionsForBook: (bookId: number) => Promise<StockTransaction[]>
   /** Drives the sidebar dot and the store manager's dashboard tile. */
   pendingReports: StockDiscrepancyReport[]
-  /** InventoryItem.adjust(). Refuses the whole batch if any line would go below zero. */
-  adjustStock: (lines: AdjustLine[]) => void
-  /** Saves a counting round, opens one report per variance and alerts the manager. */
-  saveStockCount: (draft: StockCountDraft) => StockCount
-  /** Sets on-hand to the counted figure and approves the report, in one write. */
-  resolveDiscrepancy: (reportId: number, note: string, by: string) => void
-  /** Rejects the report and leaves stock untouched. */
-  rejectDiscrepancy: (reportId: number, note: string, by: string) => void
+  setReorderPoint: (bookId: number, reorderPoint: number) => Promise<void>
+  /** InventoryItem.adjust(). เซิร์ฟเวอร์ปฏิเสธทั้งชุดถ้าบรรทัดไหนทำให้ยอดติดลบ */
+  adjustStock: (lines: AdjustLine[]) => Promise<void>
+  /** บันทึกรอบตรวจนับ · เซิร์ฟเวอร์เปิดรายงานผลต่างและแจ้งผู้จัดการให้ในทรานแซกชันเดียว */
+  saveStockCount: (draft: StockCountDraft) => Promise<StockCount>
+  /** ตั้งยอดคงเหลือเท่าที่นับได้แล้วอนุมัติรายงาน ในการเขียนครั้งเดียว */
+  resolveDiscrepancy: (reportId: number, note: string) => Promise<void>
+  /** ปฏิเสธรายงานโดยไม่แตะยอดคงเหลือ */
+  rejectDiscrepancy: (reportId: number, note: string) => Promise<void>
 }
 
 const InventoryContext = createContext<InventoryValue | null>(null)
 
-const SEED: Stored = {
-  items: SEED_INVENTORY,
-  transactions: SEED_STOCK_TRANSACTIONS,
-  counts: SEED_STOCK_COUNTS,
-  reports: SEED_DISCREPANCY_REPORTS,
-}
-
-function read(): Stored {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return SEED
-    const parsed = JSON.parse(raw) as Stored
-    return Array.isArray(parsed?.items) && parsed.items.length ? parsed : SEED
-  } catch {
-    return SEED
-  }
-}
-
-function write(stored: Stored) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
-}
-
-const nextId = <T,>(rows: T[], pick: (row: T) => number) =>
-  rows.reduce((max, row) => Math.max(max, pick(row)), 0) + 1
-
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const [stored, setStored] = useState<Stored>(read)
-  const { push } = useNotifications()
+  const { data, loading, error, reload, apply } = useResource(loadInventory)
 
   const value = useMemo<InventoryValue>(() => {
-    const persist = (next: Stored) => {
-      write(next)
-      setStored(next)
-    }
+    const items = data?.items ?? []
+    const counts = data?.counts ?? []
+    const reports = data?.reports ?? []
 
-    const findByBookId = (bookId: number) =>
-      stored.items.find((entry) => entry.bookId === bookId)
+    const findByBookId = (bookId: number) => items.find((entry) => entry.bookId === bookId)
 
-    // Writes the movement rows and moves the on-hand figures in one pass. `clamp` is
-    // what separates the goods-receipt path (floors at zero, which is safe there) from
-    // a manual adjustment, whose whole point is to refuse a negative balance.
-    const applyMovements = (base: Stored, changes: StockChange[], clamp: boolean): Stored => {
-      const now = new Date().toISOString()
-      let txnId = nextId(base.transactions, (entry) => entry.txnId)
-
-      const items = base.items.map((entry) => {
-        const delta = changes
-          .filter((change) => change.bookId === entry.bookId)
-          .reduce((sum, change) => sum + change.quantityChange, 0)
-        if (!delta) return entry
-        const raw = entry.quantityOnHand + delta
-        return {
-          ...entry,
-          quantityOnHand: clamp ? Math.max(0, raw) : raw,
-          lastUpdated: now,
-        }
-      })
-
-      const transactions = [
-        ...base.transactions,
-        ...changes.map<StockTransaction>((change) => ({
-          txnId: txnId++,
-          bookId: change.bookId,
-          type: change.type,
-          quantityChange: change.quantityChange,
-          reason: change.reason,
-          referenceDoc: change.referenceDoc,
-          txnDate: now,
-        })),
-      ]
-
-      return { ...base, items, transactions }
-    }
-
-    const applyStockChanges = (changes: StockChange[]) => {
-      if (!changes.length) return
-      persist(applyMovements(stored, changes, true))
-    }
-
-    const adjustStock = (lines: AdjustLine[]) => {
-      if (!lines.length) return
-
-      // Check every title before writing anything — a manual adjustment must not be
-      // allowed to drive a balance below zero, and a partial write would be worse.
-      for (const bookId of new Set(lines.map((line) => line.bookId))) {
-        const onHand = findByBookId(bookId)?.quantityOnHand ?? 0
-        const delta = lines
-          .filter((line) => line.bookId === bookId)
-          .reduce((sum, line) => sum + line.quantityChange, 0)
-        if (onHand + delta < 0) throw new Error('ยอดคงเหลือติดลบ ไม่สามารถบันทึกได้')
-      }
-
-      persist(
-        applyMovements(
-          stored,
-          lines.map((line) => ({ ...line, type: 'ADJUSTMENT' as const })),
-          false,
-        ),
+    // `GET /api/inventory` กับเส้นทางนี้คืน model.InventoryItem ตัวเดียวกัน (ไม่ผ่าน DTO)
+    // จึงต่อลงชุดเดิมได้ · จุดสั่งซื้อไม่กระทบรอบตรวจนับหรือรายงานผลต่าง ไม่ต้องโหลดสองชุดนั้น
+    const setReorderPoint = async (bookId: number, reorderPoint: number) => {
+      const updated = await apiPut<InventoryItem>(
+        `/api/inventory/${bookId}/reorder-point`,
+        { reorderPoint },
       )
+      apply((current) => ({
+        ...current,
+        items: current.items.map((row) => (row.bookId === bookId ? updated : row)),
+      }))
     }
 
-    const setReorderPoint = (bookId: number, reorderPoint: number) => {
-      persist({
-        ...stored,
-        items: stored.items.map((entry) =>
-          entry.bookId === bookId
-            ? { ...entry, reorderPoint, lastUpdated: new Date().toISOString() }
-            : entry,
-        ),
-      })
-    }
-
-    const saveStockCount = (draft: StockCountDraft) => {
-      const now = new Date().toISOString()
-      const countId = nextId(stored.counts, (entry) => entry.countId)
-      let reportId = nextId(stored.reports, (entry) => entry.reportId)
-
-      const reports: StockDiscrepancyReport[] = []
-      const items = draft.items.map((line) => {
-        const variance = computeVariance(line.systemQty, line.countedQty)
-        if (variance === 0) return { ...line, variance }
-
-        const report: StockDiscrepancyReport = {
-          reportId: reportId++,
-          countId,
+    // การตรวจยอดติดลบย้ายไปอยู่ฝั่งเซิร์ฟเวอร์แล้ว (`ApplyStrictStockChanges` +
+    // `assertNoNegativeStock` ตรวจทุกเล่มให้ครบก่อนเขียน) หน้าจอจึงแค่ส่งไปแล้วจับ error
+    const adjustStock = async (lines: AdjustLine[]) => {
+      if (!lines.length) return
+      await apiPost('/api/inventory/adjust', {
+        lines: lines.map((line) => ({
           bookId: line.bookId,
-          variance,
-          approvalStatus: 'PENDING',
-          note: '',
-          reportedBy: draft.countedBy,
-          reportedAt: now,
-        }
-        reports.push(report)
-        return { ...line, variance, reportId: report.reportId }
+          quantityChange: line.quantityChange,
+          reason: line.reason,
+          referenceDoc: line.referenceDoc,
+        })),
       })
+      await reload()
+    }
 
-      const count: StockCount = {
-        countId,
-        countDate: now.slice(0, 10),
-        status: 'DONE',
-        countedBy: draft.countedBy,
-        items,
-      }
-
-      persist({
-        ...stored,
-        counts: [...stored.counts, count],
-        reports: [...stored.reports, ...reports],
+    // เดิมหน้าจอคำนวณผลต่าง เปิดรายงานเอง และยิงแจ้งเตือนเอง — ตอนนี้เซิร์ฟเวอร์ทำทั้งหมด
+    // ในทรานแซกชันเดียว ถ้าหน้าจอยิงแจ้งเตือนซ้ำจะได้แถวซ้ำสองเท่า
+    const saveStockCount = async (draft: StockCountDraft) => {
+      const count = await apiPost<StockCount>('/api/stock-counts', {
+        items: draft.items.map((line) => ({
+          bookId: line.bookId,
+          countedQty: line.countedQty,
+        })),
       })
-
-      if (reports.length) {
-        const body =
-          `${formatCountCode(countId)} · พบ ${reports.length} รายการที่จำนวนไม่ตรง · ` +
-          `ผู้ตรวจนับ ${draft.countedBy}`
-        push(
-          (['in-app', 'email'] as const).map((channel) => ({
-            to: 'manager' as const,
-            kind: 'STOCK_DISCREPANCY' as const,
-            title: 'พบจำนวนหนังสือคลาดเคลื่อน',
-            body,
-            link: '/admin/stock/discrepancies',
-            channel,
-          })),
-        )
-      }
-
+      await reload()
       return count
     }
 
-    const decide = (
-      reportId: number,
-      approvalStatus: 'APPROVED' | 'REJECTED',
-      note: string,
-      by: string,
-    ) => {
-      const report = stored.reports.find((entry) => entry.reportId === reportId)
-      if (!report || report.approvalStatus !== 'PENDING') return
-      const now = new Date().toISOString()
-
-      const decided: Stored = {
-        ...stored,
-        reports: stored.reports.map((entry) =>
-          entry.reportId === reportId
-            ? { ...entry, approvalStatus, note, resolvedBy: by, resolvedAt: now }
-            : entry,
-        ),
-      }
-
-      if (approvalStatus === 'REJECTED') {
-        persist(decided)
-        return
-      }
-
-      // Set on-hand to the figure that was actually counted rather than adding the
-      // stored variance, which may be stale if the title moved since the count.
-      const counted = stored.counts
-        .find((count) => count.countId === report.countId)
-        ?.items.find((line) => line.bookId === report.bookId)?.countedQty
-      if (counted === undefined) {
-        persist(decided)
-        return
-      }
-
-      const onHand = findByBookId(report.bookId)?.quantityOnHand ?? 0
-      const quantityChange = counted - onHand
-      if (!quantityChange) {
-        persist(decided)
-        return
-      }
-
-      persist(
-        applyMovements(
-          decided,
-          [
-            {
-              bookId: report.bookId,
-              type: 'ADJUSTMENT',
-              quantityChange,
-              reason: 'ปรับปรุงยอดตามผลการตรวจนับ',
-              referenceDoc: formatReportCode(reportId),
-            },
-          ],
-          false,
-        ),
-      )
+    const decide = async (reportId: number, action: 'approve' | 'reject', note: string) => {
+      await apiPost(`/api/discrepancies/${reportId}/${action}`, { note })
+      await reload()
     }
 
     return {
-      items: stored.items,
-      transactions: stored.transactions,
+      items,
+      counts,
+      reports,
+      loading,
+      error,
+      reload,
       findByBookId,
-      belowReorder: stored.items.filter(isBelowReorder),
-      applyStockChanges,
-      setReorderPoint,
-
-      counts: stored.counts,
-      reports: stored.reports,
-      findCount: (countId: number) => stored.counts.find((count) => count.countId === countId),
+      belowReorder: items.filter(isBelowReorder),
+      findCount: (countId: number) => counts.find((count) => count.countId === countId),
       transactionsForBook: (bookId: number) =>
-        stored.transactions
-          .filter((entry) => entry.bookId === bookId)
-          .sort((a, b) => b.txnDate.localeCompare(a.txnDate) || b.txnId - a.txnId),
-      pendingReports: stored.reports.filter((entry) => entry.approvalStatus === 'PENDING'),
+        apiGet<StockTransaction[]>(`/api/books/${bookId}/stock-transactions`),
+      pendingReports: reports.filter((entry) => entry.approvalStatus === 'PENDING'),
+      setReorderPoint,
       adjustStock,
       saveStockCount,
-      resolveDiscrepancy: (reportId, note, by) => decide(reportId, 'APPROVED', note, by),
-      rejectDiscrepancy: (reportId, note, by) => decide(reportId, 'REJECTED', note, by),
+      resolveDiscrepancy: (reportId, note) => decide(reportId, 'approve', note),
+      rejectDiscrepancy: (reportId, note) => decide(reportId, 'reject', note),
     }
-  }, [stored, push])
+  }, [data, loading, error, reload, apply])
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>
 }
