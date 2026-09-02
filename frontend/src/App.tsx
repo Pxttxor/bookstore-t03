@@ -30,6 +30,7 @@ import PromotionListPage from './admin/pages/PromotionListPage'
 import PromotionFormPage from './admin/pages/PromotionFormPage'
 import ReviewModerationPage from './admin/pages/ReviewModerationPage'
 import ReviewManagerPage from './admin/pages/ReviewManagerPage'
+import DeliverySummaryReportPage from './admin/pages/DeliverySummaryReportPage'
 
 export default function App() {
   return (
@@ -45,6 +46,8 @@ export default function App() {
 
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
+
+        <Route path="delivery-report" element={<DeliverySummaryReportPage />} />
 
         <Route path="suppliers" element={<SupplierListPage />} />
         <Route path="suppliers/new" element={<SupplierFormPage />} />

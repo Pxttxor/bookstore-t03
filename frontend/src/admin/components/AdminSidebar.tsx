@@ -46,6 +46,17 @@ const MENU: MenuGroup[] = [
     ],
   },
   {
+    heading: 'การจัดส่งพัสดุ',
+    items: [
+      {
+        label: 'สรุปการจัดส่งพัสดุ',
+        to: '/admin/delivery-report',
+        icon: 'truck',
+        allowed: can.viewDeliveryReport,
+      },
+    ],
+  },
+  {
     heading: 'จัดการผู้จัดจำหน่าย',
     items: [
       {

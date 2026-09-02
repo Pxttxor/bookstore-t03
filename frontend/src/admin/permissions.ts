@@ -45,4 +45,6 @@ export const can = {
   shipOrder: (role: Role) => role === 'delivery',
   confirmDelivery: (role: Role) => role === 'delivery',
   cancelOrder: (role: Role) => role === 'sales' || role === 'manager',
+  viewDeliveryReport: (role: Role) =>
+    role === 'sales' || role === 'warehouse' || role === 'delivery' || role === 'manager',
 }

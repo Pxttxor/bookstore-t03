@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: bookstore_t03
+
+    environment:
+      POSTGRES_DB: bookstore_t03
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: [bookstore03]
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - golang_postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@example.com
+      PGADMIN_DEFAULT_PASSWORD: mypassword
+    ports:
+      - "8081:80"
+
+volumes:
+  golang_postgres_data:
