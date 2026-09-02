@@ -79,6 +79,11 @@ export const can = {
     role === 'sales' || role === 'warehouse' || role === 'manager' || role === 'delivery',
   updateTracking: (role: Role) => role === 'delivery',
   manageDeliverySummary: (role: Role) => role === 'delivery' || role === 'manager',
+  // The daily summary report (DeliverySummary.generate) is read-only, so it opens to
+  // everyone who already sees a parcel; producing/closing a summary stays with
+  // `manageDeliverySummary` above.
+  viewDeliveryReport: (role: Role) =>
+    role === 'sales' || role === 'warehouse' || role === 'manager' || role === 'delivery',
 
   // Membership and loyalty points (Membership subsystem).
   // StoreManager.manageMemberTier in the class diagram.
