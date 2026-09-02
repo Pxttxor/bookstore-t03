@@ -12,7 +12,7 @@ interface MenuItem {
   icon: IconName
   allowed: (role: Role) => boolean
   /** Renders a red dot when the named queue has something waiting on this screen. */
-  dot?: 'reorder' | 'reviews' | 'reportedReviews'
+  dot?: 'reorder' | 'reviews' | 'reportedReviews' | 'discrepancy'
   end?: boolean
 }
 
@@ -46,6 +46,17 @@ const MENU: MenuGroup[] = [
     ],
   },
   {
+    heading: 'จัดการข้อมูลหนังสือ',
+    items: [
+      {
+        label: 'รายการหนังสือ',
+        to: '/admin/books',
+        icon: 'book',
+        allowed: can.viewBooks,
+      },
+    ],
+  },
+  {
     heading: 'จัดการผู้จัดจำหน่าย',
     items: [
       {
@@ -70,6 +81,45 @@ const MENU: MenuGroup[] = [
         to: '/admin/purchasing/receipts',
         icon: 'shopping-bag',
         allowed: can.receiveGoods,
+      },
+    ],
+  },
+  {
+    heading: 'คลังสินค้า',
+    items: [
+      {
+        label: 'ยอดคงเหลือ',
+        to: '/admin/stock',
+        icon: 'package',
+        allowed: can.viewStock,
+        end: true,
+      },
+      {
+        // The low-stock report is the same read as ยอดคงเหลือ, so it shares can.viewStock;
+        // the backend has no separate endpoint for it to mirror.
+        label: 'หนังสือที่ใกล้หมด',
+        to: '/admin/stock/low',
+        icon: 'trending-down',
+        allowed: can.viewStock,
+      },
+      {
+        label: 'ปรับปรุงจำนวน',
+        to: '/admin/stock/adjust',
+        icon: 'edit',
+        allowed: can.adjustStock,
+      },
+      {
+        label: 'ตรวจนับสต็อก',
+        to: '/admin/stock/counts',
+        icon: 'clipboard',
+        allowed: can.viewStockCounts,
+      },
+      {
+        label: 'ยอดหนังสือไม่ตรง',
+        to: '/admin/stock/discrepancies',
+        icon: 'alert-triangle',
+        allowed: can.viewDiscrepancies,
+        dot: 'discrepancy',
       },
     ],
   },
@@ -130,7 +180,7 @@ const MENU: MenuGroup[] = [
 ]
 
 export default function AdminSidebar({ role }: { role: Role }) {
-  const { belowReorder } = useInventory()
+  const { belowReorder, pendingReports } = useInventory()
   const { pendingCount, reportedCount } = useReviews()
 
   const dotCount = (source: MenuItem['dot']) =>
@@ -140,6 +190,8 @@ export default function AdminSidebar({ role }: { role: Role }) {
       ? pendingCount
       : source === 'reportedReviews'
       ? reportedCount
+      : source === 'discrepancy'
+      ? pendingReports.length
       : 0
 
   return (

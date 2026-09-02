@@ -1,26 +1,55 @@
-# BUILD_ERRORS — `npm run build` ของ frontend ยังไม่ผ่าน
+# BUILD_ERRORS — ✅ แก้แล้ว 30 ส.ค. 2026
 
-บันทึกรายการ error ไว้ให้ครบ เพื่อให้กลับมาแก้ได้โดยไม่ต้องรันแล้วไล่อ่านเอง
-**ไม่ใช่รายการงานที่กำลังทำอยู่** — เป็นหนี้ที่รู้ตัวแล้วและยังไม่ตัดสินใจว่าจะแก้ทางไหน
-(คู่กับหัวข้อ "หนี้ / ค้าง" ใน [`../backend/PROGRESS.md`](../backend/PROGRESS.md))
+> **สถานะปัจจุบัน: `npm run build` ผ่าน · `npm run lint` สะอาด · `tsc` 0 error (เดิม 46)**
+> เก็บไฟล์นี้ไว้เป็นบันทึกว่าเกิดอะไรขึ้นและแก้ด้วยวิธีไหน ไม่ใช่รายการงานค้างอีกต่อไป
 
 | | |
 |---|---|
-| บันทึกเมื่อ | 30 ส.ค. 2026 · commit `f93c3e2` · branch `feat/backend-46-classes` |
-| `npm run build` | ❌ **46 error** ออกจาก `tsc -b` ทั้งหมด (`vite build` ไม่ได้เริ่มรันเลย) |
-| `npm run lint` | ✅ **สะอาด** — พังเฉพาะ type-check ไม่ใช่ eslint |
-| ไฟล์ที่พัง | 7 ไฟล์ใน `src/admin/pages/` ซึ่ง **ไม่มี route ไม่มีเมนู และไม่มีไฟล์ไหน import** |
-| กระทบการใช้งานไหม | ไม่ — `npm run dev` เปิดหน้าเว็บได้ตามปกติ เพราะ Vite คอมไพล์เฉพาะไฟล์ที่ต่อจาก entry |
+| แก้เมื่อ | 30 ส.ค. 2026 · branch `feat/backend-46-classes` (ก่อนแก้อยู่ที่ `f71f0dc`) |
+| เลือกทางไหน | **ทาง 1 · กู้คืนโมดูลเดิม** (ผู้ใช้ตัดสิน) — ไม่ใช่ทาง 2 ที่ลบไฟล์กำพร้าทิ้ง |
+| ผลตอนนี้ | `tsc` 0 error · `eslint` สะอาด · `vite build` ออก 51 JS chunk / 48 CSS chunk |
+| หน้าจอที่ได้กลับมา | 9 หน้า (Book 3 · Stock 6) · route 11 เส้น · เมนู sidebar 2 กลุ่ม · StatTile บน dashboard 3 ใบ |
 
-ตรวจซ้ำว่าตัวเลขยังเท่าเดิมไหม:
+ตรวจซ้ำ:
 
 ```bash
 cd frontend
-npx tsc --noEmit -p tsconfig.app.json 2>&1 | grep -c "error TS"   # 46 ถ้ายังไม่มีใครแก้
-npx eslint src                                                     # ต้องสะอาด
+npx tsc --noEmit -p tsconfig.app.json 2>&1 | grep -c "error TS"   # ต้องได้ 0
+npx eslint .                                                       # ต้องสะอาด
+npm run build                                                      # ต้องผ่าน
 ```
 
 ---
+
+## แก้ด้วยอะไรบ้าง
+
+| ไฟล์ | ทำอะไร |
+|---|---|
+| `src/admin/inventory/inventory.ts` | merge 20 export กลับจาก `28c4fdf` (8 → 28 export) · **คงป้ายไทยของปัจจุบัน** `'รับเข้าคลัง'`/`'ตัดขาย'` ไม่เอา `'รับเข้า'`/`'ขายออก'` ของไฟล์เก่า |
+| `src/admin/inventory/InventoryContext.tsx` | กู้คืนทั้งไฟล์ (6 → 15 สมาชิกใน `InventoryValue`) · `STORAGE_KEY` **bump เป็น `bookhaven.inventory.v3`** เพราะทั้ง `v1` (รูปที่ถูกตัด) และ `v2` (รอบ 7 ส.ค.) อาจค้างในเบราว์เซอร์ |
+| `src/admin/notifications/NotificationContext.tsx` | เติม `'STOCK_DISCREPANCY'` กลับเข้า `NotificationKind` |
+| `src/components/Icon.tsx` | **เพิ่ม** `clipboard` · `trending-down` (เก็บ `flag`/`bar-chart`/`sort` ของงานรีวิวไว้ — เพิ่ม ไม่ใช่ revert) |
+| `src/App.tsx` | คืน route 11 เส้น (`books*` 4 · `stock*` 7) + ทำ lazy chunk ทั้งไฟล์ |
+| `src/admin/components/AdminSidebar.tsx` | คืนกลุ่ม **จัดการข้อมูลหนังสือ** + **คลังสินค้า** · เพิ่ม dot `'discrepancy'` โดยไม่ลบ `'reportedReviews'` · เมนู "หนังสือที่ใกล้หมด" ใช้ `can.viewStock` แทน `can.viewLowStock` ที่ไม่มีในไฟล์ (backend ไม่มี endpoint แยกให้ mirror) |
+| `src/admin/AdminLayout.tsx` | คืน `BookProvider` ครอบ `InventoryProvider` |
+| `src/admin/pages/DashboardPage.tsx` | คืน StatTile 3 ใบ + ชี้ tile "รายการหนังสือในระบบ" กลับไป `/admin/books` |
+
+## regression อีกตัวจาก `634200d` ที่เจอตอนแก้ (ไม่ได้อยู่ในบันทึกเดิม)
+
+`tsc` จับไม่ได้เพราะไม่ใช่ type error — **ช่องค้นหาของ storefront ตายสนิท**
+
+- `TopNav.tsx` — `<input type="search">` ถูกถอด `value`/`onChange`/`aria-label` ออกหมด พิมพ์แล้วไม่เกิดอะไร
+  และ `placeholder` กลายเป็น `"Search books..."` ภาษาอังกฤษ **ผิดกฎภาษาของโปรเจกต์**
+- `StorefrontLayout.tsx` — `showSearch` เหลือเฉพาะ `/book*` หน้าหลักจึงไม่มีช่องค้นหาเลย
+- `HomePage.tsx` — เลิกอ่าน `?q=` ทั้งการกรองและหัวข้อผลการค้นหา
+
+แก้แล้วทั้งสามไฟล์ (คืน `?q=` เส้นเดียว sync ระหว่าง TopNav กับ HomePage) · **ไม่คืน**
+ช่องค้นหา `.home__search` ที่เคยอยู่กลางหน้าหลัก เพราะ TopNav ทำหน้าที่นี้ครบแล้วและการเติมกลับ
+จะเพิ่ม element บนหน้าจอ ซึ่งขัดคำสั่ง "อย่าแก้การจัดวางหน้าจอ"
+
+---
+
+## บันทึกเดิม (ก่อนแก้) — เก็บไว้อ้างอิง
 
 ## ทำไมถึงพัง
 
@@ -118,7 +147,7 @@ git show 28c4fdf:frontend/src/admin/inventory/InventoryContext.tsx
 
 ---
 
-## จะแก้ทางไหนดี — สามทาง
+## จะแก้ทางไหนดี — สามทาง *(ตัดสินแล้ว: เลือกทาง 1)*
 
 ### ทาง 1 · กู้คืนโมดูลเดิม (ได้หน้าจอกลับมา งานเยอะสุด)
 
@@ -149,14 +178,20 @@ git show 28c4fdf:frontend/src/admin/inventory/InventoryContext.tsx
 **ข้อดี** — `npm run build` ผ่านทันที ไม่ต้องแตะโค้ดของใคร
 **ข้อเสีย** — ทิ้งงานหน้าจอที่ทำไว้เมื่อ 7 ส.ค. (กู้จาก git ได้ แต่ก็คือถอยกลับไปทาง 1 อยู่ดี)
 
-### ทาง 3 · ปล่อยไว้ตามนี้ (สถานะปัจจุบัน)
+### ทาง 3 · ปล่อยไว้ตามนี้ ~~(สถานะปัจจุบัน)~~
 
 `npm run dev` ใช้งานได้ · `npm run lint` สะอาด · เสียแค่ `npm run build`
 เหมาะถ้ายังไม่ได้คุยกับเจ้าของ commit และไม่มีใครต้อง build เพื่อส่งงานตอนนี้
 
 ---
 
-## ก่อนตัดสินใจ
+## ก่อนตัดสินใจ *(ปิดแล้ว)*
+
+> **สิ่งที่เกิดขึ้นจริง** — ผู้ใช้เลือกทาง 1 · งานทำแบบ **merge ไม่ใช่ `git checkout` ทับ**
+> จึงไม่ได้ย้อน commit ของดวงกมล: งานรีวิวทั้งหมด (drawer · reply modal · report modal ·
+> ไอคอน `flag`/`bar-chart`/`sort` · dot `reportedReviews`) ยังอยู่ครบ แค่เอาของที่หายไป
+> **เติมกลับข้าง ๆ** ทีละชิ้น · ยังควรบอกเจ้าของ commit ว่าเติมอะไรกลับมาบ้าง
+
 
 `634200d` เป็น commit ของ **ดวงกมล** และไปแตะไฟล์ร่วมหลายไฟล์ในก้อนเดียวกับงาน
 review moderation UI ของเขา — **ทาง 1 กับทาง 2 ควรคุยกับเจ้าของก่อน** ว่าตั้งใจตัดออกถาวร

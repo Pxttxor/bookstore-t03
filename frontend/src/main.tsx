@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
+import ScrollToTop from './components/ScrollToTop'
 import { CartProvider } from './cart/CartContext'
 import { AuthProvider } from './auth/AuthContext'
 import { NotificationProvider } from './admin/notifications/NotificationContext'
@@ -15,6 +16,7 @@ import { OrderProvider } from './admin/orders/OrderContext'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <CartProvider>
           <NotificationProvider>
