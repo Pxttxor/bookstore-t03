@@ -83,8 +83,7 @@ func (c OrderChannel) Label() string    { return lookup(OrderChannelLabels, c) }
 func (t PromotionType) Label() string   { return lookup(PromotionTypeLabels, t) }
 func (s PromotionStatus) Label() string { return lookup(PromotionStatusLabels, s) }
 
-// PaymentStatusLabels — ระบบย่อยนี้ไม่มีหน้าจอฝั่ง frontend ให้ยึด
-// ข้อความจึงเลือกให้อ่านเข้าคู่กับป้ายของ OrderStatus ที่ผู้ใช้เห็นอยู่แล้ว
+// PaymentStatusLabels — ใช้ร่วมกับ PAYMENT_STATUS_LABELS ของ frontend
 var PaymentStatusLabels = map[PaymentStatus]string{
 	PaymentStatusWaiting:   "รอชำระเงิน",
 	PaymentStatusVerifying: "รอตรวจสอบ",
@@ -106,9 +105,7 @@ var ShipmentStatusLabels = map[ShipmentStatus]string{
 
 func (s ShipmentStatus) Label() string { return lookup(ShipmentStatusLabels, s) }
 
-// PointTxnTypeLabels / RewardTypeLabels — ระบบย่อยนี้ไม่มีหน้าจอฝั่ง frontend ให้ยึด
-// จึงคัดข้อความจากไฟล์ของเจ้าของคลาส (SourceCode/B6730741-banchakan/model/labels.go)
-// ต่างจาก ShipmentStatusLabels ที่มีป้ายฝั่งหน้าจออยู่แล้วจึงต้องยึดฝั่งนั้น
+// PointTxnTypeLabels / RewardTypeLabels — ใช้ร่วมกับป้ายในระบบสมาชิกของ frontend
 var PointTxnTypeLabels = map[PointTxnType]string{
 	PointTxnTypeEarn:     "ได้รับแต้ม",
 	PointTxnTypeRedeem:   "ใช้แต้มแลก",

@@ -1,0 +1,80 @@
+.tiers__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.tiers__panel {
+  padding: 20px;
+  overflow: hidden;
+}
+
+.tiers__panel-title {
+  margin-bottom: 14px;
+  color: var(--primary-deep);
+  font-size: 16px;
+}
+
+.tiers__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.tiers__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.tiers__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tiers__card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-deep);
+  font-family: var(--font-sans);
+  font-size: 20px;
+}
+
+.tiers__card-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.tiers__card-dl dt {
+  color: var(--text-muted);
+}
+
+.tiers__card-dl dd {
+  margin: 0;
+  color: var(--text-heading);
+  text-align: right;
+}
+
+.tiers__card-benefits {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.tiers__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

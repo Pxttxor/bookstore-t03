@@ -80,6 +80,16 @@ export default function ProfilePage() {
               <span>Order History</span>
               <Icon name="arrow-right" size={16} />
             </Link>
+            <Link to="/member/points" className="profile__link">
+              <Icon name="award" size={18} />
+              <span>แต้มสะสมของฉัน</span>
+              <Icon name="arrow-right" size={16} />
+            </Link>
+            <Link to="/member/rewards" className="profile__link">
+              <Icon name="gift" size={18} />
+              <span>แลกของรางวัล</span>
+              <Icon name="arrow-right" size={16} />
+            </Link>
             <span
               className="profile__link profile__link--soon"
               aria-disabled="true"

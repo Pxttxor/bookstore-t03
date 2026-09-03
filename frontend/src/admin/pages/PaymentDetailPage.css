@@ -1,0 +1,179 @@
+.payment-detail__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.payment-detail__col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.payment-detail__panel {
+  padding: 20px;
+}
+
+.payment-detail__panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--primary-deep);
+  font-size: 16px;
+}
+
+.payment-detail__banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+}
+
+.payment-detail__banner--danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+.payment-detail__banner--ok {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+/* สลิปจำลอง — จัดวางให้อ่านได้เหมือนสลิปโอนเงินในแอปธนาคาร */
+.payment-detail__slip {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.payment-detail__slip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--border);
+  color: var(--status-success);
+  font-weight: 600;
+}
+
+.payment-detail__slip-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 18px;
+  margin: 16px 0 0;
+  font-size: 15px;
+}
+
+.payment-detail__slip-body dt {
+  color: var(--text-muted);
+}
+
+.payment-detail__slip-body dd {
+  margin: 0;
+  color: var(--text-heading);
+  text-align: right;
+}
+
+.payment-detail__slip-amount {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  font-size: 30px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.payment-detail__slip-file {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.payment-detail__dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 20px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.payment-detail__dl dt {
+  color: var(--text-muted);
+}
+
+.payment-detail__dl dd {
+  margin: 0;
+  color: var(--text-heading);
+  text-align: right;
+}
+
+.payment-detail__amount {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.payment-detail__mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.payment-detail__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-deep);
+  font-weight: 600;
+}
+
+.payment-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.payment-detail__waiting,
+.payment-detail__hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.payment-detail__hint {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+.payment-detail__warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .payment-detail__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

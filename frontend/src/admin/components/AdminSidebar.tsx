@@ -46,6 +46,35 @@ const MENU: MenuGroup[] = [
     ],
   },
   {
+    heading: 'การชำระเงิน',
+    items: [
+      {
+        label: 'ตรวจสอบการชำระเงิน',
+        to: '/admin/payments',
+        icon: 'credit-card',
+        allowed: can.viewPayments,
+        end: true,
+      },
+      {
+        label: 'รายงานสรุปรับชำระเงิน',
+        to: '/admin/payments/report',
+        icon: 'bar-chart',
+        allowed: can.managePaymentReports,
+      },
+    ],
+  },
+  {
+    heading: 'สมาชิกและแต้มสะสม',
+    items: [
+      {
+        label: 'ระดับสมาชิกและแต้ม',
+        to: '/admin/members',
+        icon: 'award',
+        allowed: can.viewMembers,
+      },
+    ],
+  },
+  {
     heading: 'การจัดส่งพัสดุ',
     items: [
       {

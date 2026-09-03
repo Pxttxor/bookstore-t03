@@ -104,7 +104,7 @@ func TestPaymentReject(t *testing.T) {
 	}
 }
 
-// ป้ายไทยต้องครบทุกค่า — ระบบย่อยนี้ไม่มีหน้าจอฝั่ง frontend ให้เทียบ จึงต้องมีเทสต์คุมเอง
+// ป้ายไทยต้องครบทุกค่าและตรงกับค่าที่ frontend แสดง
 func TestPaymentStatusLabels(t *testing.T) {
 	want := map[PaymentStatus]string{
 		PaymentStatusWaiting:   "รอชำระเงิน",

@@ -68,6 +68,7 @@ type PlaceOrderInput struct {
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
 	SlipFileName    string             `json:"slipFileName"`
+	BankID          *int               `json:"bankId,omitempty"`
 	Items           []OrderLineInput   `json:"items"`
 }
 
@@ -137,7 +138,16 @@ func (s *OrderService) Place(input PlaceOrderInput, current Identity) (*OrderVie
 		if err := s.orders.Create(tx, order); err != nil {
 			return err
 		}
-		if err := s.openPayment(tx, order); err != nil {
+		if input.BankID != nil {
+			exists, err := s.payments.BankExists(tx, *input.BankID)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return model.ErrBankNotFound
+			}
+		}
+		if err := s.openPayment(tx, order, input.BankID); err != nil {
 			return err
 		}
 		body := fmt.Sprintf("%s · %s · ฿%.2f · %d เล่ม",
@@ -218,14 +228,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 //
 // ใบที่แนบสลิปมาตั้งแต่ตอนสั่ง (เส้นทางเว็บไซต์) เข้าสถานะรอตรวจทันที
 // ใบที่ยังไม่ได้ชำระ (โทรศัพท์/ข้อความ) เป็น WAITING ไว้ก่อน
-func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order) error {
+func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order, bankID *int) error {
 	payment := model.Payment{
 		OrderID: order.OrderID,
 		Amount:  order.NetAmount,
 		Status:  model.PaymentStatusWaiting,
 	}
 	if order.SlipFileName != "" {
-		if err := payment.UploadSlip(order.SlipFileName, nil, order.OrderDate); err != nil {
+		if err := payment.UploadSlip(order.SlipFileName, bankID, order.OrderDate); err != nil {
 			return err
 		}
 	}
@@ -299,7 +309,13 @@ func (s *OrderService) SubmitPayment(
 			}
 			// ยอดอาจเปลี่ยนไปจากตอนเปิดใบถ้ามีการแก้ส่วนลด จึงเขียนยอดล่าสุดลงไปด้วย
 			payment.Amount = order.NetAmount
-			if err := payment.UploadSlip(slip, input.BankID, time.Now()); err != nil {
+			bankID := input.BankID
+			// การเริ่มตรวจจากหน้าคำสั่งซื้อไม่ได้ถามธนาคารซ้ำ ถ้าเคยเลือกไว้
+			// ตอน checkout ให้รักษาค่าเดิมแทนการเขียน NULL ทับ
+			if bankID == nil {
+				bankID = payment.BankID
+			}
+			if err := payment.UploadSlip(slip, bankID, time.Now()); err != nil {
 				return err
 			}
 			if err := s.payments.Save(tx, payment); err != nil {

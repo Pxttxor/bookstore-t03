@@ -1,0 +1,14 @@
+.payment-list {
+  overflow: hidden;
+}
+
+.payment-list__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.payment-list__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
