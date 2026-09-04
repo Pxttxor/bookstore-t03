@@ -35,10 +35,6 @@
   margin-top: 6px;
   color: var(--text-muted);
 }
-.track__help {
-  white-space: nowrap;
-}
-
 /* status tracker */
 .track__status {
   display: flex;

@@ -72,7 +72,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
           )}
           <button
             className="topnav__icon-btn"
-            aria-label="Favorites"
+            aria-label="รายการโปรด"
             disabled
             title="ยังไม่เปิดใช้งานในเวอร์ชันนี้"
           >
@@ -81,7 +81,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
           <Link
             to="/checkout/shipping"
             className="topnav__icon-btn topnav__cart"
-            aria-label="Cart"
+            aria-label="ตะกร้าสินค้า"
           >
             <Icon name="cart" size={20} />
             {count > 0 && <span className="topnav__badge">{count}</span>}
@@ -90,7 +90,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
             <Link
               to="/profile"
               className="topnav__icon-btn topnav__avatar"
-              aria-label="Your profile"
+              aria-label="บัญชีของฉัน"
               title={user.name}
             >
               {initialsOf(user.name)}
@@ -99,7 +99,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
             <Link
               to="/login"
               className="topnav__icon-btn"
-              aria-label="Sign in to your account"
+              aria-label="เข้าสู่ระบบ"
             >
               <Icon name="user" size={20} />
             </Link>

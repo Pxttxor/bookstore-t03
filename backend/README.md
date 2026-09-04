@@ -231,8 +231,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 
 ## API
 
-ทุกเส้นทางขึ้นต้นด้วย `/api` และต้องมี `Authorization: Bearer <token>` ยกเว้น `/api/health`
-กับ `/api/auth/login`
+ทุกเส้นทางขึ้นต้นด้วย `/api` และต้องมี `Authorization: Bearer <token>` ยกเว้นเส้นทางสาธารณะ
+สี่กลุ่ม: `/api/health` · `/api/auth/login` · `/api/auth/register` กับ `/api/auth/verify-otp`
+(สมัครบัญชีลูกค้า) · และ `/api/catalogue/*` (แคตตาล็อกหน้าร้าน — คนเดินดูหนังสือยังไม่ล็อกอิน)
 
 รูปแบบข้อผิดพลาด — `code` เป็นอังกฤษให้หน้าจอ switch ได้ `message` เป็นไทยสำหรับแสดงผล:
 
@@ -243,6 +244,7 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | Method | Path | UC | สิทธิ์ |
 |---|---|---|---|
 | POST | `/auth/login` · `/auth/register` · `/auth/verify-otp` | — | เปิดสาธารณะ |
+| GET | `/catalogue` · `/catalogue/categories` · `/catalogue/{id}` | — | เปิดสาธารณะ (เฉพาะเล่มที่ขายอยู่) |
 | GET | `/auth/me` | — | ทุกคนที่ล็อกอินแล้ว (รวมลูกค้า) |
 | GET/PUT | `/customers/me` | — | ลูกค้า |
 | GET | `/customers` · `/customers/{id}` | — | ฝ่ายขาย, ผจก. |
@@ -425,10 +427,11 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
     ต้องใส่เครื่องหมายคำพูดทุกครั้งที่เขียน query ซึ่งพลาดง่ายมาก · ตารางลูกใช้คำนำหน้าเดียวกัน
     (`customer_order_item`, `customer_order_status_history`) · ชื่อคลาสใน Go ยังเป็น `Order` ตาม diagram
 
-16. **`customer_order_item.book_id` เป็นตัวเลข ไม่ใช่ slug ของหน้าร้าน** — ฝั่ง frontend เก็บ slug
-    เพราะ storefront ไม่มีตารางหนังสือจริง (deviation ที่บันทึกไว้ใน `frontend/CLAUDE.md`)
-    ฝั่งนี้มีตาราง `book` จึงยึด `OrderItem "*" --> "1" Book` ตาม class diagram ตรง ๆ
-    ข้อมูลตั้งต้นใน `seed_order.go` แปลง slug กับราคาดอลลาร์ของหน้าร้านเป็น `book_id` และบาท
+16. **`customer_order_item.book_id` เป็นตัวเลข ไม่ใช่ slug ของหน้าร้าน** — ยึด
+    `OrderItem "*" --> "1" Book` ตาม class diagram ตรง ๆ · ตอนทำ P4 หน้าร้านยังเป็นไฟล์ static
+    ที่คีย์ด้วย slug และคิดเงินเป็นดอลลาร์ `seed_order.go` จึงแปลงข้อมูลตั้งต้นให้
+    **ตั้งแต่หน้าร้านอ่าน `/api/catalogue` แล้ว (4 ก.ย. 69) ทั้งสองฝั่งใช้ `book_id` กับบาทตรงกัน**
+    การแปลงเหลืออยู่เฉพาะในข้อมูลตั้งต้นเก่า
 
 17. **สต็อกถูกตัดตอน "แพ็กสินค้า" ไม่ใช่ตอน "ยืนยันสต็อก"** — diagram บอกแค่
     `Order ..> StockTransaction : SALE_OUT` ไม่ได้ระบุจังหวะ · ขั้นยืนยันสต็อกจึงเป็นการ**ตรวจ**ว่ามีของพอ

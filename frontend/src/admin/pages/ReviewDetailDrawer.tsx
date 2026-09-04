@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { getBook } from '../../data/books'
+import { coverFor } from '../../data/covers'
 import Icon from '../../components/Icon'
 import RatingStars from '../../components/RatingStars'
 import StatusBadge from '../components/StatusBadge'
-import { slugForBookId } from '../orders/orders'
 import type { Review } from '../reviews/reviews'
 import './ReviewDetailDrawer.css'
 
@@ -21,9 +20,8 @@ export default function ReviewDetailDrawer({
   const [replyText, setReplyText] = useState('')
   const [isReplying, setIsReplying] = useState(false)
 
-  // review.bookId เป็นรหัสของแคตตาล็อกหลัง ส่วนรูปปกอยู่ในแคตตาล็อกหน้าร้านที่ key ด้วย slug
-  const slug = slugForBookId(review.bookId)
-  const coverFromCatalogue = slug ? getBook(slug)?.cover : undefined
+  // รูปปกอยู่ในโปรเจกต์ ไม่ใช่คอลัมน์ในตาราง book — ค้นจาก bookId ตรง ๆ
+  const coverFromCatalogue = coverFor(review.bookId)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

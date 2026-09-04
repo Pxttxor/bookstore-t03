@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
-import { formatPrice } from '../../data/books'
+import { formatPrice } from '../../data/money'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
 import ErrorState from '../components/ErrorState'

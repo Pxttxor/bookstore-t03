@@ -159,21 +159,26 @@
   cursor: not-allowed;
 }
 
+/* เหตุผลที่ปุ่มยืนยันยังกดไม่ได้ — title ของปุ่ม disabled ไม่ขึ้นในเบราว์เซอร์ส่วนใหญ่ */
+.pay__hint {
+  margin-top: -20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .pay__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* เหลือชิ้นเดียวหลังตัดปุ่ม "ต้องการความช่วยเหลือ" ที่ไม่มี onClick ออก */
+  justify-content: center;
 }
-.pay__help,
 .pay__secure {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   color: var(--text-muted);
-}
-.pay__help:hover {
-  color: var(--primary-deep);
 }
 
 .pay__bank {
@@ -222,4 +227,30 @@
   justify-content: center;
   margin-bottom: 12px;
   color: var(--danger, #d64545);
+}
+
+/* ปลายทางของใบนี้ — ให้ตรวจก่อนกดยืนยัน (เดิมเบอร์โทรที่กรอกไว้ไม่เคยถูกแสดงที่ไหนเลย) */
+.pay__ship {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.pay__ship svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--primary-deep);
+}
+.pay__ship strong {
+  display: block;
+  color: var(--text-heading);
+}
+.pay__ship p {
+  margin-top: 4px;
+  color: var(--text-body);
+  line-height: 1.5;
 }

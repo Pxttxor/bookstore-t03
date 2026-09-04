@@ -40,9 +40,9 @@ export default function LoginPage() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-card__head">
-          <h1 className="auth-card__title">Sign In</h1>
+          <h1 className="auth-card__title">เข้าสู่ระบบ</h1>
           <p className="auth-card__subtitle">
-            Access your curated collection and wishlists.
+            เข้าถึงรายการหนังสือและคำสั่งซื้อของคุณ
           </p>
         </div>
 
@@ -55,7 +55,7 @@ export default function LoginPage() {
           )}
 
           <label className="auth-field">
-            <span className="auth-label">Email Address</span>
+            <span className="auth-label">อีเมล</span>
             <span className="auth-input auth-input--pill">
               <input
                 type="email"
@@ -70,9 +70,9 @@ export default function LoginPage() {
 
           <div className="auth-field">
             <div className="auth-label-row">
-              <span className="auth-label">Password</span>
+              <span className="auth-label">รหัสผ่าน</span>
               <button type="button" className="auth-forgot">
-                Forgot password?
+                ลืมรหัสผ่าน?
               </button>
             </div>
             <span className="auth-input auth-input--pill">
@@ -87,7 +87,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="auth-input__toggle"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                 onClick={() => setShowPassword((s) => !s)}
               >
                 <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} />
@@ -96,12 +96,12 @@ export default function LoginPage() {
           </div>
 
           <button type="submit" className="btn btn-primary auth-submit" disabled={submitting}>
-            Sign In
+            {submitting ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
           </button>
         </form>
 
         <p className="auth-alt">
-          Don't have an account? <Link to="/signup">Create account</Link>
+          ยังไม่มีบัญชี? <Link to="/signup">สมัครสมาชิก</Link>
         </p>
       </div>
     </div>

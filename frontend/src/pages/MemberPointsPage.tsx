@@ -6,7 +6,7 @@ import ErrorState from '../admin/components/ErrorState'
 import LoadingState from '../admin/components/LoadingState'
 import StatusBadge from '../admin/components/StatusBadge'
 import { formatOrderCode } from '../admin/orders/orders'
-import { formatPrice } from '../data/books'
+import { formatPrice } from '../data/money'
 import { useMembership } from '../membership/MembershipContext'
 import {
   expiringSoon,

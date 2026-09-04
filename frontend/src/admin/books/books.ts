@@ -7,8 +7,10 @@
 // ../inventory/inventory.ts and is read by the reorder alerts screen, the dashboard and
 // PurchasingContext, so embedding it would create a second copy of the same figure.
 //
-// This is the back-office catalogue. The storefront's src/data/books.ts is a separate,
-// slug-keyed dataset and is deliberately left untouched.
+// This is the back-office catalogue: every field a staff screen needs, including status
+// and the change log. The storefront reads the same books through the public
+// GET /api/catalogue instead (src/data/catalogue.ts), which carries stock and ratings
+// but no editing state.
 
 import type { BadgeTone } from '../components/StatusBadge'
 

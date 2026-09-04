@@ -38,6 +38,10 @@
   height: auto;
   object-fit: cover;
 }
+/* ปกสำรองเป็น <div> จึงไม่มีความสูงจากตัวรูป ต้องกำหนดสัดส่วนให้เท่ากับปกจริง */
+.detail__cover .book-cover--fallback {
+  aspect-ratio: 185 / 262;
+}
 
 .detail__quick-meta {
   display: grid;
@@ -240,35 +244,6 @@
   color: var(--text-body);
   line-height: 1.7;
 }
-.review-card__actions {
-  display: flex;
-  gap: 24px;
-}
-.review-card__actions button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-weight: 500;
-  transition: color 0.15s ease;
-}
-.review-card__actions button:hover {
-  color: var(--primary-deep);
-}
-
-.detail__all-reviews {
-  align-self: stretch;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--primary-deep);
-  font-weight: 600;
-  transition: background 0.15s ease;
-}
-.detail__all-reviews:hover {
-  background: var(--surface);
-}
-
 @media (max-width: 900px) {
   .detail__bento {
     grid-template-columns: 1fr;
@@ -291,4 +266,54 @@
   .detail__buttons {
     flex-direction: column;
   }
+}
+
+/* ── สถานะสต็อกและรีวิวจริงจากฐานข้อมูล ─────────────────────────────── */
+
+.detail__stock--out {
+  color: var(--status-danger);
+}
+.detail__stock--out svg {
+  color: var(--status-danger);
+}
+
+/* ปุ่ม disabled ไม่โชว์ tooltip ในเบราว์เซอร์ส่วนใหญ่ เหตุผลจึงต้องอยู่บนหน้าจอ */
+.detail__blocked {
+  color: var(--status-danger);
+  font-size: 14px;
+}
+
+.detail__publisher {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.detail__back {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.review-card__headline {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+/* คำตอบกลับจากร้าน (ReviewReply) — เยื้องเข้ามาให้เห็นว่าเป็นของรีวิวข้างบน */
+.review-card__reply {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-alt);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.review-card__reply strong {
+  display: block;
+  font-size: 13px;
+  color: var(--primary-deep);
+  margin-bottom: 4px;
+}
+.review-card__reply p {
+  color: var(--text-body);
+  line-height: 1.6;
 }

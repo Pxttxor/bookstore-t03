@@ -119,8 +119,9 @@ export default function StockAdjustPage() {
         bookId: row.bookId,
         quantityChange: changeOf(row),
         reason: row.reason.trim() || 'ปรับปรุงจำนวนโดยพนักงานคลังสินค้า',
-        // The order reference is recorded as text only. Customer orders key their books
-        // by storefront slug and never touch inventory, so this stays a paper trail.
+        // The order reference is recorded as text only. The activity diagram allows a
+        // customer order id here, but StockTransaction has no FK to customer_order, so
+        // this stays a paper trail rather than a link.
         referenceDoc: orderRef,
       }))
 

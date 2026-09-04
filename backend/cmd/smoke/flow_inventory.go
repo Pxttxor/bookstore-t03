@@ -56,6 +56,12 @@ func saveCount(token string, bookID, countedQty int) (int, error) {
 func runInventoryFlow(e *env) {
 	warehouse, manager := e.warehouse, e.manager
 
+	// การอนุมัติผลต่างตั้งยอดเท่าที่นับได้ ซึ่งน้อยกว่าของเดิม 2 เล่ม — ถ้าไม่คืน
+	// ยอดของเล่มนี้จะลดลงทุกครั้งที่รัน smoke จนถึงศูนย์ แล้วเคส "นับได้ไม่ตรง"
+	// จะล้มด้วย INVALID_COUNTED_QTY (เคยเกิดจริง: เล่ม 122 จาก 22 เหลือ 0)
+	countStockAtStart := onHand(warehouse, approveBookID)
+	defer restoreStock(warehouse, approveBookID, countStockAtStart)
+
 	section("ปรับปรุงจำนวนสินค้าคงคลังด้วยมือ")
 	before := onHand(warehouse, adjustBookID)
 	check("คลังสินค้าปรับยอดเพิ่มได้ ยอดคงเหลือขยับตาม", func() error {
@@ -147,6 +153,13 @@ func runInventoryFlow(e *env) {
 
 	var countID, approveReportID, rejectReportID int
 	check("นับได้ไม่ตรง เปิดรายงานผลต่างสถานะ PENDING", func() error {
+		// เติมยอดให้มีของพอนับลงก่อน เพื่อให้เคสนี้รันได้แม้ฐานจะเหลือศูนย์
+		if onHand(warehouse, approveBookID) < 2 {
+			if _, err := post(warehouse, "/api/inventory/adjust",
+				adjustBody(approveBookID, 10, "เตรียมยอดก่อนทดสอบการตรวจนับ"), 201); err != nil {
+				return err
+			}
+		}
 		system := onHand(warehouse, approveBookID)
 		body, err := post(warehouse, "/api/stock-counts", countBody(approveBookID, system-2), 201)
 		if err != nil {

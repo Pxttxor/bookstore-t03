@@ -229,10 +229,6 @@ export function outstandingOrders(orders: PurchaseOrder[]) {
   return orders.filter((po) => !CLOSED_PO.includes(po.status))
 }
 
-export function receivedInFull(po: PurchaseOrder) {
-  return po.items.every((line) => line.receivedQty >= line.quantity)
-}
-
 // งบประมาณของ SCR-23 ย้ายไปฝั่งเซิร์ฟเวอร์แล้ว — อ่านผ่าน `GET /api/purchasing/budget`
 // ซึ่งคืน { budget, committed, remaining } และคิด committed จากใบสั่งซื้อที่ยังไม่ถูกยกเลิกทั้งหมด
 // (เดิมเป็นค่าคงที่ `PURCHASE_BUDGET = 500000` กับ `committedAmount()` ที่คำนวณฝั่งหน้าจอ
@@ -405,4 +401,3 @@ export const SEED_GOODS_RECEIPTS: GoodsReceipt[] = [
   },
 ]
 
-export const SEED_PURCHASE_RETURNS: PurchaseReturn[] = []

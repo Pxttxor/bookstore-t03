@@ -479,6 +479,11 @@
   flex-shrink: 0;
 }
 
+/* สีพื้นของ avatar — เข้าถึงทางเดียวคือ template literal `avatar--${review.avatarColor}`
+   ใน ReviewManagerPage.tsx · API ยังไม่ส่งฟิลด์ `avatarColor` มา จึงตกมาที่ fallback
+   ซึ่งให้แค่ orange/green/blue/purple — `--rose` จึงยังไม่มีทางเข้าถึงตอนรันจริง
+   **อย่าลบทิ้ง** เพราะ union ใน reviews.ts ยังมี 'rose' อยู่ คนที่เปิด avatarColor
+   กลับมาทีหลังจะเจอ avatar ไม่มีสี — เป็นช่องว่างของสัญญา ไม่ใช่ CSS ตาย */
 .avatar--orange {
   background: #f87171;
   color: #ffffff;

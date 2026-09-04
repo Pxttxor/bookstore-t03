@@ -22,6 +22,7 @@ type Deps struct {
 	People        *service.PersonService
 	Suppliers     *service.SupplierService
 	Books         *service.BookService
+	Catalogue     *service.CatalogueService
 	Stock         *service.InventoryService
 	Orders        *service.OrderService
 	Promotions    *service.PromotionService
@@ -39,6 +40,7 @@ type Handler struct {
 	people        *service.PersonService
 	suppliers     *service.SupplierService
 	books         *service.BookService
+	catalogue     *service.CatalogueService
 	stock         *service.InventoryService
 	orders        *service.OrderService
 	promotions    *service.PromotionService
@@ -57,6 +59,7 @@ func New(d Deps) *Handler {
 		people:        d.People,
 		suppliers:     d.Suppliers,
 		books:         d.Books,
+		catalogue:     d.Catalogue,
 		stock:         d.Stock,
 		orders:        d.Orders,
 		promotions:    d.Promotions,

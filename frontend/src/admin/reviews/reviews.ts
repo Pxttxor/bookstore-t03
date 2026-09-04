@@ -32,7 +32,7 @@ export interface Review {
   reviewId: number
   /**
    * รหัสหนังสือในแคตตาล็อกหลัง (`book.book_id`) ตามที่ตาราง review เก็บ
-   * หน้าจอที่ต้องการรูปปกแปลงกลับเป็น slug ของหน้าร้านด้วย `slugForBookId()`
+   * หน้าจอที่ต้องการรูปปกส่งรหัสนี้เข้า `coverFor()` ของ `data/covers.ts` ตรง ๆ
    */
   bookId: number
   bookTitle: string
@@ -86,12 +86,25 @@ export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
   REMOVE: 'ลบรีวิว',
 }
 
-const BANNED_WORDS = ['ห่วย', 'กาก', 'โง่', 'ควาย', 'ขยะ', 'trash', 'stupid', 'garbage', 'scam']
-
-export function checkText(text: string): boolean {
-  const lower = text.toLowerCase()
-  return BANNED_WORDS.some((word) => lower.includes(word.toLowerCase()))
-}
+/**
+ * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram ของดวงกมล
+ *
+ * **การติดธงเกิดฝั่งเซิร์ฟเวอร์แล้ว** (`Review.Submit` → `model.ProfanityFilter.CheckText`)
+ * รายการนี้จึงเหลือไว้เป็น "สัญญา" ที่ `TestProfanityFilterWordsMatchFrontend`
+ * (`backend/internal/model/review_test.go`) เทียบทีละคำ — เทสต์ฝังรายการเดียวกันไว้เอง
+ * ไม่ได้อ่านไฟล์นี้ **แก้ที่นี่เมื่อไรต้องแก้อีกฝั่งด้วย** ไม่งั้นเทสต์ล้ม
+ */
+export const BANNED_WORDS = [
+  'ห่วย',
+  'กาก',
+  'โง่',
+  'ควาย',
+  'ขยะ',
+  'trash',
+  'stupid',
+  'garbage',
+  'scam',
+]
 
 export function formatReviewCode(reviewId: number) {
   return `RV${String(reviewId).padStart(3, '0')}`
