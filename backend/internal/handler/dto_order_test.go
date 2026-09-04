@@ -23,3 +23,15 @@ func TestOrderDTOCancellationMatchesStateMachine(t *testing.T) {
 		})
 	}
 }
+
+func TestOrderDTOCustomerEmail(t *testing.T) {
+	view := service.OrderView{
+		Order:         model.Order{OrderID: 1, CustomerID: 10},
+		CustomerName:  "สมชาย ทดสอบ",
+		CustomerEmail: "somchai@example.com",
+	}
+	dto := toOrderDTO(view)
+	if dto.CustomerEmail != "somchai@example.com" {
+		t.Fatalf("expected customerEmail to be somchai@example.com, got %q", dto.CustomerEmail)
+	}
+}

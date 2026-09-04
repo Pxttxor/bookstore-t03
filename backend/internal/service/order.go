@@ -85,10 +85,11 @@ type OrderNoteInput struct {
 
 // OrderView — คำสั่งซื้อพร้อมชื่อลูกค้า ชื่อหนังสือ และโปรโมชั่นที่ใช้
 type OrderView struct {
-	Order        model.Order
-	CustomerName string
-	Books        map[int]model.Book
-	Promotion    *model.Promotion
+	Order         model.Order
+	CustomerName  string
+	CustomerEmail string
+	Books         map[int]model.Book
+	Promotion     *model.Promotion
 }
 
 // ── อ่าน ────────────────────────────────────────────────────────────────
@@ -647,8 +648,10 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 		return nil, err
 	}
 	names := make(map[int]string, len(customers))
+	emails := make(map[int]string, len(customers))
 	for _, row := range customers {
 		names[row.Customer.CustomerID] = row.Person.Name()
+		emails[row.Customer.CustomerID] = row.Person.Email
 	}
 	promotions, err := s.promotions.List()
 	if err != nil {
@@ -660,7 +663,12 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 	}
 
 	for i, order := range orders {
-		views[i] = OrderView{Order: order, CustomerName: names[order.CustomerID], Books: books}
+		views[i] = OrderView{
+			Order:         order,
+			CustomerName:  names[order.CustomerID],
+			CustomerEmail: emails[order.CustomerID],
+			Books:         books,
+		}
 		if order.PromotionID != nil {
 			if promotion, ok := byPromotion[*order.PromotionID]; ok {
 				views[i].Promotion = &promotion

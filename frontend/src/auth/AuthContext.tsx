@@ -14,10 +14,12 @@ export interface AuthUser {
   name: string
   email: string
   role: Role
+  customerId?: number
+  personId?: number
+  employeeId?: string
 }
 
-// Identity ที่ backend ส่งกลับ (service.Identity) — มีมากกว่าที่หน้าจอใช้
-// personId / customerId / employeeId ยังไม่มีหน้าจอไหนต้องใช้ จึงไม่ประกาศไว้ที่นี่
+// Identity ที่ backend ส่งกลับ (service.Identity)
 interface LoginResult {
   token: string
   user: AuthUser

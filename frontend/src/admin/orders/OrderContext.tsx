@@ -74,7 +74,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   // Provider นี้อยู่ที่ main.tsx จึงครอบหน้าร้านด้วย · ผู้ที่ยังไม่ล็อกอินไม่มี token
   // จะได้ 401 ทุกครั้งที่เปิดหน้าแรก จึงยิงเฉพาะตอนล็อกอินแล้ว
-  const { data, loading, error, reload } = useResource(loadOrders, user !== null)
+  const { data, loading, error, reload, apply } = useResource(loadOrders, user !== null)
 
   const value = useMemo<OrderValue>(() => {
     const orders = data ?? []
@@ -93,6 +93,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         bankId: draft.bankId,
         items: draft.items,
       })
+      apply((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)])
       await refresh()
       return order
     }
@@ -137,7 +138,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       placeOrder,
       updateStatus,
     }
-  }, [data, loading, error, reload, reloadNotifications])
+  }, [data, loading, error, reload, reloadNotifications, apply])
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
 }
