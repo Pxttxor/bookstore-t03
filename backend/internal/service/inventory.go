@@ -1,4 +1,4 @@
-// inventory.go — ระบบย่อยสินค้าคงคลัง (คลาสของวุฒิภัทร โกฎแสง)
+// inventory.go — ระบบย่อยสินค้าคงคลัง
 //
 // class diagram: InventoryItem "1" *-- "*" StockTransaction · StockCount "1" *-- "*" StockCountItem
 // StockCountItem "1" --> "0..1" StockDiscrepancyReport · StockDiscrepancyReport "*" --> "1" StoreManager

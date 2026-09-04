@@ -76,7 +76,7 @@ export const loadCatalogueBook = (bookId: number) =>
   apiGet<CatalogueDetail>(`/api/catalogue/${bookId}`)
 
 /**
- * ค้นหาแบบเดียวกับ `Book.search()` ของวุฒิภัทร — ชื่อเรื่อง / ผู้แต่ง / ISBN
+ * ค้นหาแบบเดียวกับ `Book.search()` — ชื่อเรื่อง / ผู้แต่ง / ISBN
  * แบบไม่สนตัวพิมพ์ · คำค้นว่างถือว่าผ่านทุกเล่ม
  */
 export function matchesSearch(book: CatalogueBook, keyword: string): boolean {

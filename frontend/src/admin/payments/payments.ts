@@ -1,5 +1,4 @@
 // ระบบย่อยที่ 1 — ตรวจสอบการชำระเงิน (Payment Verification)
-// เจ้าของ: บัญชาการ อภัยสอน (B6730741)
 
 import type { BadgeTone } from '../components/StatusBadge'
 

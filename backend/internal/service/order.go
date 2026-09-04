@@ -1,4 +1,4 @@
-// order.go — คำสั่งซื้อของลูกค้า (คลาสของจิรพนธ์ อยู่หลาย)
+// order.go — คำสั่งซื้อของลูกค้า
 //
 // class diagram: Customer "1" --> "*" Order · Order "1" *-- "*" OrderItem
 // Order "1" *-- "*" OrderStatusHistory · Order "*" --> "0..1" Promotion · Order ..> StockTransaction
@@ -438,7 +438,7 @@ func (s *OrderService) Deliver(orderID int, by string) (*OrderView, error) {
 		})
 }
 
-// earnPoints — เติมแต้มสะสมให้เจ้าของใบ (`Member.earnPoints()` ของบัญชาการ)
+// earnPoints — เติมแต้มสะสมให้เจ้าของใบ (`Member.earnPoints()`)
 //
 // อัตราแต้มมาจากระดับปัจจุบันของสมาชิก แล้วเลื่อนระดับใหม่ตามยอดสะสมที่เพิ่งเพิ่ม
 // ลูกค้าที่ยังไม่มีแถวสมาชิก (ข้อมูลก่อน P7) ให้ผ่านไป ไม่ต้องล้มการยืนยันรับสินค้าทั้งรายการ

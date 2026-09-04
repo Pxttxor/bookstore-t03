@@ -1,4 +1,4 @@
-// payment.go — ตรวจสอบการชำระเงิน (เจ้าของคลาส: บัญชาการ อภัยสอน)
+// payment.go — ตรวจสอบการชำระเงิน
 // อ้างอิง class diagram: Sub1-Payment-Verification.md
 //
 //	Order "1" --> "1" Payment : paid by

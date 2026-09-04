@@ -1,4 +1,4 @@
-// book.go — ระบบย่อยข้อมูลหนังสือ (เจ้าของ: วุฒิภัทร โกฎแสง)
+// book.go — ระบบย่อยข้อมูลหนังสือ
 // อ้างอิง class diagram: Sub1-Book-Management.md
 //
 //	Category "1" o-- "*" Book : contains

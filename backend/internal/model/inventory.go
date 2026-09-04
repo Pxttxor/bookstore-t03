@@ -1,4 +1,4 @@
-// inventory.go — ระบบย่อยสินค้าคงคลัง (เจ้าของ: วุฒิภัทร โกฎแสง)
+// inventory.go — ระบบย่อยสินค้าคงคลัง
 // อ้างอิง class diagram: Sub2-Inventory.md
 package model
 

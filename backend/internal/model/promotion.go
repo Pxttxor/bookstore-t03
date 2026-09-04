@@ -1,4 +1,4 @@
-// promotion.go — โปรโมชั่นและส่วนลด (เจ้าของคลาส: จิรพนธ์ อยู่หลาย)
+// promotion.go — โปรโมชั่นและส่วนลด
 // อ้างอิง class diagram: Sub2-Promotion.md · Order "*" --> "0..1" Promotion : applies
 package model
 

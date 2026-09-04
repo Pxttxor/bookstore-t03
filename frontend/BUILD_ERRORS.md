@@ -60,7 +60,7 @@ npm run build                                                      # ต้อ�
 | | |
 |---|---|
 | commit ที่ตัดออก | **`634200d`** — *"Refactor inventory & enhance review moderation UI"* (29 ส.ค. 2026) |
-| ผู้เขียน | `diecoolkid <duangkamonkongphan1@gmail.com>` = **ดวงกมล กองพันธ์** (เพื่อนร่วมทีม เจ้าของระบบย่อยรีวิว) |
+| ผู้เขียน | `diecoolkid` (เพื่อนร่วมทีม เจ้าของระบบย่อยรีวิว) |
 | ตัดอะไรไปบ้าง | `inventory.ts` −207 บรรทัด · `InventoryContext.tsx` −231 บรรทัด · `App.tsx` −23 (route หาย) · `AdminSidebar.tsx` (เมนูหาย) · `permissions.ts` −19 (`can.*` 7 ตัว — เติมกลับแล้วใน P9) · `Icon.tsx` (ไอคอนสองตัว) |
 | ไม่ได้ตัด | ไฟล์หน้าจอทั้ง 7 หน้า → กลายเป็น **ไฟล์กำพร้า** |
 | ทำไม `tsc` ยังจับได้ | `tsconfig.app.json` ตรวจทั้งโฟลเดอร์ `src` ไม่ได้ตรวจเฉพาะที่ต่อจาก entry ไฟล์กำพร้าจึงยังถูกคอมไพล์ |
@@ -161,7 +161,7 @@ git show 28c4fdf:frontend/src/admin/inventory/InventoryContext.tsx
 - `NotificationContext.tsx` — `634200d` ถอด `STOCK_DISCREPANCY` ออกจากชนิดการแจ้งเตือน
 - `permissions.ts` — **ไม่ต้องทำ** เติมกลับไปแล้วใน P9
 
-**ข้อดี** — ได้หน้าจอ Book/Inventory (ระบบย่อยของวุฒิภัทร) กลับมา และตรงกับ backend
+**ข้อดี** — ได้หน้าจอ Book/Inventory (ระบบย่อยข้อมูลหนังสือ/สินค้าคงคลัง) กลับมา และตรงกับ backend
 ที่ทำ API ให้ครบแล้วใน P2/P3 (`/api/books` · `/api/stock-counts` · `/api/discrepancies`)
 **ข้อเสีย** — เป็นการรื้อ commit ของเพื่อนร่วมทีม ต้องคุยกันก่อน
 
@@ -188,11 +188,11 @@ git show 28c4fdf:frontend/src/admin/inventory/InventoryContext.tsx
 ## ก่อนตัดสินใจ *(ปิดแล้ว)*
 
 > **สิ่งที่เกิดขึ้นจริง** — ผู้ใช้เลือกทาง 1 · งานทำแบบ **merge ไม่ใช่ `git checkout` ทับ**
-> จึงไม่ได้ย้อน commit ของดวงกมล: งานรีวิวทั้งหมด (drawer · reply modal · report modal ·
+> จึงไม่ได้ย้อน commit: งานรีวิวทั้งหมด (drawer · reply modal · report modal ·
 > ไอคอน `flag`/`bar-chart`/`sort` · dot `reportedReviews`) ยังอยู่ครบ แค่เอาของที่หายไป
 > **เติมกลับข้าง ๆ** ทีละชิ้น · ยังควรบอกเจ้าของ commit ว่าเติมอะไรกลับมาบ้าง
 
 
-`634200d` เป็น commit ของ **ดวงกมล** และไปแตะไฟล์ร่วมหลายไฟล์ในก้อนเดียวกับงาน
-review moderation UI ของเขา — **ทาง 1 กับทาง 2 ควรคุยกับเจ้าของก่อน** ว่าตั้งใจตัดออกถาวร
+`634200d` เป็น commit ที่ไปแตะไฟล์ร่วมหลายไฟล์ในก้อนเดียวกับงาน
+review moderation UI — **ทาง 1 กับทาง 2 ควรคุยกับเจ้าของก่อน** ว่าตั้งใจตัดออกถาวร
 หรือแค่พลาดตอนรวมงาน เพราะสองทางนั้นให้ผลตรงข้ามกัน (ทางหนึ่งเอากลับ อีกทางลบทิ้งถาวร)

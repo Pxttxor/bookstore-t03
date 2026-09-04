@@ -30,6 +30,7 @@ const STEP_LABELS = ['สั่งซื้อแล้ว', 'ชำระเง
 // แล้วติดป้าย "ซื้อสินค้าจริง" · รีวิวเข้าคิวตรวจสอบของพนักงานก่อนขึ้นหน้าร้าน
 function ReviewForm({ bookId, title }: { bookId: number; title: string }) {
   const [rating, setRating] = useState(0)
+  const [headline, setHeadline] = useState('')
   const [comment, setComment] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
@@ -41,6 +42,10 @@ function ReviewForm({ bookId, title }: { bookId: number; title: string }) {
       setError('กรุณาให้คะแนนก่อนส่งรีวิว')
       return
     }
+    if (headline.trim() === '') {
+      setError('กรุณาระบุหัวข้อรีวิวก่อนส่ง')
+      return
+    }
     if (comment.trim() === '') {
       setError('กรุณาเขียนความเห็นก่อนส่งรีวิว')
       return
@@ -49,7 +54,12 @@ function ReviewForm({ bookId, title }: { bookId: number; title: string }) {
     setError('')
     try {
       // body ต้องมีเฉพาะฟิลด์ที่ service.ReviewInput ประกาศ (DisallowUnknownFields)
-      await apiPost('/api/reviews', { bookId, rating, comment: comment.trim() })
+      await apiPost('/api/reviews', {
+        bookId,
+        rating,
+        headline: headline.trim(),
+        comment: comment.trim(),
+      })
       setSent(true)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'ส่งรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
@@ -74,6 +84,16 @@ function ReviewForm({ bookId, title }: { bookId: number; title: string }) {
             <span>ให้คะแนน</span>
             <RatingStars value={rating} interactive size={22} onChange={setRating} />
           </div>
+          <label className="track-review__field">
+            <span>หัวข้อรีวิว</span>
+            <input
+              type="text"
+              maxLength={200}
+              placeholder="สรุปความรู้สึกสั้น ๆ เช่น อ่านสนุกมาก, แนะนำเลย"
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+            />
+          </label>
           <label className="track-review__field">
             <span>เขียนรีวิว</span>
             <textarea

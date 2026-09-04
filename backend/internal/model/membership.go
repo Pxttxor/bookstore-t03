@@ -1,4 +1,4 @@
-// membership.go — ระบบสมาชิกและแต้มสะสม (เจ้าของคลาส: บัญชาการ อภัยสอน)
+// membership.go — ระบบสมาชิกและแต้มสะสม
 // อ้างอิง class diagram: Sub2-Membership-Loyalty.md
 //
 //	Member "*" --> "1" MembershipTier : tier
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// PointExpiryYears — แต้มที่ได้รับมีอายุกี่ปี (ตรงกับ AddDate(1, 0, 0) ในไฟล์ของเจ้าของคลาส)
+// PointExpiryYears — แต้มที่ได้รับมีอายุกี่ปี (ตรงกับ AddDate(1, 0, 0))
 const PointExpiryYears = 1
 
 // MembershipTier — ระดับสมาชิกที่ผู้จัดการร้านเป็นคนกำหนด (`StoreManager.manageMemberTier()`)
