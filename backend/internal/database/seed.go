@@ -119,6 +119,14 @@ func Seed(db *gorm.DB) error {
 	inserted := map[string]int{}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		// Serialize seed runs; all demo documents belong to this transaction.
+		if err := tx.Exec("SELECT pg_advisory_xact_lock(6730741)").Error; err != nil {
+			return err
+		}
+		fresh, err := demoDatabaseEmpty(tx)
+		if err != nil {
+			return err
+		}
 		// พนักงาน — สร้างแถว person ให้ด้วยในตัว (ดู seedEmployeeRows)
 		n, err := seedEmployeeRows(tx, string(hash))
 		if err != nil {
@@ -228,20 +236,30 @@ func Seed(db *gorm.DB) error {
 			return err
 		}
 		inserted["รีวิว"] = n
+		if fresh {
+			if err := resetSequences(tx); err != nil {
+				return err
+			}
+			if err := seedDemoRows(tx, time.Now().UTC()); err != nil {
+				return fmt.Errorf("ใส่ข้อมูลสาธิตเพิ่มเติมไม่สำเร็จ: %w", err)
+			}
+			inserted["ชุดสาธิตครบระบบ"] = 1
+		}
+		for _, count := range inserted {
+			if count > 0 {
+				return resetSequences(tx)
+			}
+		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	if err := resetSequences(db); err != nil {
-		return err
-	}
-
 	// เพิ่มระบบย่อยใหม่ = เติมป้ายเข้าลิสต์นี้ ไม่ต้องแก้ format string
 	order := []string{"พนักงาน", "ลูกค้า", "หมวดหมู่", "หนังสือ", "ประวัติหนังสือ",
 		"ผู้จัดจำหน่าย", "สินค้าคงคลัง", "เคลื่อนไหวสต็อก", "PR", "PO", "GR", "โปรโมชั่น", "ธนาคาร",
-		"บริษัทขนส่ง", "คำสั่งซื้อ", "ระดับสมาชิก", "ของรางวัล", "สมาชิก", "รีวิว"}
+		"บริษัทขนส่ง", "คำสั่งซื้อ", "ระดับสมาชิก", "ของรางวัล", "สมาชิก", "รีวิว", "ชุดสาธิตครบระบบ"}
 	parts := make([]string, 0, len(order))
 	for _, label := range order {
 		parts = append(parts, fmt.Sprintf("%s %d", label, inserted[label]))
