@@ -453,7 +453,7 @@ export default function ReviewManagerPage() {
                     <div className="review-book-isbn-wrap">
                       <span className="isbn-label">ISBN</span>
                       <span className="isbn-value">
-                        {review.isbn || '978-3-16-148410-0'}
+                        {review.isbn || '—'}
                       </span>
                     </div>
                   </div>

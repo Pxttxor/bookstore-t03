@@ -50,10 +50,10 @@ export default function ReviewModerationPage() {
   const role = user!.role
   const mayModerate = can.moderateReview(role)
 
-  const kpiTotal = 1248 - 5 + reviews.length
-  const kpiUnreplied = 24 - 2 + unrepliedCount
-  const kpiReplied = 1215 - 2 + repliedCount
-  const kpiReported = 9 - 1 + reportedCount
+  const kpiTotal = reviews.length
+  const kpiUnreplied = unrepliedCount
+  const kpiReplied = repliedCount
+  const kpiReported = reportedCount
 
   const filteredReviews = useMemo(() => {
     const needle = term.trim().toLowerCase()
@@ -248,7 +248,7 @@ export default function ReviewModerationPage() {
                   <div className="review-book-meta-sales">
                     <h3 className="review-book-title-sales">{review.bookTitle}</h3>
                     <p className="review-book-author-sales">{review.author || 'ไม่ระบุผู้แต่ง'}</p>
-                    <p className="review-book-isbn-sales">ISBN: {review.isbn || '978-0000000000'}</p>
+                    <p className="review-book-isbn-sales">ISBN: {review.isbn || '—'}</p>
                   </div>
                 </div>
 

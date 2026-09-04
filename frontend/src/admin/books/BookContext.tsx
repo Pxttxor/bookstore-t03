@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost, apiPut } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
 import {
   searchBook,
   type Book,
@@ -65,7 +67,8 @@ const toBody = (draft: BookDraft) => ({
 })
 
 export function BookProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, reload, apply } = useResource(loadCatalogue)
+  const { user } = useAuth()
+  const { data, loading, error, reload, apply } = useResource(loadCatalogue, !!user && can.viewBooks(user.role))
 
   const value = useMemo<BookValue>(() => {
     const books = data?.books ?? []

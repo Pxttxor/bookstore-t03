@@ -15,6 +15,8 @@ import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
 import { can } from '../permissions'
 import { useOrders } from '../orders/OrderContext'
+import { usePayments } from '../payments/PaymentContext'
+import { useInventory } from '../inventory/InventoryContext'
 import {
   CHANNEL_LABELS,
   formatOrderCode,
@@ -57,6 +59,8 @@ export default function CustomerOrderDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { findOrder, updateStatus, loading, error, reload } = useOrders()
+  const { reload: reloadPayments } = usePayments()
+  const { reload: reloadInventory } = useInventory()
   // บริษัทขนส่งอยู่ในตาราง shipping_company · พัสดุเป็นคนละ endpoint กับใบสั่งซื้อ
   const { data: carrierRows } = useResource(loadCarriers)
   const { notify } = useToast()
@@ -66,6 +70,10 @@ export default function CustomerOrderDetailPage() {
   const [tracking, setTracking] = useState('')
   const [carrierId, setCarrierId] = useState<number>(0)
   const [trackingError, setTrackingError] = useState('')
+  const [decision, setDecision] = useState<'CANCELLED' | 'REJECTED' | null>(null)
+  const [reason, setReason] = useState('')
+  const [reasonError, setReasonError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const role = user!.role
   const order = findOrder(Number(id))
@@ -114,13 +122,34 @@ export default function CustomerOrderDetailPage() {
 
   // ต้องรอผลก่อนขึ้น toast — เซิร์ฟเวอร์เป็นคนตัดสินว่าเปลี่ยนสถานะได้จริงไหม
   // (ตารางการเปลี่ยนสถานะ · สต็อกพอไหมตอนแพ็ก · สิทธิ์ของบทบาท)
-  const advance = async (next: OrderStatus, message: string) => {
+  const advance = async (next: OrderStatus, message: string, note?: string) => {
+    if (saving) return
+    setSaving(true)
     try {
-      await updateStatus(order.orderId, next)
+      await updateStatus(order.orderId, next, { note })
+      await Promise.all([reloadPayments(), reloadInventory()])
+      setDecision(null)
       notify('success', message)
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'เปลี่ยนสถานะไม่สำเร็จ')
+    } finally {
+      setSaving(false)
     }
+  }
+
+  const askReason = (next: 'CANCELLED' | 'REJECTED') => {
+    setReason('')
+    setReasonError('')
+    setDecision(next)
+  }
+
+  const confirmDecision = () => {
+    if (!decision || saving) return
+    if (!reason.trim()) {
+      setReasonError('กรุณาระบุเหตุผลก่อนยืนยัน')
+      return
+    }
+    void advance(decision, decision === 'CANCELLED' ? 'ยกเลิกคำสั่งซื้อแล้ว' : 'ปฏิเสธการชำระเงินแล้ว', reason.trim())
   }
 
   const recordShipment = () => {
@@ -169,9 +198,11 @@ export default function CustomerOrderDetailPage() {
   }
   if (order.status === 'STOCK_CONFIRMED' && can.verifyPayment(role)) {
     actions.push({
-      label: 'ตรวจสอบการชำระเงิน',
+      label: order.slipFileName ? 'ตรวจสอบการชำระเงิน' : 'แจ้งรอชำระเงิน',
       tone: 'primary',
-      run: () => void advance('VERIFYING_PAYMENT', 'เริ่มตรวจสอบการชำระเงิน'),
+      run: () => void (order.slipFileName
+        ? advance('VERIFYING_PAYMENT', 'เริ่มตรวจสอบการชำระเงิน')
+        : advance('WAITING_PAYMENT', 'แจ้งรอลูกค้าชำระเงินแล้ว')),
     })
   }
   if (order.status === 'VERIFYING_PAYMENT' && can.verifyPayment(role)) {
@@ -183,7 +214,7 @@ export default function CustomerOrderDetailPage() {
     actions.push({
       label: 'สลิปไม่ถูกต้อง',
       tone: 'danger',
-      run: () => void advance('REJECTED', 'ปฏิเสธคำสั่งซื้อ (สลิปไม่ถูกต้อง)'),
+      run: () => askReason('REJECTED'),
     })
   }
   if (order.status === 'PAID' && can.packOrder(role)) {
@@ -210,11 +241,11 @@ export default function CustomerOrderDetailPage() {
       run: () => void advance('DELIVERED', 'ยืนยันการจัดส่งสำเร็จแล้ว'),
     })
   }
-  if (!closed && order.status !== 'SHIPPED' && can.cancelOrder(role)) {
+  if (order.canCancel && can.cancelOrder(role)) {
     actions.push({
       label: 'ยกเลิกคำสั่งซื้อ',
       tone: 'outline',
-      run: () => void advance('CANCELLED', 'ยกเลิกคำสั่งซื้อแล้ว'),
+      run: () => askReason('CANCELLED'),
     })
   }
 
@@ -323,6 +354,7 @@ export default function CustomerOrderDetailPage() {
                     key={action.label}
                     type="button"
                     className={btnClass(action.tone)}
+                    disabled={saving}
                     onClick={action.run}
                   >
                     {action.label}
@@ -401,6 +433,36 @@ export default function CustomerOrderDetailPage() {
           </section>
         </div>
       </div>
+
+      {decision && (
+        <Modal
+          title={decision === 'CANCELLED' ? 'ยกเลิกคำสั่งซื้อ' : 'ปฏิเสธการชำระเงิน'}
+          onClose={() => { if (!saving) setDecision(null) }}
+          footer={
+            <>
+              <button type="button" className="btn btn-ghost btn-sm" disabled={saving} onClick={() => setDecision(null)}>กลับ</button>
+              <button type="button" className="btn btn-danger btn-sm" disabled={saving} onClick={confirmDecision}>
+                {saving ? 'กำลังบันทึก…' : 'ยืนยันพร้อมเหตุผล'}
+              </button>
+            </>
+          }
+        >
+          <label className="admin-field">
+            <span className="admin-field__label">เหตุผล <em>*</em></span>
+            <textarea
+              className="admin-input"
+              value={reason}
+              disabled={saving}
+              rows={4}
+              required
+              aria-invalid={!!reasonError}
+              aria-describedby={reasonError ? 'order-reason-error' : undefined}
+              onChange={(event) => { setReason(event.target.value); setReasonError('') }}
+            />
+          </label>
+          {reasonError && <p id="order-reason-error" className="admin-field__error" role="alert">{reasonError}</p>}
+        </Modal>
+      )}
 
       {shipOpen && (
         <Modal

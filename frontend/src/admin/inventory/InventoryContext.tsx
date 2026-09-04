@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost, apiPut } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
 import {
   isBelowReorder,
   type InventoryItem,
@@ -22,6 +24,13 @@ const loadInventory = async () => {
   ])
   return { items, counts, reports }
 }
+
+// Sales may read stock, but must not request warehouse-only counts/discrepancies.
+const loadStockOnly = async () => ({
+  items: await apiGet<InventoryItem[]>('/api/inventory'),
+  counts: [] as StockCount[],
+  reports: [] as StockDiscrepancyReport[],
+})
 
 /** One line of a manual stock adjustment. quantityChange is signed. */
 export interface AdjustLine {
@@ -70,7 +79,9 @@ interface InventoryValue {
 const InventoryContext = createContext<InventoryValue | null>(null)
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, reload, apply } = useResource(loadInventory)
+  const { user } = useAuth()
+  const loader = user && can.viewStockCounts(user.role) ? loadInventory : loadStockOnly
+  const { data, loading, error, reload, apply } = useResource(loader, !!user && can.viewStock(user.role))
 
   const value = useMemo<InventoryValue>(() => {
     const items = data?.items ?? []

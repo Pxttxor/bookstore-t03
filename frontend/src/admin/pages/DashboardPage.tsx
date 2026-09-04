@@ -40,13 +40,17 @@ export default function DashboardPage() {
   const { orders: customerOrders } = order
   const { unrepliedCount, reportedCount } = review
 
-  // การ์ดทุกใบบนหน้านี้คิดจากหกระบบย่อยพร้อมกัน จึงต้องรอให้ครบก่อนถึงจะแสดงตัวเลขได้
-  // ไม่งั้นผู้ใช้จะเห็นศูนย์ทุกช่องแล้วค่อยกระโดดเป็นเลขจริงทีละใบ
-  const sources = [supplier, book, inventory, purchasing, order, review]
+  const role = user!.role
+  // Wait only for resources used by this role. A forbidden subsystem must not
+  // prevent sales or delivery staff from opening their own dashboard.
+  const sources: { loading: boolean; error: string | null; reload: () => Promise<void> }[] = [order]
+  if (can.viewSuppliers(role)) sources.push(supplier)
+  if (can.viewBooks(role)) sources.push(book)
+  if (can.viewStock(role)) sources.push(inventory)
+  if (can.viewPurchasing(role)) sources.push(purchasing)
+  if (can.moderateReview(role)) sources.push(review)
   const loading = sources.some((source) => source.loading)
   const failed = sources.find((source) => source.error)
-
-  const role = user!.role
 
   const outOfStock = items.filter((item) => stockLevel(item) === 'OUT').length
   const lowStock = items.filter((item) => stockLevel(item) === 'LOW').length

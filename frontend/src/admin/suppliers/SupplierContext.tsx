@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost, apiPut } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
 import type { Deactivation, Supplier } from './suppliers'
 
 // ข้อมูลอยู่ในตาราง supplier / supplier_book / supplier_edit_log / supplier_deactivation
@@ -50,7 +52,8 @@ const toBody = (draft: SupplierDraft) => ({
 })
 
 export function SupplierProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, reload, apply } = useResource(loadSuppliers)
+  const { user } = useAuth()
+  const { data, loading, error, reload, apply } = useResource(loadSuppliers, !!user && can.viewSuppliers(user.role))
 
   const value = useMemo<SupplierValue>(() => {
     const suppliers = data ?? []
