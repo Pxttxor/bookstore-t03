@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
 import { useOrders } from '../admin/orders/OrderContext'
+import { usePayments } from '../admin/payments/PaymentContext'
 import './CheckoutPaymentPage.css'
 
 interface ShippingState {
@@ -50,12 +51,21 @@ export default function CheckoutPaymentPage() {
   const { state } = useLocation()
   const { subtotal, lines, clear } = useCart()
   const { placeOrder } = useOrders()
+  const {
+    banks,
+    loading: banksLoading,
+    error: banksError,
+    reload: reloadBanks,
+  } = usePayments()
   const fileRef = useRef<HTMLInputElement>(null)
   const [slip, setSlip] = useState<File | null>(null)
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
+  const [bankId, setBankId] = useState(0)
 
   const amount = subtotal
+  const selectedBankId = bankId || banks[0]?.bankId
+  const selectedBank = banks.find((bank) => bank.bankId === selectedBankId)
   const shipping = (state ?? {}) as ShippingState
   const shippingAddress = shipping.shippingAddress?.trim() ?? ''
   const recipient = shipping.customerName?.trim() ?? ''
@@ -88,6 +98,10 @@ export default function CheckoutPaymentPage() {
 
   const confirm = async () => {
     if (placing) return
+    if (!selectedBankId || banksLoading) {
+      setError('กรุณารอให้ระบบโหลดบัญชีธนาคาร หรือกดลองใหม่')
+      return
+    }
     if (!slip) {
       setError('กรุณาแนบหลักฐานการชำระเงิน')
       return
@@ -98,6 +112,7 @@ export default function CheckoutPaymentPage() {
       // ชื่อลูกค้าและยอดเงินเซิร์ฟเวอร์คิดเอง (จากบัญชีที่ล็อกอินและราคาในตาราง book)
       // หน้าจอส่งแค่ที่อยู่จัดส่ง รายการหนังสือ และชื่อไฟล์สลิป
       const order = await placeOrder({
+        bankId: selectedBankId,
         shippingAddress,
         items: lines.map((line) => ({ bookId: line.book.bookId, quantity: line.qty })),
         slipFileName: slip.name,
@@ -155,6 +170,37 @@ export default function CheckoutPaymentPage() {
           <span className="pay__label">การตรวจสอบ</span>
           <h2 className="pay__verify-title">แนบหลักฐานการชำระเงิน</h2>
 
+          <label className="pay__bank">
+            <span>โอนเข้าธนาคาร</span>
+            <select
+              value={selectedBankId ?? ''}
+              onChange={(event) => setBankId(Number(event.target.value))}
+              disabled={banksLoading || banks.length === 0}
+            >
+              {banks.length === 0 && (
+                <option value="">
+                  {banksLoading ? 'กำลังโหลดบัญชีธนาคาร…' : 'ไม่พบบัญชีธนาคาร'}
+                </option>
+              )}
+              {banks.map((bank) => (
+                <option key={bank.bankId} value={bank.bankId}>
+                  {bank.name}
+                </option>
+              ))}
+            </select>
+            {selectedBank && (
+              <small className="pay__bank-account">เลขบัญชี {selectedBank.accountNo}</small>
+            )}
+            {banksError && (
+              <small className="pay__bank-error">
+                {banksError}
+                <button type="button" onClick={() => void reloadBanks()}>
+                  ลองใหม่
+                </button>
+              </small>
+            )}
+          </label>
+
           <button
             type="button"
             className="pay__drop"
@@ -197,7 +243,7 @@ export default function CheckoutPaymentPage() {
       <button
         className="btn btn-primary pay__confirm"
         onClick={() => void confirm()}
-        disabled={blockedReason !== '' || placing}
+        disabled={blockedReason !== '' || !selectedBankId || banksLoading || placing}
         title={blockedReason || undefined}
       >
         <Icon name="check" size={18} />

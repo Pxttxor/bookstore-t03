@@ -1,0 +1,241 @@
+.points {
+  font-family: var(--font-thai);
+  padding-block: 40px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.points__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.points__title {
+  font-size: 28px;
+}
+
+.points__subtitle {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+/* สมัครสมาชิก — แสดงเมื่อบัญชีนี้ยังไม่มีโปรไฟล์สมาชิก */
+.points__join {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 64px 32px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--primary-deep);
+  text-align: center;
+}
+
+.points__join-title {
+  font-size: 22px;
+}
+
+.points__join-text {
+  max-width: 460px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.points__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.points__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.points__card--balance {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--mint) 100%);
+  border-color: transparent;
+  color: var(--on-primary);
+}
+
+.points__card-label {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.points__balance {
+  font-family: var(--font-sans);
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.points__card-unit {
+  font-size: 15px;
+  opacity: 0.9;
+}
+
+.points__expiring {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 14px;
+}
+
+.points__tier {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-deep);
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.points__benefits {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.points__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.points__progress-note {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.points__accumulated {
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.points__account {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.points__account dt {
+  color: var(--text-muted);
+}
+
+.points__account dd {
+  margin: 0;
+  color: var(--text-heading);
+  text-align: right;
+}
+
+.points__panel {
+  padding: 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.points__panel-title {
+  margin-bottom: 14px;
+  font-size: 18px;
+}
+
+.points__empty {
+  padding: 24px 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.points__history {
+  display: flex;
+  flex-direction: column;
+}
+
+.points__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.points__row:last-child {
+  border-bottom: none;
+}
+
+.points__row-main,
+.points__row-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.points__row-source {
+  color: var(--text-body);
+  font-size: 15px;
+}
+
+.points__row-date {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.points__row-points {
+  min-width: 72px;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.points__row-points.is-positive {
+  color: var(--status-success);
+}
+
+.points__row-points.is-negative {
+  color: var(--text-muted);
+}
+
+.points__row-balance {
+  min-width: 118px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .points__row-side {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

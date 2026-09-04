@@ -18,6 +18,7 @@ export interface OrderDraft {
   /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
   items: { bookId: number; quantity: number }[]
   slipFileName?: string
+  bankId?: number
 }
 
 export interface StatusChangeOpts {
@@ -89,6 +90,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const order = await apiPost<CustomerOrder>('/api/orders', {
         shippingAddress: draft.shippingAddress,
         slipFileName: draft.slipFileName ?? '',
+        bankId: draft.bankId,
         items: draft.items,
       })
       await refresh()
@@ -118,7 +120,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       } else if (next === 'CANCELLED' || next === 'REJECTED') {
         body = { note: opts.note ?? '' }
       } else if (next === 'VERIFYING_PAYMENT') {
-        body = { slipFileName: opts.note ?? '' }
+        const order = orders.find((row) => row.orderId === orderId)
+        body = { slipFileName: opts.note?.trim() || order?.slipFileName || '' }
       }
 
       await apiPost(`/api/orders/${orderId}/${route}`, body)

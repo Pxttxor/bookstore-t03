@@ -181,6 +181,38 @@
   color: var(--text-muted);
 }
 
+.pay__bank {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.pay__bank select {
+  height: 42px;
+  padding-inline: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.pay__bank-account {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.pay__bank-error {
+  color: var(--danger, #d64545);
+}
+
+.pay__bank-error button {
+  margin-left: 6px;
+  color: inherit;
+  text-decoration: underline;
+}
+
 @media (max-width: 720px) {
   .pay__grid {
     grid-template-columns: 1fr;

@@ -5,10 +5,11 @@
 ประกอบด้วยสองฝั่ง
 
 - **หน้าร้าน** สำหรับลูกค้า: หน้าแรก/แคตตาล็อก, รายละเอียดหนังสือ, ชำระเงิน, ติดตามคำสั่งซื้อ, สมัครสมาชิก/เข้าสู่ระบบ, โปรไฟล์
-- **หลังร้าน** (`/admin`) สำหรับพนักงาน: ระบบจัดการข้อมูลผู้จัดจำหน่าย (U1–U4) และระบบจัดซื้อจากผู้จัดจำหน่าย
-  (U5–U10)
+- **หลังร้าน** (`/admin`) สำหรับพนักงาน: ผู้จัดจำหน่าย, จัดซื้อ, สินค้าคงคลัง,
+  คำสั่งซื้อ, ตรวจสอบการชำระเงิน, สมาชิกและแต้มสะสม และงานสนับสนุนอื่น ๆ
 
-ยังไม่มี backend ข้อมูลทั้งหมดเก็บใน localStorage ของเบราว์เซอร์
+ข้อมูลโดเมนอ่านและเขียนผ่าน REST API ของ Go backend ลง PostgreSQL ส่วน `localStorage`
+ใช้เก็บ JWT สำหรับการเข้าสู่ระบบเท่านั้น
 
 ## เทคโนโลยี
 
@@ -50,10 +51,12 @@ src/
     suppliers/      ชนิดข้อมูลและ state ของผู้จัดจำหน่าย
     purchasing/     ชนิดข้อมูลและ state machine ของ PR/PO/GRN/ใบส่งคืน
     inventory/      สินค้าคงคลังและรายการเคลื่อนไหวสต็อก
+    payments/       ตรวจสอบการชำระเงินและออกรายงานรับชำระ
     notifications/  การแจ้งเตือนในระบบและสำเนาอีเมล (จำลอง)
     permissions.ts  กฎสิทธิ์ตามตำแหน่งงาน
   auth/             บัญชีผู้ใช้และตำแหน่งงาน
   cart/             ตะกร้าสินค้าของหน้าร้าน
+  membership/       ระดับสมาชิก แต้มสะสม และของรางวัล
   components/       ส่วนประกอบที่ใช้ร่วมกัน
   layouts/          กรอบหน้าร้านและหน้าเข้าสู่ระบบ
   pages/            หน้าจอฝั่งลูกค้า
@@ -75,6 +78,11 @@ Figma spec ไม่ได้กำหนด URL ไว้ เส้นทาง
 | `/admin/purchasing/receipts` · `/po/:id/receive` | SCR-25 รับสินค้าเข้าคลัง (U9) |
 | `/admin/purchasing/returns/new` · `/returns/:id` | SCR-26 ส่งคืนสินค้า (U10) |
 | `/admin/contacts` | SCR-27 ศูนย์การติดต่อ |
+| `/admin/payments` · `/admin/payments/:id` | รายการและรายละเอียดตรวจสอบการชำระเงิน |
+| `/admin/payments/report` | รายงานสรุปรับชำระเงิน (ผู้จัดการ) |
+| `/admin/members` | ระดับสมาชิกและแต้มสะสม |
+
+เส้นทางสมาชิกฝั่งลูกค้าอยู่ที่ `/member/points` และ `/member/rewards`
 
 ชื่อชนิดข้อมูลใน `src/admin/suppliers/suppliers.ts` (`Supplier`, `SupplierBook`, `SupplierStatus`)
 และ `src/admin/purchasing/purchasing.ts` (`PurchaseRequisition`, `PurchaseOrder`, `GoodsReceipt`,
@@ -84,9 +92,7 @@ Figma spec ไม่ได้กำหนด URL ไว้ เส้นทาง
 
 - ใบสั่งซื้อย้ายไปอยู่ในระบบจัดซื้อ ไม่ได้ฝังอยู่ใน `Supplier` แล้ว หน้า SCR-11 และ SCR-14
   อ่านผ่าน `usePurchasing().ordersForSupplier()`
-- คีย์ localStorage มีเลขเวอร์ชัน (`bookhaven.suppliers.v2`, `bookhaven.purchasing.v1`,
-  `bookhaven.inventory.v1`, `bookhaven.notifications.v1`) ถ้าโครงสร้างข้อมูลเปลี่ยนให้ขึ้นเวอร์ชันใหม่
-  แทนการเขียน migration
+- ข้อมูลโดเมนทั้งหมดอยู่ใน backend; ฝั่ง frontend เก็บเฉพาะ JWT ใน `localStorage`
 - อีเมลเป็นการจำลอง ระบบบันทึกไว้ให้ดูในแท็บ "การแจ้งเตือน" ของ SCR-27 เท่านั้น ไม่ได้ส่งจริง
 - หน้าฝั่งผู้จัดจำหน่าย (SCR-30) เป็นทางเลือกใน spec โปรเจกต์นี้ไม่ได้ทำ พนักงานคลังกรอกสถานะ
   "ยืนยันแล้ว" และกำหนดวันส่งเองที่ SCR-24
