@@ -133,6 +133,11 @@ func (s *InventoryService) TransactionsForBook(bookID int) ([]model.StockTransac
 	return s.inventory.TransactionsForBook(bookID)
 }
 
+// AdjustmentTransactions — ประวัติการปรับยอดด้วยมือสำหรับผู้จัดการร้าน
+func (s *InventoryService) AdjustmentTransactions() ([]model.StockTransaction, error) {
+	return s.inventory.AdjustmentTransactions()
+}
+
 // ── ปรับยอดด้วยมือ ──────────────────────────────────────────────────────
 
 // AdjustStock — พนักงานคลังปรับยอดคงเหลือเอง (`InventoryItem.adjust(qty, reason)`)

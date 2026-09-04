@@ -63,6 +63,7 @@ interface InventoryValue {
    * จึงอ่านทีละเล่มผ่าน `GET /api/books/{id}/stock-transactions`
    */
   transactionsForBook: (bookId: number) => Promise<StockTransaction[]>
+  adjustmentTransactions: () => Promise<StockTransaction[]>
   /** Drives the sidebar dot and the store manager's dashboard tile. */
   pendingReports: StockDiscrepancyReport[]
   setReorderPoint: (bookId: number, reorderPoint: number) => Promise<void>
@@ -148,6 +149,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       findCount: (countId: number) => counts.find((count) => count.countId === countId),
       transactionsForBook: (bookId: number) =>
         apiGet<StockTransaction[]>(`/api/books/${bookId}/stock-transactions`),
+      adjustmentTransactions: () => apiGet<StockTransaction[]>('/api/inventory/adjustments'),
       pendingReports: reports.filter((entry) => entry.approvalStatus === 'PENDING'),
       setReorderPoint,
       adjustStock,
