@@ -11,7 +11,7 @@ interface OrderSummaryProps {
 }
 
 export default function OrderSummary({
-  title = 'Order Summary',
+  title = 'สรุปคำสั่งซื้อ',
   footer,
   shipping = 0,
 }: OrderSummaryProps) {
@@ -51,17 +51,17 @@ export default function OrderSummary({
 
       <div className="summary__totals">
         <div className="summary__row">
-          <span>Subtotal</span>
+          <span>รวมค่าสินค้า</span>
           <span>{formatPrice(subtotal)}</span>
         </div>
         <div className="summary__row">
-          <span>Shipping</span>
+          <span>ค่าจัดส่ง</span>
           <span className={shipping === 0 ? 'summary__free' : undefined}>
-            {shipping === 0 ? 'FREE' : formatPrice(shipping)}
+            {shipping === 0 ? 'ส่งฟรี' : formatPrice(shipping)}
           </span>
         </div>
         <div className="summary__row summary__row--total">
-          <span>Total</span>
+          <span>ยอดชำระทั้งสิ้น</span>
           <span>{formatPrice(total)}</span>
         </div>
       </div>

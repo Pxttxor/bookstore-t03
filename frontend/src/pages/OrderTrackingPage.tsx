@@ -20,7 +20,8 @@ import './OrderTrackingPage.css'
 
 type StepStatus = 'done' | 'current' | 'todo'
 
-const STEP_LABELS = ['Order Placed', 'Payment Confirmed', 'Processing', 'Shipped', 'Delivered']
+// คำเดียวกับ ORDER_STATUS_LABELS ของหลังร้าน เรียงตาม milestoneOf() ทั้งห้าขั้น
+const STEP_LABELS = ['สั่งซื้อแล้ว', 'ชำระเงินแล้ว', 'กำลังแพ็กสินค้า', 'จัดส่งแล้ว', 'ส่งถึงแล้ว']
 
 // ReviewForm — เขียนรีวิวจริงลงตาราง review
 //
@@ -156,13 +157,9 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
     <div className="track page-shell">
       <header className="track__head">
         <div>
-          <h1>Order #{formatOrderCode(order.orderId)}</h1>
+          <h1>คำสั่งซื้อ {formatOrderCode(order.orderId)}</h1>
           <p>สั่งซื้อเมื่อ {order.orderDate}</p>
         </div>
-        <button className="btn btn-ghost track__help">
-          <Icon name="help" size={18} />
-          Need Help?
-        </button>
       </header>
 
       <section className="track__status">
@@ -198,18 +195,18 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
         <div className="track__col">
           <section className="track__panel">
             <h3 className="track__panel-title">
-              <Icon name="truck" size={18} /> Shipping Details
+              <Icon name="truck" size={18} /> ข้อมูลการจัดส่ง
             </h3>
             <dl className="track__dl">
-              <dt>DELIVERY ADDRESS</dt>
+              <dt>ที่อยู่จัดส่ง</dt>
               <dd>
                 {order.customerName}
                 <br />
                 {order.shippingAddress}
               </dd>
-              <dt>CARRIER</dt>
+              <dt>ผู้ให้บริการขนส่ง</dt>
               <dd>{order.shipment?.carrier ?? 'รอจัดส่ง'}</dd>
-              <dt>TRACKING NUMBER</dt>
+              <dt>หมายเลขพัสดุ</dt>
               <dd className="track__tracking">
                 {order.shipment ? (
                   <span className="track__mono">{order.shipment.trackingNumber}</span>
@@ -222,21 +219,21 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
 
           <section className="track__panel">
             <h3 className="track__panel-title">
-              <Icon name="package" size={18} /> Order Summary
+              <Icon name="package" size={18} /> สรุปคำสั่งซื้อ
             </h3>
             <div className="track__totals">
               <div className="track__row">
-                <span>Subtotal</span>
+                <span>รวมค่าสินค้า</span>
                 <span>{formatPrice(order.subtotal)}</span>
               </div>
               {order.discountAmount > 0 && (
                 <div className="track__row track__row--discount">
-                  <span>Discount</span>
+                  <span>ส่วนลด</span>
                   <span>-{formatPrice(order.discountAmount)}</span>
                 </div>
               )}
               <div className="track__row track__row--total">
-                <span>Total</span>
+                <span>ยอดชำระทั้งสิ้น</span>
                 <span>{formatPrice(order.netAmount)}</span>
               </div>
             </div>
@@ -245,7 +242,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
 
         <div className="track__col track__col--wide">
           <section className="track__panel">
-            <h3 className="track__panel-title">Items Ordered</h3>
+            <h3 className="track__panel-title">รายการที่สั่งซื้อ</h3>
             <ul className="track__items">
               {order.items.map((line) => (
                 <li key={line.bookId} className="track__item">
@@ -267,7 +264,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
           {order.status === 'DELIVERED' && (
             <section className="track__panel">
               <h3 className="track__panel-title">
-                <Icon name="star" size={18} filled /> Review &amp; Rate
+                <Icon name="star" size={18} filled /> รีวิวและให้คะแนน
               </h3>
               <div className="track__reviews">
                 {order.items.map((line) => (

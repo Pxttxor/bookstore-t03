@@ -68,13 +68,20 @@ function BookDetailView({ book }: { book: CatalogueDetail }) {
   const soldOut = book.quantityOnHand === 0
   const remaining = book.quantityOnHand - qtyInCart(book.bookId)
 
+  // เพดานของตัวนับคือ "ยอดที่ยังหยิบได้" ไม่ใช่ 99 ที่เป็นค่าปริยายของ QuantityStepper —
+  // ไม่งั้นผู้ใช้กดเป็น 10 ทั้งที่เหลือ 3 แล้ว addItem จะตัดให้เหลือ 3 เงียบ ๆ
+  // พร้อมขึ้น "เพิ่มแล้ว ✓" เหมือนได้ครบ · หนีบค่าตอนอ่านแทน useEffect เพราะ
+  // remaining หดลงทุกครั้งที่หยิบใส่ตะกร้า และค่าที่แสดงต้องหดตามในเรนเดอร์เดียวกัน
+  const maxQty = Math.max(1, remaining)
+  const safeQty = Math.min(qty, maxQty)
+
   const addToCart = () => {
-    if (addItem(book, qty) === 0) return
+    if (addItem(book, safeQty) === 0) return
     setAdded(true)
     window.setTimeout(() => setAdded(false), 1600)
   }
   const buyNow = () => {
-    if (addItem(book, qty) === 0) return
+    if (addItem(book, safeQty) === 0) return
     navigate('/checkout/shipping')
   }
 
@@ -124,7 +131,7 @@ function BookDetailView({ book }: { book: CatalogueDetail }) {
               </p>
               <div className="detail__qty-row">
                 <span>จำนวน:</span>
-                <QuantityStepper value={qty} onChange={setQty} />
+                <QuantityStepper value={safeQty} onChange={setQty} max={maxQty} />
               </div>
               <div className="detail__buttons">
                 <button

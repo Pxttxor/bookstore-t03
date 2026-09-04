@@ -30,7 +30,7 @@ export interface DeliveryRecord {
   /** Every parcel ships free in this prototype; the column stays so the report can show
    *  it and the total can be checked against the carrier invoice. */
   shippingFee: number
-  /** Order.netAmount — the same figure, in the same currency, as the order screens. */
+  /** Order.netAmount หน่วยเป็นบาท เท่ากับที่หน้าคำสั่งซื้อแสดง */
   orderValue: number
   shippingAddress: string
   itemCount: number
@@ -51,6 +51,10 @@ const isCarrier = (name: string | undefined): name is Carrier =>
 
 // Earlier parcels, all on one summary day. Their order codes sit outside the range
 // SEED_ORDERS uses, so a seeded row can never contradict a live order.
+//
+// orderValue เป็นบาท — ชุดนี้ตั้งไว้ตอนที่ทั้งแอปเป็นดอลลาร์ จึงคูณ 27 ตอนที่
+// เปลี่ยนมาใช้ formatPrice ของ data/money.ts (อัตราเดียวกับ Atomic Habits $16.20 ↔ ฿438.00)
+// ไม่งั้นแถวประวัตจะไปนั่ง ฿70.00 ข้างออเดอร์จริงหลักพันในรายงานเดียวกัน
 export const SEED_DELIVERIES: DeliveryRecord[] = [
   {
     id: 'DEL-001',
@@ -61,7 +65,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 70.0,
+    orderValue: 1890.0,
     shippingAddress: '120/15 ถ.พหลโยธิน แขวงลาดยาว เขตจตุจักร กรุงเทพฯ 10900',
     itemCount: 4,
   },
@@ -74,7 +78,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 48.0,
+    orderValue: 1296.0,
     shippingAddress: '78 หมู่ 2 ต.เสม็ด อ.เมือง จ.ชลบุรี 20000',
     itemCount: 3,
   },
@@ -87,7 +91,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 26.29,
+    orderValue: 709.83,
     shippingAddress: '333 ถ.มิตรภาพ ต.ในเมือง อ.เมือง จ.ขอนแก่น 40000',
     itemCount: 2,
   },
@@ -100,7 +104,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'DELIVERED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 41.43,
+    orderValue: 1118.61,
     shippingAddress: '55/9 ถ.รามคำแหง แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240',
     itemCount: 2,
   },
@@ -113,7 +117,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 16.0,
+    orderValue: 432.0,
     shippingAddress: '12 หมู่ 5 ต.ตลาด อ.เมือง จ.สุราษฎร์ธานี 84000',
     itemCount: 1,
   },
@@ -126,7 +130,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'DELIVERED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 91.43,
+    orderValue: 2468.61,
     shippingAddress: '99/4 ถ.ศรีนครินทร์ ต.บางเมือง อ.เมือง จ.สมุทรปราการ 10270',
     itemCount: 5,
   },
@@ -139,7 +143,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 22.57,
+    orderValue: 609.39,
     shippingAddress: '88 ถ.เพชรเกษม ต.พระปฐมเจดีย์ อ.เมือง จ.นครปฐม 73000',
     itemCount: 1,
   },
@@ -152,7 +156,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 31.43,
+    orderValue: 848.61,
     shippingAddress: '24/1 ถ.แจ้งวัฒนะ ต.ปากเกร็ด อ.ปากเกร็ด จ.นนทบุรี 11120',
     itemCount: 2,
   },
@@ -165,7 +169,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'DELIVERED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 54.0,
+    orderValue: 1458.0,
     shippingAddress: '150 ถ.รอบเมือง ต.หมากแข้ง อ.เมือง จ.อุดรธานี 41000',
     itemCount: 3,
   },
@@ -178,7 +182,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 128.57,
+    orderValue: 3471.39,
     shippingAddress: '77/1 ถ.สาทรใต้ แขวงทุ่งมหาเมฆ เขตสาทร กรุงเทพฯ 10120',
     itemCount: 6,
   },
@@ -191,7 +195,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 18.29,
+    orderValue: 493.83,
     shippingAddress: '14/2 ถ.สุขุมวิท 71 แขวงพระโขนงเหนือ เขตวัฒนา กรุงเทพฯ 10110',
     itemCount: 1,
   },
@@ -204,7 +208,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 38.57,
+    orderValue: 1041.39,
     shippingAddress: '202 ถ.งามวงศ์วาน ต.บางเขน อ.เมือง จ.นนทบุรี 11000',
     itemCount: 2,
   },
@@ -217,7 +221,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'DELIVERED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 28.0,
+    orderValue: 756.0,
     shippingAddress: '56 หมู่ 3 ต.บ้านคลอง อ.เมือง จ.พิษณุโลก 65000',
     itemCount: 2,
   },
@@ -230,7 +234,7 @@ export const SEED_DELIVERIES: DeliveryRecord[] = [
     status: 'SHIPPED',
     date: '2026-08-29',
     shippingFee: 0,
-    orderValue: 61.43,
+    orderValue: 1658.61,
     shippingAddress: '89/1 ถ.ศรีจันทร์ ต.ในเมือง อ.เมือง จ.ขอนแก่น 40000',
     itemCount: 3,
   },

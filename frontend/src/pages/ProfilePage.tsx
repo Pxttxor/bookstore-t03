@@ -42,19 +42,19 @@ export default function ProfilePage() {
         <section className="profile__card">
           <h2 className="profile__card-title">
             <Icon name="user" size={20} />
-            Account Details
+            ข้อมูลบัญชี
           </h2>
           <dl className="profile__details">
             <div className="profile__row">
-              <dt>Full Name</dt>
+              <dt>ชื่อ-นามสกุล</dt>
               <dd>{user.name}</dd>
             </div>
             <div className="profile__row">
-              <dt>Email Address</dt>
+              <dt>อีเมล</dt>
               <dd>{user.email}</dd>
             </div>
             <div className="profile__row">
-              <dt>Password</dt>
+              <dt>รหัสผ่าน</dt>
               <dd>••••••••</dd>
             </div>
           </dl>
@@ -65,19 +65,19 @@ export default function ProfilePage() {
             title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
           >
             <Icon name="edit" size={16} />
-            Edit Profile
+            แก้ไขข้อมูลส่วนตัว
           </button>
         </section>
 
         <section className="profile__card">
           <h2 className="profile__card-title">
             <Icon name="package" size={20} />
-            Quick Links
+            ทางลัด
           </h2>
           <nav className="profile__links">
             <Link to="/orders" className="profile__link">
               <Icon name="clock" size={18} />
-              <span>Order History</span>
+              <span>ประวัติการสั่งซื้อ</span>
               <Icon name="arrow-right" size={16} />
             </Link>
             <span
@@ -86,7 +86,7 @@ export default function ProfilePage() {
               title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
             >
               <Icon name="heart" size={18} />
-              <span>My Wishlist</span>
+              <span>รายการโปรดของฉัน</span>
               <em className="profile__soon">เร็ว ๆ นี้</em>
             </span>
             <span
@@ -95,13 +95,13 @@ export default function ProfilePage() {
               title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
             >
               <Icon name="truck" size={18} />
-              <span>Saved Addresses</span>
+              <span>สมุดที่อยู่จัดส่ง</span>
               <em className="profile__soon">เร็ว ๆ นี้</em>
             </span>
           </nav>
           <button type="button" className="profile__signout" onClick={signOut}>
             <Icon name="log-out" size={18} />
-            Sign Out
+            ออกจากระบบ
           </button>
         </section>
       </div>

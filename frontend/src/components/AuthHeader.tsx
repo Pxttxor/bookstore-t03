@@ -12,7 +12,7 @@ export default function AuthHeader() {
         </Link>
         <Link to="/" className="auth-header__back">
           <Icon name="arrow-left" size={16} />
-          <span>Back to store</span>
+          <span>กลับหน้าร้าน</span>
         </Link>
       </div>
     </header>

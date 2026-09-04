@@ -33,9 +33,9 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 | | |
 |---|---|
 | **เฟส** | **P0–P9 เสร็จครบทั้งแผน** — backend ครอบทั้ง 46 คลาสของ class diagram แล้ว |
-| **ทำต่อที่** | **ต่อ frontend เข้ากับ API เสร็จแล้ว (2 ก.ย. 69)** — ทุกหน้าจออ่าน/เขียนผ่าน REST ลง PostgreSQL · `localStorage` เหลือแค่ JWT · งานถัดไป = การ์ดข้อมูลจัดส่งใน `CustomerOrderDetailPage` (`GET /api/orders/{id}/shipment`) และหน้าจอของ endpoint ที่ยังไม่มีหน้า |
-| **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 96/96 ✅** · migrate+seed ✅ · **smoke 300/300 ✅ (รันซ้ำสามรอบได้ผลเท่าเดิม)** |
+| **ทำต่อที่** | **หน้าร้านต่อ API เสร็จแล้ว (4 ก.ย. 69)** — เพิ่ม `/api/catalogue/*` (สาธารณะ) แล้ว storefront เลิกใช้ไฟล์ static · เงินเป็นบาททั้งแอป · `localStorage` เหลือแค่ JWT · งานถัดไป = การ์ดข้อมูลจัดส่งใน `CustomerOrderDetailPage` (`GET /api/orders/{id}/shipment`) และหน้าจอของ endpoint ที่ยังไม่มีหน้า |
+| **branch** | `main` (merge `feat/backend-46-classes` เข้ามาแล้ว) |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 97/97 ✅** · migrate+seed ✅ · **smoke 315/315 ✅ (รันซ้ำแล้วข้อมูลนิ่งสนิท)** · frontend `npm run build` + `npm run lint` ✅ |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -195,9 +195,10 @@ git add -A && git commit
 |---|---|---|
 | A | ตารางคำสั่งซื้อชื่อ `customer_order` ไม่ใช่ `order` | `ORDER` เป็นคำสงวนของ SQL · ตารางลูกใช้คำนำหน้าเดียวกัน ส่วนชื่อคลาสใน Go ยังเป็น `Order` ตาม diagram |
 | B | ชื่อชนกับระบบจัดซื้อ 5 จุด | `OrderFilter`/`orderDTO`/`toOrderDTO(s)`/`listOrders`/`getOrder` เป็นของใบสั่งซื้อผู้จัดจำหน่ายอยู่ก่อน → เปลี่ยนเป็น `PurchaseOrderFilter`/`purchaseOrderDTO`/`toPurchaseOrderDTO(s)`/`listPurchaseOrders`/`getPurchaseOrder` ต่อเนื่องจากการ rename `/api/orders`→`/api/purchase-orders` ใน P0 |
-| C | `OrderItem.bookId` เป็นตัวเลข ไม่ใช่ slug | ฝั่งหน้าจอเก็บ slug เพราะ storefront ไม่มีตารางหนังสือจริง · ฝั่งนี้ยึด class diagram · `seed_order.go` แปลงข้อมูลให้ |
+| C | `OrderItem.bookId` เป็นตัวเลข ไม่ใช่ slug | ยึด class diagram · ตอนทำ P4 หน้าร้านยังเป็นไฟล์ static ที่คีย์ด้วย slug `seed_order.go` จึงแปลงข้อมูลตั้งต้นให้ · **ปิดไปแล้ว 4 ก.ย. 69** ตั้งแต่หน้าร้านอ่าน `/api/catalogue` — ทั้งสองฝั่งใช้ `book_id` ตรงกัน |
 | D | สต็อกถูกตัดตอน "แพ็ก" ไม่ใช่ "ยืนยันสต็อก" | ขั้นยืนยันสต็อกเป็นการตรวจว่ามีของพอ · ของออกจากคลังจริงตอนแพ็ก · ยกเลิกใบที่แพ็กแล้วไม่ได้ จึงไม่ต้องมีเส้นทางคืนสต็อก |
 | E | smoke ตัดสต็อกจริงทุกรอบ | รอบแรกคืนยอดแค่เล่มเดียวทั้งที่ใบมีสองเล่ม อีกเล่มจึงลดลงทีละหนึ่งจนหมดและ smoke ล้ม → เปลี่ยนไปใช้เล่มที่มีของเยอะ (113/116) และคืนยอด **ทุกเล่มในใบ** |
+| F | smoke ทิ้ง "แถวที่สร้างขึ้น" ไว้ด้วย ไม่ใช่แค่สต็อก | เจอ 4 จุด: หนังสือทดสอบค้าง `ACTIVE` · เล่ม 101 บวกทีละ 10 · เล่ม 122 ถูกดูดจนหมด (แก้ 3 ก.ย.) · `flow_review.go` ทิ้งรีวิว `PUBLISHED` ทุกรอบจนเล่ม 116 มีรีวิว 5 ดาวซ้ำ 13 อัน ทำให้คะแนนหน้าร้านเพี้ยน (แก้ 4 ก.ย. ด้วย `moderate` action `REMOVE` ตอนจบ flow) · **เกณฑ์คือรันสองรอบติดแล้วข้อมูลเท่าเดิม ไม่ใช่แค่ PASS** |
 
 ### P5 — รายการย่อย
 
