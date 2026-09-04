@@ -46,6 +46,33 @@ func TestHealthIsPublic(t *testing.T) {
 	}
 }
 
+// แคตตาล็อกหน้าร้านเปิดสาธารณะ — คนที่ยังไม่ล็อกอินต้องเดินดูหนังสือได้
+//
+// Deps ของเทสต์ว่าง service จึงเป็น nil และ handler จะ panic แล้วถูก Recover
+// แปลงเป็น 500 — ที่เทสต์นี้ต้องการคือ "ไม่ถูก middleware กันไว้" จึงดูว่าไม่ใช่ 401 (มี RequireAuth)
+// และไม่ใช่ 404 (ลืมลงทะเบียน) · ห้ามเพิ่มสามเส้นนี้ลง TestProtectedRoutesRequireToken
+func TestCatalogueIsPublic(t *testing.T) {
+	routes := newTestRoutes(t)
+
+	paths := []string{
+		"/api/catalogue",
+		"/api/catalogue/categories",
+		"/api/catalogue/101",
+	}
+
+	for _, path := range paths {
+		recorder := httptest.NewRecorder()
+		routes.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+
+		switch recorder.Code {
+		case http.StatusUnauthorized:
+			t.Errorf("%s ตอบ 401 — เส้นทางนี้ต้องเปิดสาธารณะ (เผลอลงทะเบียนผ่าน register หรือเปล่า)", path)
+		case http.StatusNotFound:
+			t.Errorf("%s ตอบ 404 — ยังไม่ได้ลงทะเบียนเส้นทางนี้", path)
+		}
+	}
+}
+
 // เส้นทางที่ต้องยืนยันตัวตนต้องตอบ 401 เมื่อไม่ส่ง token — ไม่ใช่ 404 หรือ panic
 func TestProtectedRoutesRequireToken(t *testing.T) {
 	routes := newTestRoutes(t)
@@ -64,6 +91,7 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodGet, "/api/books"},
 		{http.MethodGet, "/api/books/101"},
 		{http.MethodGet, "/api/books/101/change-logs"},
+		{http.MethodGet, "/api/books/101/stock-transactions"},
 		{http.MethodPost, "/api/books"},
 		{http.MethodPut, "/api/books/101"},
 		{http.MethodPost, "/api/books/101/status"},

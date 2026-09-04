@@ -33,9 +33,9 @@ go build ./... && go vet ./... && go test ./...    # ยืนยัน baseline
 | | |
 |---|---|
 | **เฟส** | **P0–P9 เสร็จครบทั้งแผน** — backend ครอบทั้ง 46 คลาสของ class diagram แล้ว |
-| **ทำต่อที่** | ต่อ frontend เข้ากับ API (ยังใช้ `localStorage` อยู่) — เป็นงานรอบถัดไป ยังไม่มีแผน |
-| **branch** | `feat/backend-46-classes` |
-| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 96/96 ✅** · migrate+seed ✅ · **smoke 300/300 ✅ (รันซ้ำสามรอบได้ผลเท่าเดิม)** |
+| **ทำต่อที่** | **หน้าร้านต่อ API เสร็จแล้ว (4 ก.ย. 69)** — เพิ่ม `/api/catalogue/*` (สาธารณะ) แล้ว storefront เลิกใช้ไฟล์ static · เงินเป็นบาททั้งแอป · `localStorage` เหลือแค่ JWT · งานถัดไป = การ์ดข้อมูลจัดส่งใน `CustomerOrderDetailPage` (`GET /api/orders/{id}/shipment`) และหน้าจอของ endpoint ที่ยังไม่มีหน้า |
+| **branch** | `main` (merge `feat/backend-46-classes` เข้ามาแล้ว) |
+| **verify ล่าสุด** | build ✅ · vet ✅ · gofmt ✅ · **test 97/97 ✅** · migrate+seed ✅ · **smoke 315/315 ✅ (รันซ้ำแล้วข้อมูลนิ่งสนิท)** · frontend `npm run build` + `npm run lint` ✅ |
 | **ฐานข้อมูล** | Postgres 17 (Docker) บน Pi 5 `192.168.8.190:5433` · db `bookstore_t03` · user `bookstore` |
 
 ---
@@ -195,9 +195,10 @@ git add -A && git commit
 |---|---|---|
 | A | ตารางคำสั่งซื้อชื่อ `customer_order` ไม่ใช่ `order` | `ORDER` เป็นคำสงวนของ SQL · ตารางลูกใช้คำนำหน้าเดียวกัน ส่วนชื่อคลาสใน Go ยังเป็น `Order` ตาม diagram |
 | B | ชื่อชนกับระบบจัดซื้อ 5 จุด | `OrderFilter`/`orderDTO`/`toOrderDTO(s)`/`listOrders`/`getOrder` เป็นของใบสั่งซื้อผู้จัดจำหน่ายอยู่ก่อน → เปลี่ยนเป็น `PurchaseOrderFilter`/`purchaseOrderDTO`/`toPurchaseOrderDTO(s)`/`listPurchaseOrders`/`getPurchaseOrder` ต่อเนื่องจากการ rename `/api/orders`→`/api/purchase-orders` ใน P0 |
-| C | `OrderItem.bookId` เป็นตัวเลข ไม่ใช่ slug | ฝั่งหน้าจอเก็บ slug เพราะ storefront ไม่มีตารางหนังสือจริง · ฝั่งนี้ยึด class diagram · `seed_order.go` แปลงข้อมูลให้ |
+| C | `OrderItem.bookId` เป็นตัวเลข ไม่ใช่ slug | ยึด class diagram · ตอนทำ P4 หน้าร้านยังเป็นไฟล์ static ที่คีย์ด้วย slug `seed_order.go` จึงแปลงข้อมูลตั้งต้นให้ · **ปิดไปแล้ว 4 ก.ย. 69** ตั้งแต่หน้าร้านอ่าน `/api/catalogue` — ทั้งสองฝั่งใช้ `book_id` ตรงกัน |
 | D | สต็อกถูกตัดตอน "แพ็ก" ไม่ใช่ "ยืนยันสต็อก" | ขั้นยืนยันสต็อกเป็นการตรวจว่ามีของพอ · ของออกจากคลังจริงตอนแพ็ก · ยกเลิกใบที่แพ็กแล้วไม่ได้ จึงไม่ต้องมีเส้นทางคืนสต็อก |
 | E | smoke ตัดสต็อกจริงทุกรอบ | รอบแรกคืนยอดแค่เล่มเดียวทั้งที่ใบมีสองเล่ม อีกเล่มจึงลดลงทีละหนึ่งจนหมดและ smoke ล้ม → เปลี่ยนไปใช้เล่มที่มีของเยอะ (113/116) และคืนยอด **ทุกเล่มในใบ** |
+| F | smoke ทิ้ง "แถวที่สร้างขึ้น" ไว้ด้วย ไม่ใช่แค่สต็อก | เจอ 4 จุด: หนังสือทดสอบค้าง `ACTIVE` · เล่ม 101 บวกทีละ 10 · เล่ม 122 ถูกดูดจนหมด (แก้ 3 ก.ย.) · `flow_review.go` ทิ้งรีวิว `PUBLISHED` ทุกรอบจนเล่ม 116 มีรีวิว 5 ดาวซ้ำ 13 อัน ทำให้คะแนนหน้าร้านเพี้ยน (แก้ 4 ก.ย. ด้วย `moderate` action `REMOVE` ตอนจบ flow) · **เกณฑ์คือรันสองรอบติดแล้วข้อมูลเท่าเดิม ไม่ใช่แค่ PASS** |
 
 ### P5 — รายการย่อย
 
@@ -331,9 +332,8 @@ git add -A && git commit
 | 3 | `PROGRESS.md` · `backend/CLAUDE.md` · `../../CLAUDE.md` — ตัดคำว่า "กำลังขยาย" ออก ปิดทั้ง 10 เฟส | ✅ |
 | 4 | verify รวมทั้งชุด (build · vet · gofmt · test 96 · migrate+seed · smoke 300 สามรอบ) | ✅ |
 
-**`npm run build` ของ frontend ยังพังอยู่ 46 error** — **เป็นหนี้เดิม ไม่ใช่ผลของ P9**
-(`permissions.ts` ผ่าน eslint และไม่มี error ของตัวเอง) · ผู้ใช้ตัดสินแล้วว่าอยู่นอกขอบเขตรอบนี้
-· **รายการ error ครบทุกบรรทัดพร้อมสาเหตุและทางแก้อยู่ที่ [`../frontend/BUILD_ERRORS.md`](../frontend/BUILD_ERRORS.md)**
+> **ข้อความเดิมตรงนี้เขียนว่า "`npm run build` ของ frontend ยังพังอยู่ 46 error" — ไม่จริงแล้ว**
+> แก้ไปตั้งแต่ 30 ส.ค. · ยืนยันซ้ำอีกครั้ง 2 ก.ย. 69: `npm run build` ผ่าน · `npm run lint` สะอาด
 
 ### P0 — สิ่งที่เจอเพิ่มระหว่างทำ (ไม่ได้อยู่ในแผนเดิม)
 
@@ -374,13 +374,14 @@ git add -A && git commit
 ## หนี้ / ค้าง
 
 - [x] ~~`frontend/src/admin/permissions.ts` ขาด `can.*`~~ — เติมครบ 21 ตัวใน P9 แล้ว
-- [ ] **`frontend` build พังอยู่ 46 error** — `634200d` (29 ส.ค. · commit ของดวงกมล) ตัด
-      `inventory.ts`/`InventoryContext.tsx` ให้เหลือแค่ `InventoryItem`/`StockTransaction`
-      พร้อมถอด route/เมนู/ไอคอนออกด้วย แต่ **ไม่ได้ลบไฟล์หน้าจอ 7 หน้าที่ import ของพวกนั้น**
-      → ไฟล์กำพร้าที่คอมไพล์ไม่ผ่าน · กู้ของเดิมได้จาก `28c4fdf`
-      · **รายละเอียดครบ (log ดิบ · สาเหตุ 3 ราก · ทางแก้ 3 ทาง) อยู่ที่
-      [`../frontend/BUILD_ERRORS.md`](../frontend/BUILD_ERRORS.md)**
-      · **นอกขอบเขตรอบนี้** ผู้ใช้ตัดสินใจแล้ว · ทาง 1 กับทาง 2 ต้องคุยกับเจ้าของ commit ก่อน
+- [x] ~~**`frontend` build พังอยู่ 46 error**~~ — ปิดแล้ว (แก้ตั้งแต่ 30 ส.ค. · ยืนยันซ้ำ 2 ก.ย.)
+      สาเหตุเดิมคือ `634200d` ตัด `inventory.ts`/`InventoryContext.tsx` โดยไม่ลบหน้าจอที่ import อยู่
 - [ ] FK ~28 ตัวที่ diagram วาดเส้นแต่ไม่ระบุ attribute เป็น deviation ที่ **ต้องคุยกับเจ้าของคลาสก่อนรวมงาน**
       · รายการอยู่ใน README หัวข้อ "จุดที่ต่างจาก class diagram" (ข้อ 25–27 เป็นของระบบย่อยรีวิว)
-- [ ] frontend ยังอ่าน/เขียน `localStorage` ไม่ได้ต่อ API จริงเลยสักหน้า — งานรอบถัดไป
+- [x] ~~frontend ยังอ่าน/เขียน `localStorage` ไม่ได้ต่อ API จริงเลยสักหน้า~~ — **ปิดแล้ว 2 ก.ย. 69**
+      ทั้ง 9 ระบบย่อยอ่าน/เขียนผ่าน REST ลง PostgreSQL · `localStorage` เหลือคีย์เดียวคือ JWT
+      · ชั้น API อยู่ที่ `frontend/src/api/client.ts` + `useResource.ts`
+- [ ] `orderDTO` ไม่มีฟิลด์ `shipment` (แยกเป็น `GET /api/orders/{id}/shipment`) → การ์ด
+      "ข้อมูลการจัดส่ง" ใน `CustomerOrderDetailPage` ยังไม่ขึ้น — งานถัดไป
+- [ ] endpoint ที่มีแล้วแต่ยังไม่มีหน้าจอ: `/api/members*` · `/api/rewards` · `/api/payments`
+      · `/api/payment-reports` · `/api/customers*` · `/api/shipments*` — เป็นงานสร้างหน้าจอใหม่

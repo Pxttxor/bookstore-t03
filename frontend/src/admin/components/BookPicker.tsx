@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
 import Modal from './Modal'
 import EmptyState from './EmptyState'
+import ErrorState from './ErrorState'
+import LoadingState from './LoadingState'
 import { useBooks } from '../books/BookContext'
 import { searchBook, type Book } from '../books/books'
 import { formatBookCode } from '../inventory/inventory'
@@ -24,7 +26,7 @@ export default function BookPicker({
   onSelect,
   onClose,
 }: BookPickerProps) {
-  const { books, categoryName } = useBooks()
+  const { books, categoryName, loading, error, reload } = useBooks()
   const { findByBookId } = useInventory()
   const [term, setTerm] = useState('')
 
@@ -46,7 +48,13 @@ export default function BookPicker({
         />
       </label>
 
-      {results.length === 0 ? (
+      {/* กล่องนี้เปิดเมื่อผู้ใช้กดเท่านั้น ไม่ได้อยู่บนโครงหน้า จึงขึ้นสถานะเต็มพื้นที่ได้
+          ต้องเช็คก่อน results.length ไม่งั้นระหว่างโหลดจะขึ้นว่า "ไม่พบหนังสือที่ตรงกับคำค้น" */}
+      {loading ? (
+        <LoadingState label="กำลังโหลดรายการหนังสือ…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={() => void reload()} />
+      ) : results.length === 0 ? (
         <EmptyState
           icon="book"
           title="ไม่พบหนังสือที่ตรงกับคำค้น"

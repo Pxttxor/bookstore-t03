@@ -68,6 +68,7 @@ type PlaceOrderInput struct {
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
 	SlipFileName    string             `json:"slipFileName"`
+	BankID          *int               `json:"bankId,omitempty"`
 	Items           []OrderLineInput   `json:"items"`
 }
 
@@ -84,10 +85,11 @@ type OrderNoteInput struct {
 
 // OrderView — คำสั่งซื้อพร้อมชื่อลูกค้า ชื่อหนังสือ และโปรโมชั่นที่ใช้
 type OrderView struct {
-	Order        model.Order
-	CustomerName string
-	Books        map[int]model.Book
-	Promotion    *model.Promotion
+	Order         model.Order
+	CustomerName  string
+	CustomerEmail string
+	Books         map[int]model.Book
+	Promotion     *model.Promotion
 }
 
 // ── อ่าน ────────────────────────────────────────────────────────────────
@@ -137,7 +139,16 @@ func (s *OrderService) Place(input PlaceOrderInput, current Identity) (*OrderVie
 		if err := s.orders.Create(tx, order); err != nil {
 			return err
 		}
-		if err := s.openPayment(tx, order); err != nil {
+		if input.BankID != nil {
+			exists, err := s.payments.BankExists(tx, *input.BankID)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return model.ErrBankNotFound
+			}
+		}
+		if err := s.openPayment(tx, order, input.BankID); err != nil {
 			return err
 		}
 		body := fmt.Sprintf("%s · %s · ฿%.2f · %d เล่ม",
@@ -170,11 +181,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	}
 
 	address := strings.TrimSpace(input.ShippingAddress)
-	if address == "" {
-		address = customer.Customer.Address // ใช้ที่อยู่ในโปรไฟล์ถ้าไม่ได้กรอกมาใหม่
+	if address == "" && channel != model.OrderChannelWebsite {
+		address = strings.TrimSpace(customer.Customer.Address)
 	}
-	if address == "" {
+	if address == "" || address == "—" || address == "-" {
 		return nil, model.ErrAddressRequired
+	}
+	if channel == model.OrderChannelWebsite && strings.TrimSpace(input.SlipFileName) == "" {
+		return nil, model.ErrSlipRequired
 	}
 	if len(input.Items) == 0 {
 		return nil, model.ErrNoOrderItems
@@ -218,14 +232,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 //
 // ใบที่แนบสลิปมาตั้งแต่ตอนสั่ง (เส้นทางเว็บไซต์) เข้าสถานะรอตรวจทันที
 // ใบที่ยังไม่ได้ชำระ (โทรศัพท์/ข้อความ) เป็น WAITING ไว้ก่อน
-func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order) error {
+func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order, bankID *int) error {
 	payment := model.Payment{
 		OrderID: order.OrderID,
 		Amount:  order.NetAmount,
 		Status:  model.PaymentStatusWaiting,
 	}
 	if order.SlipFileName != "" {
-		if err := payment.UploadSlip(order.SlipFileName, nil, order.OrderDate); err != nil {
+		if err := payment.UploadSlip(order.SlipFileName, bankID, order.OrderDate); err != nil {
 			return err
 		}
 	}
@@ -299,7 +313,13 @@ func (s *OrderService) SubmitPayment(
 			}
 			// ยอดอาจเปลี่ยนไปจากตอนเปิดใบถ้ามีการแก้ส่วนลด จึงเขียนยอดล่าสุดลงไปด้วย
 			payment.Amount = order.NetAmount
-			if err := payment.UploadSlip(slip, input.BankID, time.Now()); err != nil {
+			bankID := input.BankID
+			// การเริ่มตรวจจากหน้าคำสั่งซื้อไม่ได้ถามธนาคารซ้ำ ถ้าเคยเลือกไว้
+			// ตอน checkout ให้รักษาค่าเดิมแทนการเขียน NULL ทับ
+			if bankID == nil {
+				bankID = payment.BankID
+			}
+			if err := payment.UploadSlip(slip, bankID, time.Now()); err != nil {
 				return err
 			}
 			if err := s.payments.Save(tx, payment); err != nil {
@@ -628,8 +648,10 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 		return nil, err
 	}
 	names := make(map[int]string, len(customers))
+	emails := make(map[int]string, len(customers))
 	for _, row := range customers {
 		names[row.Customer.CustomerID] = row.Person.Name()
+		emails[row.Customer.CustomerID] = row.Person.Email
 	}
 	promotions, err := s.promotions.List()
 	if err != nil {
@@ -641,7 +663,12 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 	}
 
 	for i, order := range orders {
-		views[i] = OrderView{Order: order, CustomerName: names[order.CustomerID], Books: books}
+		views[i] = OrderView{
+			Order:         order,
+			CustomerName:  names[order.CustomerID],
+			CustomerEmail: emails[order.CustomerID],
+			Books:         books,
+		}
 		if order.PromotionID != nil {
 			if promotion, ok := byPromotion[*order.PromotionID]; ok {
 				views[i].Promotion = &promotion

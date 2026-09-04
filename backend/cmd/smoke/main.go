@@ -43,6 +43,7 @@ func main() {
 	runPermissionFlow(e)
 	runPersonFlow(e)
 	runBookFlow(e)
+	runCatalogueFlow(e)
 	runInventoryFlow(e)
 	runOrderFlow(e)
 	runPaymentFlow(e)
@@ -51,6 +52,7 @@ func main() {
 	runReviewFlow(e)
 	runSupplierFlow(e)
 	runPurchasingFlow(e)
+	runReportedBugRegression(e)
 
 	fmt.Printf("\n== สรุป: ผ่าน %d · ไม่ผ่าน %d ==\n", passed, failed)
 

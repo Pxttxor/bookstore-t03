@@ -30,7 +30,11 @@ export interface ReviewReport {
 
 export interface Review {
   reviewId: number
-  bookId: string // storefront slug
+  /**
+   * รหัสหนังสือในแคตตาล็อกหลัง (`book.book_id`) ตามที่ตาราง review เก็บ
+   * หน้าจอที่ต้องการรูปปกส่งรหัสนี้เข้า `coverFor()` ของ `data/covers.ts` ตรง ๆ
+   */
+  bookId: number
   bookTitle: string
   author?: string
   isbn?: string
@@ -82,12 +86,25 @@ export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
   REMOVE: 'ลบรีวิว',
 }
 
-const BANNED_WORDS = ['ห่วย', 'กาก', 'โง่', 'ควาย', 'ขยะ', 'trash', 'stupid', 'garbage', 'scam']
-
-export function checkText(text: string): boolean {
-  const lower = text.toLowerCase()
-  return BANNED_WORDS.some((word) => lower.includes(word.toLowerCase()))
-}
+/**
+ * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram ของดวงกมล
+ *
+ * **การติดธงเกิดฝั่งเซิร์ฟเวอร์แล้ว** (`Review.Submit` → `model.ProfanityFilter.CheckText`)
+ * รายการนี้จึงเหลือไว้เป็น "สัญญา" ที่ `TestProfanityFilterWordsMatchFrontend`
+ * (`backend/internal/model/review_test.go`) เทียบทีละคำ — เทสต์ฝังรายการเดียวกันไว้เอง
+ * ไม่ได้อ่านไฟล์นี้ **แก้ที่นี่เมื่อไรต้องแก้อีกฝั่งด้วย** ไม่งั้นเทสต์ล้ม
+ */
+export const BANNED_WORDS = [
+  'ห่วย',
+  'กาก',
+  'โง่',
+  'ควาย',
+  'ขยะ',
+  'trash',
+  'stupid',
+  'garbage',
+  'scam',
+]
 
 export function formatReviewCode(reviewId: number) {
   return `RV${String(reviewId).padStart(3, '0')}`
@@ -113,10 +130,16 @@ export function formatThaiRelativeTime(dateString: string): string {
   }
 }
 
+// SEED_REVIEWS เป็นข้อมูลอ้างอิงอย่างเดียวแล้ว — `ReviewContext` อ่านจาก `GET /api/reviews`
+// ไม่ได้ใช้ชุดนี้เป็น fallback อีก · เก็บไว้เพราะ backend ยึดความหมายของ "ผลการตัดสินรายงาน"
+// ตามชุดนี้ (ดูหัวข้อการตัดสินรายงานรีวิวใน backend/CLAUDE.md)
+//
+// รหัสหนังสือ 101-114 คือเล่มเดียวกับแคตตาล็อกหลัก ส่วน 901/902 เป็นหนังสือสมมติของ seed ชุดนี้
+// ที่มีรูปปกของตัวเองและไม่มีอยู่ในตาราง book
 export const SEED_REVIEWS: Review[] = [
   {
     reviewId: 1,
-    bookId: 'the-silent-observer',
+    bookId: 901,
     bookTitle: 'The Silent Observer',
     author: 'A. E. Hemingway',
     isbn: '978-3-16-148410-0',
@@ -148,7 +171,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 2,
-    bookId: 'echoes-in-the-rain',
+    bookId: 902,
     bookTitle: 'Echoes in the Rain',
     author: 'M. K. Vance',
     isbn: '978-1-56619-909-4',
@@ -180,7 +203,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 3,
-    bookId: 'circe',
+    bookId: 103,
     bookTitle: 'Circe',
     author: 'Madeline Miller',
     isbn: '978-0316556347',
@@ -212,7 +235,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 4,
-    bookId: 'the-midnight-library',
+    bookId: 109,
     bookTitle: 'The Midnight Library',
     author: 'Matt Haig',
     isbn: '978-0525559474',
@@ -240,7 +263,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 5,
-    bookId: 'project-hail-mary',
+    bookId: 104,
     bookTitle: 'Project Hail Mary',
     author: 'Andy Weir',
     isbn: '978-0593135204',
@@ -268,7 +291,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 6,
-    bookId: 'atomic-habits',
+    bookId: 101,
     bookTitle: 'Atomic Habits',
     author: 'James Clear',
     isbn: '978-0735211292',
@@ -290,7 +313,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 7,
-    bookId: 'dune',
+    bookId: 106,
     bookTitle: 'Dune',
     author: 'Frank Herbert',
     isbn: '978-0441172719',
@@ -320,7 +343,7 @@ export const SEED_REVIEWS: Review[] = [
   },
   {
     reviewId: 8,
-    bookId: 'normal-people',
+    bookId: 108,
     bookTitle: 'Normal People',
     author: 'Sally Rooney',
     isbn: '978-0525633471',

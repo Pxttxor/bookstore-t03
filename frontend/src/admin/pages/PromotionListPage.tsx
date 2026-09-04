@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Modal from '../components/Modal'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
@@ -29,7 +31,7 @@ type TypeFilter = PromotionType | 'ALL'
 
 export default function PromotionListPage() {
   const { user } = useAuth()
-  const { promotions, setActive, remove } = usePromotions()
+  const { promotions, setActive, remove, loading, error, reload } = usePromotions()
   const { notify } = useToast()
   const navigate = useNavigate()
 
@@ -85,22 +87,30 @@ export default function PromotionListPage() {
     setPage(1)
   }
 
-  const toggleActive = (promo: Promotion) => {
+  const toggleActive = async (promo: Promotion) => {
     const next = promoDisplayStatus(promo) === 'ACTIVE' ? false : true
-    setActive(promo.promotionId, next)
-    notify(
-      'success',
-      next
-        ? `เปิดใช้งานโปรโมชั่น "${promo.name}" แล้ว`
-        : `ปิดใช้งานโปรโมชั่น "${promo.name}" แล้ว`,
-    )
+    try {
+      await setActive(promo.promotionId, next)
+      notify(
+        'success',
+        next
+          ? `เปิดใช้งานโปรโมชั่น "${promo.name}" แล้ว`
+          : `ปิดใช้งานโปรโมชั่น "${promo.name}" แล้ว`,
+      )
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'เปลี่ยนสถานะโปรโมชั่นไม่สำเร็จ')
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!toDelete) return
-    remove(toDelete.promotionId)
-    notify('success', `ลบโปรโมชั่น "${toDelete.name}" ออกจากระบบแล้ว`)
-    setToDelete(null)
+    try {
+      await remove(toDelete.promotionId)
+      notify('success', `ลบโปรโมชั่น "${toDelete.name}" ออกจากระบบแล้ว`)
+      setToDelete(null)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ลบโปรโมชั่นไม่สำเร็จ')
+    }
   }
 
   return (
@@ -181,7 +191,11 @@ export default function PromotionListPage() {
           )}
         </div>
 
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดโปรโมชั่น…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon="tag"
             title="ไม่พบโปรโมชั่นที่ตรงกับคำค้น"
@@ -246,7 +260,7 @@ export default function PromotionListPage() {
                                 type="button"
                                 className="icon-btn"
                                 title={display === 'ACTIVE' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-                                onClick={() => toggleActive(promo)}
+                                onClick={() => void toggleActive(promo)}
                               >
                                 <Icon
                                   name={display === 'ACTIVE' ? 'eye-off' : 'eye'}
@@ -301,7 +315,11 @@ export default function PromotionListPage() {
               >
                 ยกเลิก
               </button>
-              <button type="button" className="btn btn-danger btn-sm" onClick={confirmDelete}>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => void confirmDelete()}
+              >
                 ยืนยันการลบ
               </button>
             </>

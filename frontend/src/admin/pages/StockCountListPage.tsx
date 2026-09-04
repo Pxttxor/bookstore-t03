@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { useInventory } from '../inventory/InventoryContext'
@@ -19,7 +21,7 @@ import './StockCountListPage.css'
 // The counting history — the record every round leaves behind.
 export default function StockCountListPage() {
   const { user } = useAuth()
-  const { counts } = useInventory()
+  const { counts, loading, error, reload } = useInventory()
   const navigate = useNavigate()
 
   const [page, setPage] = useState(1)
@@ -73,7 +75,11 @@ export default function StockCountListPage() {
       </div>
 
       <section className="admin-card count-list">
-        {rows.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดประวัติการตรวจนับ…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon="clipboard"
             title="ยังไม่มีประวัติการตรวจนับ"

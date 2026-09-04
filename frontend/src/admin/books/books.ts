@@ -7,8 +7,10 @@
 // ../inventory/inventory.ts and is read by the reorder alerts screen, the dashboard and
 // PurchasingContext, so embedding it would create a second copy of the same figure.
 //
-// This is the back-office catalogue. The storefront's src/data/books.ts is a separate,
-// slug-keyed dataset and is deliberately left untouched.
+// This is the back-office catalogue: every field a staff screen needs, including status
+// and the change log. The storefront reads the same books through the public
+// GET /api/catalogue instead (src/data/catalogue.ts), which carries stock and ratings
+// but no editing state.
 
 import type { BadgeTone } from '../components/StatusBadge'
 
@@ -43,8 +45,15 @@ export interface Book {
   status: BookStatus
   /** Category "1" o-- "*" Book : contains */
   categoryId: number
-  /** Book "1" *-- "*" BookChangeLog : history */
-  changeLogs: BookChangeLog[]
+  /**
+   * Book "1" *-- "*" BookChangeLog : history
+   *
+   * ไม่ติดมากับ `GET /api/books` (bookDTO ฝั่ง Go ไม่มีฟิลด์นี้ — อ่านผ่าน
+   * `GET /api/books/{id}/change-logs` แทน) จึงเป็น optional
+   * ยังคงไว้ในชนิดเพราะ `SEED_BOOKS` ข้างล่างใส่ค่าให้ และ `backend/tools/gen_seed.py`
+   * อ่านอาร์กิวเมนต์ตัวนี้ของ `book(...)` ไปสร้าง `seedBookChangeLogs` — ห้ามลบ
+   */
+  changeLogs?: BookChangeLog[]
 }
 
 export const BOOK_STATUS_LABELS: Record<BookStatus, string> = {

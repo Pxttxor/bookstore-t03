@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getBook } from '../../data/books'
+import { coverFor } from '../../data/covers'
 import Icon from '../../components/Icon'
 import RatingStars from '../../components/RatingStars'
 import StatusBadge from '../components/StatusBadge'
@@ -19,6 +19,9 @@ export default function ReviewDetailDrawer({
 }: ReviewDetailDrawerProps) {
   const [replyText, setReplyText] = useState('')
   const [isReplying, setIsReplying] = useState(false)
+
+  // รูปปกอยู่ในโปรเจกต์ ไม่ใช่คอลัมน์ในตาราง book — ค้นจาก bookId ตรง ๆ
+  const coverFromCatalogue = coverFor(review.bookId)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -72,9 +75,9 @@ export default function ReviewDetailDrawer({
             </h3>
             <div className="drawer-book-card">
               <div className="drawer-book-cover">
-                {(review.coverUrl || getBook(review.bookId)?.cover) ? (
+                {(review.coverUrl || coverFromCatalogue) ? (
                   <img
-                    src={review.coverUrl || getBook(review.bookId)?.cover}
+                    src={review.coverUrl || coverFromCatalogue}
                     alt={review.bookTitle}
                     loading="lazy"
                     decoding="async"
@@ -90,7 +93,7 @@ export default function ReviewDetailDrawer({
                 <p className="drawer-book-author">ผู้แต่ง: {review.author || 'ไม่ระบุ'}</p>
                 <div className="drawer-book-meta-pills">
                   <span className="drawer-meta-pill">
-                    <strong>ISBN:</strong> {review.isbn || '978-0000000000'}
+                    <strong>ISBN:</strong> {review.isbn || '—'}
                   </span>
                   {review.price && (
                     <span className="drawer-meta-pill price">
@@ -111,7 +114,7 @@ export default function ReviewDetailDrawer({
             <div className="drawer-order-grid">
               <div className="drawer-order-item">
                 <span className="drawer-order-label">เลขที่คำสั่งซื้อ (Order ID)</span>
-                <span className="drawer-order-val code">{review.orderId || 'ORD-2026-08501'}</span>
+                <span className="drawer-order-val code">{review.orderId || 'ไม่ได้ผูกกับคำสั่งซื้อ'}</span>
               </div>
               <div className="drawer-order-item">
                 <span className="drawer-order-label">วันที่สั่งซื้อ</span>
@@ -121,7 +124,7 @@ export default function ReviewDetailDrawer({
                         dateStyle: 'medium',
                         timeStyle: 'short',
                       })
-                    : '02 ส.ค. 2026 14:15 น.'}
+                    : '—'}
                 </span>
               </div>
               <div className="drawer-order-item full">
@@ -129,7 +132,7 @@ export default function ReviewDetailDrawer({
                 <div className="drawer-order-status">
                   <StatusBadge tone="success">
                     <Icon name="truck" size={14} />
-                    {review.deliveryStatus || 'จัดส่งสำเร็จแล้ว'}
+                    {review.deliveryStatus || '—'}
                   </StatusBadge>
                   <span className="drawer-order-hint">
                     (บริบทกรณีตรวจสอบลูกค้าบ่นเรื่องส่งช้า/หนังสือชำรุด)

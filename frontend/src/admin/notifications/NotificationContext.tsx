@@ -1,7 +1,16 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import type { Role } from '../../auth/roles'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost } from '../../api/client'
+import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { isEmployee, type Role } from '../../auth/roles'
 
-const STORAGE_KEY = 'bookhaven.notifications.v1'
+// ข้อมูลอยู่ในตาราง notification ของ PostgreSQL แล้ว
+// เดิมเก็บใน localStorage คีย์ bookhaven.notifications.v1
+//
+// **หน้าจอไม่สร้างการแจ้งเตือนเองอีกแล้ว** — เซิร์ฟเวอร์เขียนแถวให้ในทรานแซกชันเดียวกับ
+// งานธุรกิจที่เป็นต้นเหตุ (อนุมัติใบขอสั่งซื้อ · รับสินค้า · ตรวจนับพบผลต่าง · เปลี่ยนสถานะ
+// คำสั่งซื้อ) ถ้าหน้าจอ push ซ้ำจะได้แถวซ้ำสองเท่า · เมธอด `push` จึงถูกถอดออก
+const loadNotifications = () => apiGet<AppNotification[]>('/api/notifications')
 
 export type NotificationKind =
   | 'REORDER_ALERT'
@@ -33,82 +42,64 @@ export interface AppNotification {
   createdAt: string
 }
 
-export type NotificationDraft = Omit<AppNotification, 'id' | 'read' | 'createdAt'>
-
 interface NotificationValue {
   notifications: AppNotification[]
+  loading: boolean
+  error: string | null
+  /** เรียกหลังงานที่ทำให้เซิร์ฟเวอร์ออกแจ้งเตือนใหม่ */
+  reload: () => Promise<void>
   listFor: (role: Role) => AppNotification[]
   unreadCountFor: (role: Role) => number
-  /** Records one or more entries as a single write, e.g. in-app plus email. */
-  push: (drafts: NotificationDraft[]) => void
-  markRead: (id: number) => void
-  markAllRead: (role: Role) => void
+  markRead: (id: number) => Promise<void>
+  markAllRead: () => Promise<void>
 }
 
 const NotificationContext = createContext<NotificationValue | null>(null)
-
-function read(): AppNotification[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as AppNotification[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function write(notifications: AppNotification[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications))
-}
 
 const newest = (a: AppNotification, b: AppNotification) =>
   b.createdAt.localeCompare(a.createdAt) || b.id - a.id
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<AppNotification[]>(read)
+  const { user } = useAuth()
+
+  // Provider นี้อยู่ที่ main.tsx จึงครอบหน้าร้านด้วย แต่ `/api/notifications` เป็น roleStaff
+  // ถ้ายิงตอนยังไม่ล็อกอินหรือเป็นลูกค้าจะได้ 401/403 ทุกครั้งที่มีคนเปิดหน้าแรก
+  const enabled = user !== null && isEmployee(user.role)
+  const { data, loading, error, reload, apply } = useResource(loadNotifications, enabled)
 
   const value = useMemo<NotificationValue>(() => {
-    const persist = (next: AppNotification[]) => {
-      write(next)
-      setNotifications(next)
-    }
-
-    const listFor = (role: Role) =>
-      notifications.filter((entry) => entry.to === role).sort(newest)
+    const notifications = data ?? []
 
     return {
       notifications,
-      listFor,
-      unreadCountFor: (role) =>
+      loading,
+      error,
+      reload,
+
+      // เซิร์ฟเวอร์กรองตามบทบาทของผู้เรียกให้อยู่แล้ว กรองซ้ำที่นี่เพื่อคงสัญญาเดิมของหน้าจอ
+      listFor: (role: Role) =>
+        notifications.filter((entry) => entry.to === role).sort(newest),
+
+      unreadCountFor: (role: Role) =>
         notifications.filter((entry) => entry.to === role && !entry.read).length,
 
-      push: (drafts) => {
-        if (!drafts.length) return
-        const createdAt = new Date().toISOString()
-        let nextId = notifications.reduce((max, entry) => Math.max(max, entry.id), 0) + 1
-        persist([
-          ...notifications,
-          ...drafts.map<AppNotification>((draft) => ({
-            ...draft,
-            id: nextId++,
-            read: false,
-            createdAt,
-          })),
-        ])
+      // ทั้งสองเส้นทางตอบ 204 ไม่มีเนื้อหา · ผลที่เกิดคือธง read เท่านั้น
+      // จึงพลิกธงในชุดที่ถืออยู่ได้เลย ไม่ต้องดึงรายการแจ้งเตือนทั้งกองใหม่
+      markRead: async (id: number) => {
+        await apiPost(`/api/notifications/${id}/read`)
+        apply((list) =>
+          list.map((entry) => (entry.id === id ? { ...entry, read: true } : entry)),
+        )
       },
 
-      markRead: (id) =>
-        persist(
-          notifications.map((entry) => (entry.id === id ? { ...entry, read: true } : entry)),
-        ),
-
-      markAllRead: (role) =>
-        persist(
-          notifications.map((entry) => (entry.to === role ? { ...entry, read: true } : entry)),
-        ),
+      // บทบาทมาจาก JWT — เส้นทางนี้ปิดเฉพาะของผู้เรียกเท่านั้น
+      // ชุดที่ถืออยู่ก็เป็นของบทบาทนั้นอยู่แล้ว (เซิร์ฟเวอร์กรองมาให้) จึงพลิกได้ทั้งชุด
+      markAllRead: async () => {
+        await apiPost('/api/notifications/read-all')
+        apply((list) => list.map((entry) => (entry.read ? entry : { ...entry, read: true })))
+      },
     }
-  }, [notifications])
+  }, [data, loading, error, reload, apply])
 
   return (
     <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>

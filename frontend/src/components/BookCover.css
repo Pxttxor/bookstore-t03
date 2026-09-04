@@ -1,0 +1,64 @@
+/* BookCover — รูปปก และปกสำรองที่วาดเองสำหรับเล่มที่ไม่มีไฟล์ปก
+   ขนาดจริงมาจากคอนเทนเนอร์ที่ครอบอยู่ (การ์ด / หน้ารายละเอียด / แถวในตะกร้า)
+   ที่นี่กำหนดแค่ว่าเต็มกล่องและครอบรูปแบบไหน */
+
+.book-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-cover--fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 12px;
+  text-align: center;
+  overflow: hidden;
+
+  /* พื้นไล่เฉดจากสีที่คำนวณด้วย bookId — อิ่มตัวต่ำและสว่างพอให้ตัวหนังสือเข้มอ่านออก */
+  background: linear-gradient(
+    160deg,
+    hsl(var(--cover-hue) 42% 88%),
+    hsl(var(--cover-hue) 34% 76%)
+  );
+  border: 1px solid hsl(var(--cover-hue) 30% 68%);
+  color: hsl(var(--cover-hue) 55% 22%);
+}
+
+.book-cover__title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.35;
+
+  /* ชื่อเรื่องยาว ๆ ตัดที่สี่บรรทัด ไม่ให้ดันผู้แต่งหลุดกรอบ */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-cover__author {
+  font-size: 0.75rem;
+  opacity: 0.75;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-cover--sm .book-cover__title {
+  font-size: 0.72rem;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.book-cover--sm.book-cover--fallback {
+  padding: 8px;
+}

@@ -46,6 +46,35 @@ const MENU: MenuGroup[] = [
     ],
   },
   {
+    heading: 'การชำระเงิน',
+    items: [
+      {
+        label: 'ตรวจสอบการชำระเงิน',
+        to: '/admin/payments',
+        icon: 'credit-card',
+        allowed: can.viewPayments,
+        end: true,
+      },
+      {
+        label: 'รายงานสรุปรับชำระเงิน',
+        to: '/admin/payments/report',
+        icon: 'bar-chart',
+        allowed: can.managePaymentReports,
+      },
+    ],
+  },
+  {
+    heading: 'สมาชิกและแต้มสะสม',
+    items: [
+      {
+        label: 'ระดับสมาชิกและแต้ม',
+        to: '/admin/members',
+        icon: 'award',
+        allowed: can.viewMembers,
+      },
+    ],
+  },
+  {
     heading: 'การจัดส่งพัสดุ',
     items: [
       {
@@ -191,11 +220,15 @@ const MENU: MenuGroup[] = [
 ]
 
 export default function AdminSidebar({ role }: { role: Role }) {
-  const { belowReorder, pendingReports } = useInventory()
-  const { pendingCount, reportedCount } = useReviews()
+  const { belowReorder, pendingReports, loading: stockLoading } = useInventory()
+  const { pendingCount, reportedCount, loading: reviewLoading } = useReviews()
 
+  // แถบเมนูอยู่บนโครงหน้าตลอด จะขึ้นจอโหลดเต็มไม่ได้ — ระหว่างยังไม่รู้ตัวเลขจริง
+  // ให้ถือว่าไม่มีงานค้าง จุดแดงจึงไม่กระพริบขึ้นแล้วหายทุกครั้งที่เปิดหลังร้าน
   const dotCount = (source: MenuItem['dot']) =>
-    source === 'reorder'
+    stockLoading || reviewLoading
+      ? 0
+      : source === 'reorder'
       ? belowReorder.length
       : source === 'reviews'
       ? pendingCount

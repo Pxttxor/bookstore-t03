@@ -71,6 +71,12 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	mux.HandleFunc("POST /api/auth/register", h.register)    // สมัครบัญชีลูกค้า
 	mux.HandleFunc("POST /api/auth/verify-otp", h.verifyOtp) // ยืนยันตัวตนก่อนเข้าใช้งาน
 
+	// แคตตาล็อกหน้าร้าน — คนเดินดูหนังสือยังไม่ล็อกอิน จึงผ่าน register() ไม่ได้
+	// อ่านอย่างเดียว และเห็นเฉพาะเล่มที่ขายอยู่ (CatalogueService คัดให้แล้ว)
+	mux.HandleFunc("GET /api/catalogue", h.listCatalogue)
+	mux.HandleFunc("GET /api/catalogue/categories", h.listCatalogueCategories)
+	mux.HandleFunc("GET /api/catalogue/{id}", h.getCatalogueBook)
+
 	register := registrar(func(pattern string, roles []model.Role, handler http.HandlerFunc) {
 		mux.Handle(pattern, middleware.Chain(handler,
 			middleware.RequireAuth(cfg.Auth),
@@ -82,7 +88,7 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerCustomerRoutes(register)     // ลูกค้า + บัญชีผู้ใช้
 	h.registerSupplierRoutes(register)     // U1–U4
 	h.registerBookRoutes(register)         // หมวดหมู่ + หนังสือ + ประวัติการแก้ไข
-	h.registerCatalogueRoutes(register)    // สินค้าคงคลัง (รองรับ U5)
+	h.registerInventoryRoutes(register)    // สินค้าคงคลัง (รองรับ U5)
 	h.registerStockRoutes(register)        // ปรับยอด · ตรวจนับ · รายงานผลต่าง
 	h.registerOrderRoutes(register)        // คำสั่งซื้อลูกค้า
 	h.registerPromotionRoutes(register)    // โปรโมชั่นและส่วนลด
@@ -93,9 +99,13 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	h.registerPurchasingRoutes(register)   // U5–U10
 	h.registerNotificationRoutes(register) // SCR-27
 
+	// ลำดับจากนอกเข้าใน: กัน panic → บันทึก log → บีบอัด → CORS → ตารางเส้นทาง
+	// Compress อยู่ในชั้น RequestLog เพื่อให้ statusRecorder ยังอ่านสถานะจริงได้
+	// และอยู่นอก CORS เพื่อครอบทุกเส้นทาง (OPTIONS ที่ CORS ตัดจบเป็น 204 ไม่ถูกบีบอัด)
 	return middleware.Chain(mux,
 		middleware.Recover,
 		middleware.RequestLog,
+		middleware.Compress,
 		middleware.CORS(cfg.CORSOrigins),
 	)
 }

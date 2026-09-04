@@ -29,6 +29,7 @@ type orderDTO struct {
 	Code            string             `json:"code"`
 	CustomerID      int                `json:"customerId"`
 	CustomerName    string             `json:"customerName"`
+	CustomerEmail   string             `json:"customerEmail,omitempty"`
 	Channel         model.OrderChannel `json:"channel"`
 	ChannelLabel    string             `json:"channelLabel"`
 	OrderDate       time.Time          `json:"orderDate"`
@@ -43,6 +44,7 @@ type orderDTO struct {
 	SlipFileName    string             `json:"slipFileName,omitempty"`
 	ItemCount       int                `json:"itemCount"`
 	Closed          bool               `json:"closed"`
+	CanCancel       bool               `json:"canCancel"`
 	Items           []orderItemDTO     `json:"items"`
 	Timeline        []orderHistoryDTO  `json:"timeline"`
 }
@@ -95,9 +97,11 @@ func toOrderDTO(view service.OrderView) orderDTO {
 
 	dto := orderDTO{
 		OrderID:         order.OrderID,
+		CanCancel:       order.CanTransitionTo(model.OrderStatusCancelled),
 		Code:            model.FormatOrderCode(order.OrderID),
 		CustomerID:      order.CustomerID,
 		CustomerName:    view.CustomerName,
+		CustomerEmail:   view.CustomerEmail,
 		Channel:         order.Channel,
 		ChannelLabel:    order.Channel.Label(),
 		OrderDate:       order.OrderDate,

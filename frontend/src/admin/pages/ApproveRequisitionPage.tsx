@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import LineItemsTable from '../components/LineItemsTable'
 import Meter from '../components/Meter'
 import StatusBadge from '../components/StatusBadge'
@@ -12,13 +14,11 @@ import { useToast } from '../components/ToastContext'
 import { can } from '../permissions'
 import { usePurchasing } from '../purchasing/PurchasingContext'
 import {
-  committedAmount,
   documentTotal,
   formatPOCode,
   formatPRCode,
   PR_STATUS_LABELS,
   PR_STATUS_TONES,
-  PURCHASE_BUDGET,
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatBaht, formatSupplierCode } from '../suppliers/suppliers'
@@ -30,7 +30,8 @@ export default function ApproveRequisitionPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { suppliers } = useSuppliers()
-  const { findRequisition, orders, approveRequisition, rejectRequisition } = usePurchasing()
+  const { findRequisition, budget, approveRequisition, rejectRequisition, loading, error, reload } =
+    usePurchasing()
   const { notify } = useToast()
   const navigate = useNavigate()
 
@@ -38,6 +39,7 @@ export default function ApproveRequisitionPage() {
   const [reasonError, setReasonError] = useState('')
   const [overBudgetNote, setOverBudgetNote] = useState('')
   const [overBudgetError, setOverBudgetError] = useState('')
+  const [working, setWorking] = useState(false)
 
   const role = user!.role
   const requisition = findRequisition(Number(id))
@@ -62,6 +64,26 @@ export default function ApproveRequisitionPage() {
               onClick: () => navigate('/admin/purchasing'),
             }}
           />
+        </section>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดใบขอสั่งซื้อ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
         </section>
       </div>
     )
@@ -94,39 +116,56 @@ export default function ApproveRequisitionPage() {
 
   const supplier = suppliers.find((entry) => entry.supplierId === requisition.supplierId)
   const total = documentTotal(requisition.items)
-  const remaining = PURCHASE_BUDGET - committedAmount(orders)
+  // งบประมาณมาจาก `GET /api/purchasing/budget` แล้ว ไม่ใช่ค่าคงที่ฝั่งหน้าจอ
+  // เซิร์ฟเวอร์คิด committed จากใบสั่งซื้อจริงทั้งหมด จึงตรงกับที่ใช้ตัดสินตอนอนุมัติ
+  const remaining = budget.remaining
   const remainingAfter = remaining - total
   const overBudget = remainingAfter < 0
-  const remainingPercent = (remaining / PURCHASE_BUDGET) * 100
+  const remainingPercent = budget.budget > 0 ? (remaining / budget.budget) * 100 : 0
   const decided = requisition.status !== 'SUBMITTED'
 
   const tone = overBudget ? 'danger' : remainingPercent <= 30 ? 'warning' : 'accent'
 
-  const approve = () => {
+  const approve = async () => {
     // U7 abnormal flow: over budget must be adjusted down or justified in writing.
     if (overBudget && overBudgetNote.trim() === '') {
       setOverBudgetError('ยอดเกินงบประมาณ กรุณาบันทึกเหตุผลก่อนอนุมัติ')
       return
     }
-    const order = approveRequisition(
-      requisition.prId,
-      overBudget ? overBudgetNote.trim() : undefined,
-    )
-    notify(
-      'success',
-      `อนุมัติ ${formatPRCode(requisition.prId)} แล้ว · ระบบออก ${formatPOCode(order.poId)} รอส่งให้ผู้จัดจำหน่าย`,
-    )
-    navigate('/admin/purchasing')
+    if (working) return
+    setWorking(true)
+    try {
+      // เซิร์ฟเวอร์ออกใบสั่งซื้อ ปรับสถานะใบขอ และแจ้งเตือน ในทรานแซกชันเดียว
+      const order = await approveRequisition(
+        requisition.prId,
+        overBudget ? overBudgetNote.trim() : undefined,
+      )
+      notify(
+        'success',
+        `อนุมัติ ${formatPRCode(requisition.prId)} แล้ว · ระบบออก ${formatPOCode(order.poId)} รอส่งให้ผู้จัดจำหน่าย`,
+      )
+      navigate('/admin/purchasing')
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'อนุมัติไม่สำเร็จ')
+      setWorking(false)
+    }
   }
 
-  const reject = () => {
+  const reject = async () => {
     if (reason.trim() === '') {
       setReasonError('กรุณาระบุเหตุผลที่ตีกลับให้แก้ไข')
       return
     }
-    rejectRequisition(requisition.prId, reason.trim())
-    notify('warning', `ตีกลับ ${formatPRCode(requisition.prId)} ให้พนักงานคลังแก้ไขแล้ว`)
-    navigate('/admin/purchasing')
+    if (working) return
+    setWorking(true)
+    try {
+      await rejectRequisition(requisition.prId, reason.trim())
+      notify('warning', `ตีกลับ ${formatPRCode(requisition.prId)} ให้พนักงานคลังแก้ไขแล้ว`)
+      navigate('/admin/purchasing')
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ตีกลับไม่สำเร็จ')
+      setWorking(false)
+    }
   }
 
   return (
@@ -190,7 +229,7 @@ export default function ApproveRequisitionPage() {
             />
             <p className="approve__budget-note">
               คงเหลือหลังอนุมัติใบนี้ ฿ {formatBaht(remainingAfter)} จากงบทั้งหมด ฿{' '}
-              {formatBaht(PURCHASE_BUDGET)}
+              {formatBaht(budget.budget)}
             </p>
           </div>
         </div>

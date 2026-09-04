@@ -1,0 +1,48 @@
+.payment-report__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px;
+}
+
+.payment-report__save {
+  margin-bottom: 2px;
+}
+
+.payment-report__error {
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.payment-report__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.payment-report__panel {
+  padding: 20px;
+  overflow: hidden;
+}
+
+.payment-report__panel-title {
+  margin-bottom: 14px;
+  color: var(--primary-deep);
+  font-size: 16px;
+}
+
+.payment-report__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-report__total-label {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.payment-report__total {
+  color: var(--text-heading);
+  font-weight: 600;
+}

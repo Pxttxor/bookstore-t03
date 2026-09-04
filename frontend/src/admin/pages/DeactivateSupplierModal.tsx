@@ -29,10 +29,15 @@ export default function DeactivateSupplierModal({
   const [reason, setReason] = useState('')
   const [note, setNote] = useState('')
   const [reasonError, setReasonError] = useState('')
-  const { ordersForSupplier } = usePurchasing()
+  const { ordersForSupplier, loading, error } = usePurchasing()
 
   const pending = outstandingOrders(ordersForSupplier(supplier.supplierId))
-  const blocked = pending.length > 0
+
+  // กล่องนี้เล็กเกินกว่าจะขึ้นจอโหลดเต็ม แต่ปล่อยให้กดยืนยันไม่ได้เช่นกัน —
+  // ระหว่างที่ยังไม่รู้ว่ามีใบสั่งซื้อคงค้างหรือไม่ ผลลัพธ์ที่นับได้คือ 0 เสมอ
+  // ซึ่งจะบอกผู้ใช้ว่าปิดใช้งานได้ทั้งที่เซิร์ฟเวอร์อาจปฏิเสธ (SUPPLIER_HAS_OPEN_PO)
+  const unverified = loading || error !== null
+  const blocked = unverified || pending.length > 0
 
   const confirm = () => {
     if (!reason) {
@@ -65,12 +70,17 @@ export default function DeactivateSupplierModal({
       <div className={'deactivate__notice' + (blocked ? ' deactivate__notice--blocked' : '')}>
         <Icon name={blocked ? 'alert-triangle' : 'check-circle'} size={20} />
         <span>
-          ตรวจพบใบสั่งซื้อคงค้าง {pending.length} รายการ
-          {blocked && ' — ต้องปิดรายการคงค้างให้ครบก่อนจึงจะปิดใช้งานได้'}
+          {loading
+            ? 'กำลังตรวจสอบใบสั่งซื้อคงค้าง…'
+            : error
+            ? `ตรวจสอบใบสั่งซื้อคงค้างไม่สำเร็จ: ${error}`
+            : `ตรวจพบใบสั่งซื้อคงค้าง ${pending.length} รายการ`}
+          {!unverified && blocked && ' — ต้องปิดรายการคงค้างให้ครบก่อนจึงจะปิดใช้งานได้'}
         </span>
       </div>
 
-      {blocked && (
+      {/* รายการคงค้างจะว่างตอนที่ยังตรวจไม่ได้ ต้องเช็ค pending เอง ไม่ใช่ blocked */}
+      {pending.length > 0 && (
         <ul className="deactivate__orders">
           {pending.map((po) => {
             const display = poDisplayStatus(po)

@@ -1,10 +1,11 @@
 // Customer-order types (Order / OrderItem / OrderStatusHistory + Shipment) follow the
 // team's analysis class diagram, which is authoritative on names and enums.
 //
-// A customer order is kept self-contained: it snapshots the book title, unit price and
-// quantity rather than linking to the InventoryItem (the storefront keys books by a slug
-// string, inventory by a numeric bookId), and it does not touch the Payment subsystem.
-// See the "deliberate deviations" note in the project README.
+// คำสั่งซื้อสแน็ปช็อตชื่อเรื่อง/ราคา/จำนวนไว้ในแถวของตัวเอง เพื่อให้ประวัติการสั่งซื้อ
+// ไม่เปลี่ยนตามเมื่อราคาหน้าปกถูกแก้ทีหลัง · อ้างหนังสือด้วย `bookId` ตัวเดียวกับที่หน้าร้านใช้
+//
+// **การเปลี่ยนสถานะตัดสินที่เซิร์ฟเวอร์** (`OrderService.advance`) — หน้าจอไม่มีตาราง
+// transition ของตัวเองอีกชุด เพราะสองชุดมีโอกาสเพี้ยนจากกันโดยไม่มีอะไรจับ
 
 import type { BadgeTone } from '../components/StatusBadge'
 
@@ -26,8 +27,8 @@ export type OrderChannel = 'WEBSITE' | 'MESSAGE' | 'PHONE'
 export type ShipmentStatus = 'PREPARING' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED'
 
 export interface OrderItem {
-  /** Storefront slug (Book.id) so the tracking page can resolve the cover via getBook(). */
-  bookId: string
+  /** รหัสหนังสือในแคตตาล็อก (`book.book_id`) — คีย์เดียวกันทั้งหน้าร้านและหลังร้าน */
+  bookId: number
   title: string
   unitPrice: number
   quantity: number
@@ -49,6 +50,7 @@ export interface Shipment {
 
 export interface CustomerOrder {
   orderId: number
+  customerId?: number
   channel: OrderChannel
   orderDate: string
   customerName: string
@@ -57,6 +59,8 @@ export interface CustomerOrder {
   customerEmail?: string
   shippingAddress: string
   status: OrderStatus
+  /** Server-derived transition guard; role permissions are checked separately. */
+  canCancel?: boolean
   subtotal: number
   discountAmount: number
   netAmount: number
@@ -114,29 +118,6 @@ export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
 /** Delivery companies the delivery staff picks from when recording a shipment. */
 export const CARRIERS = ['DHL Express', 'Kerry Express', 'ไปรษณีย์ไทย', 'J&T Express', 'Flash Express'] as const
 
-/* ── State machine (Order.updateStatus) ─────────────────────────────────── */
-
-// Allowed forward transitions. The storefront always attaches a slip at checkout, so a
-// web order skips WAITING_PAYMENT straight to VERIFYING_PAYMENT; WAITING_PAYMENT is kept
-// for orders placed through other channels that have not paid yet.
-export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_CONFIRM: ['STOCK_CONFIRMED', 'CANCELLED', 'REJECTED'],
-  STOCK_CONFIRMED: ['VERIFYING_PAYMENT', 'WAITING_PAYMENT', 'CANCELLED'],
-  WAITING_PAYMENT: ['VERIFYING_PAYMENT', 'CANCELLED'],
-  VERIFYING_PAYMENT: ['PAID', 'REJECTED'],
-  PAID: ['PACKING', 'CANCELLED'],
-  PACKING: ['READY_TO_SHIP'],
-  READY_TO_SHIP: ['SHIPPED'],
-  SHIPPED: ['DELIVERED'],
-  DELIVERED: [],
-  CANCELLED: [],
-  REJECTED: [],
-}
-
-export function canTransition(from: OrderStatus, to: OrderStatus) {
-  return ORDER_TRANSITIONS[from].includes(to)
-}
-
 // The five milestones shown on the customer tracking timeline and the back-office detail
 // stepper. CANCELLED / REJECTED sit outside the happy path and render their own banner.
 export const ORDER_MILESTONES = ['รับคำสั่งซื้อ', 'ชำระเงิน', 'เตรียมพัสดุ', 'จัดส่ง', 'ส่งถึงแล้ว'] as const
@@ -171,7 +152,7 @@ export const orderItemCount = (order: CustomerOrder) =>
 
 /* ── Seed data ──────────────────────────────────────────────────────────── */
 
-const item = (bookId: string, title: string, unitPrice: number, quantity: number): OrderItem => ({
+const item = (bookId: number, title: string, unitPrice: number, quantity: number): OrderItem => ({
   bookId,
   title,
   unitPrice,
@@ -193,8 +174,8 @@ export const SEED_ORDERS: CustomerOrder[] = [
     netAmount: 50.9,
     slipFileName: 'slip-1001.jpg',
     items: [
-      item('the-midnight-library', 'The Midnight Library', 18.5, 1),
-      item('atomic-habits', 'Atomic Habits', 16.2, 2),
+      item(109, 'The Midnight Library', 18.5, 1),
+      item(101, 'Atomic Habits', 16.2, 2),
     ],
     timeline: [{ status: 'PENDING_CONFIRM', changedDate: '2026-08-04T02:10:00.000Z' }],
   },
@@ -210,8 +191,8 @@ export const SEED_ORDERS: CustomerOrder[] = [
     netAmount: 38.98,
     slipFileName: 'slip-1002.png',
     items: [
-      item('dune', 'Dune', 23.99, 1),
-      item('project-hail-mary', 'Project Hail Mary', 14.99, 1),
+      item(106, 'Dune', 23.99, 1),
+      item(104, 'Project Hail Mary', 14.99, 1),
     ],
     timeline: [
       { status: 'PENDING_CONFIRM', changedDate: '2026-08-03T01:00:00.000Z' },
@@ -233,7 +214,7 @@ export const SEED_ORDERS: CustomerOrder[] = [
     discountAmount: 0,
     netAmount: 13.5,
     slipFileName: 'slip-1003.jpg',
-    items: [item('the-song-of-achilles', 'The Song of Achilles', 13.5, 1)],
+    items: [item(110, 'The Song of Achilles', 13.5, 1)],
     timeline: [
       { status: 'PENDING_CONFIRM', changedDate: '2026-07-30T01:00:00.000Z' },
       { status: 'STOCK_CONFIRMED', changedDate: '2026-07-30T02:00:00.000Z' },

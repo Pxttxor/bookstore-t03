@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { formatPrice } from '../data/books'
+import BookCover from './BookCover'
+import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
 import './OrderSummary.css'
 
@@ -10,7 +11,7 @@ interface OrderSummaryProps {
 }
 
 export default function OrderSummary({
-  title = 'Order Summary',
+  title = 'สรุปคำสั่งซื้อ',
   footer,
   shipping = 0,
 }: OrderSummaryProps) {
@@ -26,9 +27,14 @@ export default function OrderSummary({
       ) : (
         <ul className="summary__list">
           {lines.map(({ book, qty }) => (
-            <li key={book.id} className="summary__item">
+            <li key={book.bookId} className="summary__item">
               <div className="summary__thumb">
-                <img src={book.cover} alt={book.title} loading="lazy" decoding="async" />
+                <BookCover
+                  bookId={book.bookId}
+                  title={book.title}
+                  author={book.author}
+                  size="sm"
+                />
                 {qty > 1 && <span className="summary__qty">{qty}</span>}
               </div>
               <div className="summary__info">
@@ -45,17 +51,17 @@ export default function OrderSummary({
 
       <div className="summary__totals">
         <div className="summary__row">
-          <span>Subtotal</span>
+          <span>รวมค่าสินค้า</span>
           <span>{formatPrice(subtotal)}</span>
         </div>
         <div className="summary__row">
-          <span>Shipping</span>
+          <span>ค่าจัดส่ง</span>
           <span className={shipping === 0 ? 'summary__free' : undefined}>
-            {shipping === 0 ? 'FREE' : formatPrice(shipping)}
+            {shipping === 0 ? 'ส่งฟรี' : formatPrice(shipping)}
           </span>
         </div>
         <div className="summary__row summary__row--total">
-          <span>Total</span>
+          <span>ยอดชำระทั้งสิ้น</span>
           <span>{formatPrice(total)}</span>
         </div>
       </div>

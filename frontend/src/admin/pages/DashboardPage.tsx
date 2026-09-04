@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import { ROLE_LABELS } from '../../auth/roles'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Meter from '../components/Meter'
 import StatTile from '../components/StatTile'
 import StatusBadge from '../components/StatusBadge'
@@ -13,11 +15,9 @@ import { useOrders } from '../orders/OrderContext'
 import { can } from '../permissions'
 import { usePurchasing } from '../purchasing/PurchasingContext'
 import {
-  committedAmount,
   documentTotal,
   formatPRCode,
   poDisplayStatus,
-  PURCHASE_BUDGET,
 } from '../purchasing/purchasing'
 import { useReviews } from '../reviews/ReviewContext'
 import { useSuppliers } from '../suppliers/SupplierContext'
@@ -26,14 +26,31 @@ import './DashboardPage.css'
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { suppliers } = useSuppliers()
-  const { books } = useBooks()
-  const { belowReorder, items, pendingReports } = useInventory()
-  const { requisitions, orders, returns } = usePurchasing()
-  const { orders: customerOrders } = useOrders()
-  const { unrepliedCount, reportedCount } = useReviews()
+  const supplier = useSuppliers()
+  const book = useBooks()
+  const inventory = useInventory()
+  const purchasing = usePurchasing()
+  const order = useOrders()
+  const review = useReviews()
+
+  const { suppliers } = supplier
+  const { books } = book
+  const { belowReorder, items, pendingReports } = inventory
+  const { requisitions, orders, returns, budget } = purchasing
+  const { orders: customerOrders } = order
+  const { unrepliedCount, reportedCount } = review
 
   const role = user!.role
+  // Wait only for resources used by this role. A forbidden subsystem must not
+  // prevent sales or delivery staff from opening their own dashboard.
+  const sources: { loading: boolean; error: string | null; reload: () => Promise<void> }[] = [order]
+  if (can.viewSuppliers(role)) sources.push(supplier)
+  if (can.viewBooks(role)) sources.push(book)
+  if (can.viewStock(role)) sources.push(inventory)
+  if (can.viewPurchasing(role)) sources.push(purchasing)
+  if (can.moderateReview(role)) sources.push(review)
+  const loading = sources.some((source) => source.loading)
+  const failed = sources.find((source) => source.error)
 
   const outOfStock = items.filter((item) => stockLevel(item) === 'OUT').length
   const lowStock = items.filter((item) => stockLevel(item) === 'LOW').length
@@ -66,13 +83,34 @@ export default function DashboardPage() {
     (record) => record.date === latestSummaryDate,
   ).length
 
-  const remaining = PURCHASE_BUDGET - committedAmount(orders)
-  const remainingPercent = (remaining / PURCHASE_BUDGET) * 100
+  // งบประมาณมาจาก `GET /api/purchasing/budget` เหมือนแถบบน SCR-23 ไม่ใช่ค่าคงที่ฝั่งหน้าจอ
+  const remaining = budget.remaining
+  const remainingPercent = budget.budget > 0 ? (remaining / budget.budget) * 100 : 0
   const budgetTone = remaining < 0 ? 'danger' : remainingPercent <= 30 ? 'warning' : 'accent'
 
   const activeSuppliers = suppliers.filter((entry) => entry.status === 'ACTIVE')
   const supplierName = (supplierId: number) =>
     suppliers.find((entry) => entry.supplierId === supplierId)?.companyName ?? '—'
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลสรุปประจำวัน…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (failed?.error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={failed.error} onRetry={() => void failed.reload()} />
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="admin-page">
@@ -161,7 +199,7 @@ export default function DashboardPage() {
               />
               <p className="dash__budget-note">
                 คงเหลือ {Math.round(remainingPercent)}% จากงบทั้งหมด ฿{' '}
-                {formatBaht(PURCHASE_BUDGET)}
+                {formatBaht(budget.budget)}
               </p>
             </article>
           </section>

@@ -1,25 +1,32 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import BookCard from '../components/BookCard'
-import { books, CATEGORIES, type Category } from '../data/books'
+import LoadingState from '../admin/components/LoadingState'
+import ErrorState from '../admin/components/ErrorState'
+import { useCatalogue } from '../catalogue/CatalogueContext'
+import { matchesSearch } from '../data/catalogue'
 import './HomePage.css'
 
 const PAGE_SIZE = 12
 
+// 0 = "ทั้งหมด" — หมวดหมู่จริงในตาราง category เริ่มที่ 1 จึงใช้ 0 เป็นค่าไม่กรองได้
+const ALL_CATEGORIES = 0
+
 export default function HomePage() {
   const [params] = useSearchParams()
-  // ค้นแบบ case-insensitive contains บน title/author — เลียนแบบ Book.search() ของวุฒิภัทร
-  // (storefront Book ไม่มี isbn จึงตัด isbn ออก) · ช่องค้นหาอยู่บน TopNav ส่งค่ามาทาง ?q=
+  // ช่องค้นหาอยู่บน TopNav ส่งค่ามาทาง ?q= · ค้นแบบเดียวกับ Book.search()
+  // ของวุฒิภัทร (ชื่อเรื่อง / ผู้แต่ง / ISBN แบบไม่สนตัวพิมพ์)
   const query = params.get('q') ?? ''
   const term = query.trim().toLowerCase()
 
-  const [category, setCategory] = useState<Category>('All Books')
+  const { books, categories, loading, error, reload } = useCatalogue()
+  const [categoryId, setCategoryId] = useState<number>(ALL_CATEGORIES)
 
   // "Load More" remembers which filter it was counting for, so changing the category or
   // the search term resets the page back to PAGE_SIZE by derivation — the คำค้นมาจาก URL
   // จึงเปลี่ยนได้โดยหน้านี้ไม่ได้เป็นคนสั่ง case that React's "You Might Not Need an
   // Effect" covers. Deriving beats both an effect and a render-phase setState here.
-  const filterKey = `${category}|${term}`
+  const filterKey = `${categoryId}|${term}`
   const [page, setPage] = useState({ key: filterKey, size: PAGE_SIZE })
   const visible = page.key === filterKey ? page.size : PAGE_SIZE
 
@@ -29,31 +36,38 @@ export default function HomePage() {
   // (react-hooks/preserve-manual-memoization). Depending on the raw `query` string is
   // equivalent and keeps the memo.
   const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase()
     return books.filter(
       (b) =>
-        (category === 'All Books' || b.category === category) &&
-        (needle === '' ||
-          b.title.toLowerCase().includes(needle) ||
-          b.author.toLowerCase().includes(needle)),
+        (categoryId === ALL_CATEGORIES || b.categoryId === categoryId) &&
+        matchesSearch(b, query),
     )
-  }, [category, query])
+  }, [books, categoryId, query])
 
   const shown = filtered.slice(0, visible)
   const hasMore = visible < filtered.length
+
+  // ลำดับ loading → error → ว่าง ตามกติกาใน frontend/CLAUDE.md
+  if (loading) return <LoadingState label="กำลังโหลดรายการหนังสือ…" />
+  if (error) return <ErrorState message={error} onRetry={() => void reload()} />
 
   return (
     <div className="home page-shell">
       <section className="home__chips">
         <h2 className="home__chips-title">เลือกตามหมวดหมู่</h2>
         <div className="home__chip-row">
-          {CATEGORIES.map((c) => (
+          <button
+            className={'chip' + (categoryId === ALL_CATEGORIES ? ' chip--active' : '')}
+            onClick={() => setCategoryId(ALL_CATEGORIES)}
+          >
+            ทั้งหมด
+          </button>
+          {categories.map((c) => (
             <button
-              key={c}
-              className={'chip' + (c === category ? ' chip--active' : '')}
-              onClick={() => setCategory(c)}
+              key={c.categoryId}
+              className={'chip' + (c.categoryId === categoryId ? ' chip--active' : '')}
+              onClick={() => setCategoryId(c.categoryId)}
             >
-              {c}
+              {c.name}
             </button>
           ))}
         </div>
@@ -68,7 +82,7 @@ export default function HomePage() {
 
         <div className="home__grid">
           {shown.map((book) => (
-            <BookCard key={book.id} book={book} />
+            <BookCard key={book.bookId} book={book} />
           ))}
         </div>
 
@@ -76,7 +90,7 @@ export default function HomePage() {
           <p className="home__empty">
             {term !== ''
               ? `ไม่พบหนังสือที่ตรงกับ "${query.trim()}"`
-              : 'No books in this category yet.'}
+              : 'ยังไม่มีหนังสือในหมวดหมู่นี้'}
           </p>
         )}
 
@@ -86,7 +100,7 @@ export default function HomePage() {
               className="btn btn-ghost"
               onClick={() => setPage({ key: filterKey, size: visible + PAGE_SIZE })}
             >
-              Load More
+              ดูเพิ่มเติม
             </button>
           </div>
         )}

@@ -81,6 +81,54 @@
   box-shadow: 0 0 0 3px rgba(37, 196, 168, 0.15);
 }
 
+/* ช่องที่ตรวจไม่ผ่าน — ล้อ .admin-input--error / .admin-field__error ของหลังร้าน */
+.field__input--error {
+  border-color: var(--danger);
+}
+.field__input--error:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+.field__error {
+  font-size: 14px;
+  color: var(--danger);
+}
+
+/* ที่อยู่ที่ลูกค้าบันทึกไว้จากใบก่อน — เลือกใช้ซ้ำหรือกรอกใหม่ */
+.checkout__saved {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+.checkout__saved-title {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+.checkout__saved-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-body);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.checkout__saved-choice input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+
+.checkout__save-error {
+  font-size: 14px;
+  color: var(--danger);
+}
+
 .checkout__save {
   display: inline-flex;
   align-items: center;

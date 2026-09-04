@@ -40,6 +40,9 @@ export type IconName =
   | 'close'
   | 'file-text'
   | 'shopping-bag'
+  | 'credit-card'
+  | 'gift'
+  | 'award'
   | 'tag'
   | 'flag'
   | 'bar-chart'
@@ -53,6 +56,9 @@ export type IconName =
   | 'printer'
   | 'trending-up'
   | 'dollar-sign'
+  | 'phone'
+  | 'map-pin'
+  | 'key'
 
 const PATHS: Record<IconName, ReactNode> = {
   search: (
@@ -252,6 +258,27 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M16 10a4 4 0 0 1-8 0" />
     </>
   ),
+  'credit-card': (
+    <>
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+    </>
+  ),
+  gift: (
+    <>
+      <polyline points="20 12 20 22 4 22 4 12" />
+      <rect x="2" y="7" width="20" height="5" />
+      <line x1="12" y1="22" x2="12" y2="7" />
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </>
+  ),
+  award: (
+    <>
+      <circle cx="12" cy="8" r="7" />
+      <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+    </>
+  ),
   tag: (
     <>
       <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
@@ -334,6 +361,22 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <line x1="12" y1="1" x2="12" y2="23" />
       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </>
+  ),
+  phone: (
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+  ),
+  'map-pin': (
+    <>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z" />
+      <circle cx="12" cy="10" r="3" />
+    </>
+  ),
+  key: (
+    <>
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="M10.7 12.3 21 2" />
+      <path d="m17 6 3 3" />
     </>
   ),
 }

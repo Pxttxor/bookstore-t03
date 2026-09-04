@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import type { BadgeTone } from '../components/StatusBadge'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { can } from '../permissions'
@@ -50,7 +52,7 @@ interface DocumentRow {
 
 export default function PurchasingListPage() {
   const { user } = useAuth()
-  const { requisitions, orders } = usePurchasing()
+  const { requisitions, orders, loading, error, reload } = usePurchasing()
   const { suppliers } = useSuppliers()
   const navigate = useNavigate()
 
@@ -201,7 +203,11 @@ export default function PurchasingListPage() {
           </label>
         </div>
 
-        {visible.length === 0 ? (
+        {loading ? (
+          <LoadingState label="กำลังโหลดเอกสารจัดซื้อ…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        ) : visible.length === 0 ? (
           <EmptyState
             icon="file-text"
             title="ไม่พบเอกสารในหมวดนี้"

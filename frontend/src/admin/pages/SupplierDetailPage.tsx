@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
 import { usePurchasing } from '../purchasing/PurchasingContext'
@@ -31,7 +33,7 @@ type Tab = 'books' | 'orders'
 export default function SupplierDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const { findById, deactivate } = useSuppliers()
+  const { findById, deactivate, loading, error, reload } = useSuppliers()
   const { ordersForSupplier } = usePurchasing()
   const { notify } = useToast()
   const navigate = useNavigate()
@@ -40,6 +42,26 @@ export default function SupplierDetailPage() {
   const [confirming, setConfirming] = useState(false)
 
   const supplier = findById(Number(id))
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลผู้จัดจำหน่าย…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
 
   if (!supplier) {
     return (
@@ -71,15 +93,21 @@ export default function SupplierDetailPage() {
   const orders = ordersForSupplier(supplier.supplierId)
   const pendingCount = outstandingOrders(orders).length
 
-  const onConfirmDeactivate = (reason: string, note: string) => {
-    deactivate(supplier.supplierId, {
-      reason,
-      note,
-      at: new Date().toISOString(),
-      by: user!.name,
-    })
-    setConfirming(false)
-    notify('success', `ปิดใช้งาน ${supplier.companyName} เรียบร้อยแล้ว`)
+  const onConfirmDeactivate = async (reason: string, note: string) => {
+    try {
+      // at / by เซิร์ฟเวอร์เติมจาก JWT ให้เอง หน้าจอส่งแค่เหตุผลกับหมายเหตุ
+      await deactivate(supplier.supplierId, {
+        reason,
+        note,
+        at: new Date().toISOString(),
+        by: user!.name,
+      })
+      setConfirming(false)
+      notify('success', `ปิดใช้งาน ${supplier.companyName} เรียบร้อยแล้ว`)
+    } catch (err) {
+      // abnormal flow ของ U3: ยังมีใบสั่งซื้อคงค้าง → เซิร์ฟเวอร์ปฏิเสธพร้อมข้อความไทย
+      notify('error', err instanceof Error ? err.message : 'ปิดใช้งานไม่สำเร็จ')
+    }
   }
 
   return (

@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
 import { formatBookCode } from '../inventory/inventory'
@@ -24,7 +26,7 @@ import '../components/AdminForm.css'
 import '../components/DataTable.css'
 import './PurchaseReturnPage.css'
 
-// Evidence photos are base64-inlined into localStorage, so they have to stay small.
+// Evidence photos travel as data URLs into a `text` column, so they have to stay small.
 const MAX_EVIDENCE_BYTES = 300_000
 
 interface DraftLine {
@@ -35,7 +37,36 @@ interface DraftLine {
   evidence?: string
 }
 
+// ตัวห่อกันไว้ก่อนให้ฟอร์ม mount — ฟอร์มตั้งค่าเริ่มต้นของรายการด้วย useState
+// ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
+// รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function PurchaseReturnPage() {
+  const { loading, error, reload } = usePurchasing()
+
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลใบส่งคืน…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
+        </section>
+      </div>
+    )
+  }
+
+  return <PurchaseReturnForm />
+}
+
+function PurchaseReturnForm() {
   const { id } = useParams()
   const [search] = useSearchParams()
   const { state } = useLocation() as { state: { bookIds?: number[] } | null }
@@ -58,6 +89,7 @@ export default function PurchaseReturnPage() {
 
   const [reason, setReason] = useState(RETURN_REASONS[0])
   const [escalation, setEscalation] = useState('')
+  const [working, setWorking] = useState(false)
   const [compensationType, setCompensationType] =
     useState<Compensation['type']>('REPLACEMENT')
   const [compensationNote, setCompensationNote] = useState('')
@@ -139,15 +171,17 @@ export default function PurchaseReturnPage() {
     reader.readAsDataURL(file)
   }
 
-  const submit = () => {
+  const submit = async () => {
     const chosen = lines.filter((line) => line.quantity > 0)
     if (chosen.length === 0) {
       notify('error', 'กรุณาระบุจำนวนที่ต้องการส่งคืนอย่างน้อยหนึ่งรายการ')
       return
     }
-    const entry = createReturn(
-      order.poId,
-      {
+    if (working) return
+    setWorking(true)
+    try {
+      // ผู้เปิดใบมาจาก JWT · เซิร์ฟเวอร์ตัดสต็อกและปิด PO ถ้าคืนครบ ในทรานแซกชันเดียว
+      const entry = await createReturn(order.poId, {
         reason,
         items: chosen.map((line) => ({
           bookId: line.bookId,
@@ -155,35 +189,53 @@ export default function PurchaseReturnPage() {
           reason: line.reason,
           evidence: line.evidence,
         })),
-      },
-      user!.name,
-    )
-    notify(
-      'success',
-      `ส่งเรื่องคืน ${formatReturnCode(entry.returnId)} ให้ผู้จัดจำหน่ายทางอีเมลแล้ว`,
-    )
-    navigate(`/admin/purchasing/returns/${entry.returnId}`, { replace: true })
+      })
+      notify(
+        'success',
+        `ส่งเรื่องคืน ${formatReturnCode(entry.returnId)} ให้ผู้จัดจำหน่ายทางอีเมลแล้ว`,
+      )
+      navigate(`/admin/purchasing/returns/${entry.returnId}`, { replace: true })
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'เปิดใบส่งคืนไม่สำเร็จ')
+      setWorking(false)
+    }
   }
 
-  const escalate = () => {
-    if (!existing) return
+  const escalate = async () => {
+    if (!existing || working) return
     if (escalation.trim() === '') {
       notify('error', 'กรุณาระบุรายละเอียดก่อนส่งเรื่องให้ผู้จัดการร้าน')
       return
     }
-    escalateReturn(existing.returnId, escalation.trim())
-    notify('warning', 'ส่งเรื่องให้ผู้จัดการร้านพิจารณาแล้ว')
+    setWorking(true)
+    try {
+      await escalateReturn(existing.returnId, escalation.trim())
+      notify('warning', 'ส่งเรื่องให้ผู้จัดการร้านพิจารณาแล้ว')
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ส่งเรื่องไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
 
-  const close = () => {
-    if (!existing) return
-    recordCompensation(existing.returnId, {
-      type: compensationType,
-      note: compensationNote.trim(),
-      at: new Date().toISOString(),
-      by: user!.name,
-    })
-    notify('success', `ปิดรายการ ${formatReturnCode(existing.returnId)} เรียบร้อยแล้ว`)
+  // at / by เซิร์ฟเวอร์เติมจาก JWT ให้เอง (`toBody` ใน PurchasingContext ส่งแค่ type กับ note)
+  // การชดเชยแบบ REPLACEMENT ทำให้สต็อกเพิ่มกลับในทรานแซกชันเดียวกัน จึงต้องรอผลจริง
+  const close = async () => {
+    if (!existing || working) return
+    setWorking(true)
+    try {
+      await recordCompensation(existing.returnId, {
+        type: compensationType,
+        note: compensationNote.trim(),
+        at: new Date().toISOString(),
+        by: user!.name,
+      })
+      notify('success', `ปิดรายการ ${formatReturnCode(existing.returnId)} เรียบร้อยแล้ว`)
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ปิดรายการไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
 
   const heading = existing
@@ -385,7 +437,12 @@ export default function PurchaseReturnPage() {
                     onChange={(e) => setCompensationNote(e.target.value)}
                   />
                 </label>
-                <button type="button" className="btn btn-primary btn-sm" onClick={close}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={working}
+                  onClick={() => void close()}
+                >
                   บันทึกการชดเชย
                 </button>
               </div>
@@ -404,7 +461,12 @@ export default function PurchaseReturnPage() {
                       onChange={(e) => setEscalation(e.target.value)}
                     />
                   </label>
-                  <button type="button" className="btn btn-danger btn-sm" onClick={escalate}>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    disabled={working}
+                    onClick={() => void escalate()}
+                  >
                     ส่งเรื่องให้ผู้จัดการร้านพิจารณา
                   </button>
                 </div>
@@ -421,7 +483,12 @@ export default function PurchaseReturnPage() {
           >
             ยกเลิก
           </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={submit}>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={working}
+            onClick={() => void submit()}
+          >
             <Icon name="mail" size={18} />
             ส่งเรื่องคืน
           </button>

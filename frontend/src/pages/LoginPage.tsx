@@ -15,18 +15,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated && user) {
     return <Navigate to={isEmployee(user.role) ? '/admin' : from} replace />
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (submitting) return
+    setSubmitting(true)
+    setError('')
     try {
-      const signedIn = login(email, password)
+      const signedIn = await login(email, password)
       navigate(isEmployee(signedIn.role) ? '/admin' : from, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in.')
+      // ApiError.message เป็นภาษาไทยจาก backend อยู่แล้ว (บัญชีถูกระงับ / ยังไม่ยืนยันตัวตน ฯลฯ)
+      setError(err instanceof Error ? err.message : 'เข้าสู่ระบบไม่สำเร็จ')
+      setSubmitting(false)
     }
   }
 
@@ -34,9 +40,9 @@ export default function LoginPage() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-card__head">
-          <h1 className="auth-card__title">Sign In</h1>
+          <h1 className="auth-card__title">เข้าสู่ระบบ</h1>
           <p className="auth-card__subtitle">
-            Access your curated collection and wishlists.
+            เข้าถึงรายการหนังสือและคำสั่งซื้อของคุณ
           </p>
         </div>
 
@@ -49,7 +55,7 @@ export default function LoginPage() {
           )}
 
           <label className="auth-field">
-            <span className="auth-label">Email Address</span>
+            <span className="auth-label">อีเมล</span>
             <span className="auth-input auth-input--pill">
               <input
                 type="email"
@@ -64,9 +70,9 @@ export default function LoginPage() {
 
           <div className="auth-field">
             <div className="auth-label-row">
-              <span className="auth-label">Password</span>
+              <span className="auth-label">รหัสผ่าน</span>
               <button type="button" className="auth-forgot">
-                Forgot password?
+                ลืมรหัสผ่าน?
               </button>
             </div>
             <span className="auth-input auth-input--pill">
@@ -81,7 +87,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="auth-input__toggle"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                 onClick={() => setShowPassword((s) => !s)}
               >
                 <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} />
@@ -89,13 +95,13 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <button type="submit" className="btn btn-primary auth-submit">
-            Sign In
+          <button type="submit" className="btn btn-primary auth-submit" disabled={submitting}>
+            {submitting ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
           </button>
         </form>
 
         <p className="auth-alt">
-          Don't have an account? <Link to="/signup">Create account</Link>
+          ยังไม่มีบัญชี? <Link to="/signup">สมัครสมาชิก</Link>
         </p>
       </div>
     </div>

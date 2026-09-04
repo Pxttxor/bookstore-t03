@@ -48,6 +48,12 @@ const PromotionListPage = lazy(() => import('./admin/pages/PromotionListPage'))
 const PromotionFormPage = lazy(() => import('./admin/pages/PromotionFormPage'))
 const ReviewModerationPage = lazy(() => import('./admin/pages/ReviewModerationPage'))
 const ReviewManagerPage = lazy(() => import('./admin/pages/ReviewManagerPage'))
+const PaymentListPage = lazy(() => import('./admin/pages/PaymentListPage'))
+const PaymentDetailPage = lazy(() => import('./admin/pages/PaymentDetailPage'))
+const PaymentReportPage = lazy(() => import('./admin/pages/PaymentReportPage'))
+const MemberTierListPage = lazy(() => import('./admin/pages/MemberTierListPage'))
+const MemberPointsPage = lazy(() => import('./pages/MemberPointsPage'))
+const MemberRewardsPage = lazy(() => import('./pages/MemberRewardsPage'))
 
 export default function App() {
   return (
@@ -63,6 +69,11 @@ export default function App() {
 
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
+
+        <Route path="payments" element={<PaymentListPage />} />
+        <Route path="payments/report" element={<PaymentReportPage />} />
+        <Route path="payments/:id" element={<PaymentDetailPage />} />
+        <Route path="members" element={<MemberTierListPage />} />
 
         <Route path="delivery-report" element={<DeliverySummaryReportPage />} />
 
@@ -111,12 +122,14 @@ export default function App() {
 
       <Route element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="book/:id" element={<BookDetailPage />} />
+        <Route path="book/:bookId" element={<BookDetailPage />} />
         <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
         <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
         <Route path="order/:id" element={<OrderTrackingPage />} />
         <Route path="orders" element={<OrderHistoryPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="member/points" element={<MemberPointsPage />} />
+        <Route path="member/rewards" element={<MemberRewardsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

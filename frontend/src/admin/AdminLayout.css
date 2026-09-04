@@ -70,3 +70,11 @@
     padding: 20px 16px 40px;
   }
 }
+
+/* จอรอตรวจสิทธิ์ก่อนรู้ว่าล็อกอินอยู่หรือเปล่า — ยังไม่มี sidebar/topbar ให้จัดวาง */
+.admin--booting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}

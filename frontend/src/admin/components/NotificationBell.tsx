@@ -19,13 +19,15 @@ function relative(iso: string) {
 }
 
 export default function NotificationBell({ role }: { role: Role }) {
-  const { listFor, markRead, markAllRead } = useNotifications()
+  const { listFor, markRead, markAllRead, loading, error, reload } = useNotifications()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
 
   const entries = listFor(role).filter(inApp)
-  const unread = entries.filter((entry) => !entry.read).length
+  // ตัวเลขบนกระดิ่งอยู่บนแถบบนตลอด — ระหว่างโหลดหรือโหลดไม่สำเร็จให้ซ่อนไว้
+  // ดีกว่าขึ้น 0 แล้วกระโดดเป็นเลขจริง หรือค้างเลขเก่าที่อาจไม่จริงแล้ว
+  const unread = loading || error ? 0 : entries.filter((entry) => !entry.read).length
 
   useEffect(() => {
     if (!open) return
@@ -36,8 +38,12 @@ export default function NotificationBell({ role }: { role: Role }) {
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
+  // ทำเครื่องหมายว่าอ่านแล้วเป็นงานเบื้องหลัง ไม่ต้องรอก่อนพาผู้ใช้ไปหน้าปลายทาง
+  // แต่ต้องดักไว้ ไม่งั้น promise ที่ reject จะกลายเป็น unhandled rejection ใน console
   const openEntry = (entry: AppNotification) => {
-    markRead(entry.id)
+    void markRead(entry.id).catch(() => {
+      // อ่านไม่สำเร็จไม่ใช่เรื่องที่ต้องขัดจังหวะผู้ใช้ · จุดแดงจะยังอยู่จนกว่าจะโหลดใหม่
+    })
     setOpen(false)
     navigate(entry.link)
   }
@@ -60,13 +66,22 @@ export default function NotificationBell({ role }: { role: Role }) {
           <div className="notif__head">
             <span>การแจ้งเตือน</span>
             {unread > 0 && (
-              <button type="button" className="notif__mark" onClick={() => markAllRead(role)}>
+              <button type="button" className="notif__mark" onClick={() => void markAllRead()}>
                 อ่านทั้งหมด
               </button>
             )}
           </div>
 
-          {entries.length === 0 ? (
+          {loading ? (
+            <p className="notif__empty">กำลังโหลดการแจ้งเตือน…</p>
+          ) : error ? (
+            <p className="notif__empty">
+              {error}{' '}
+              <button type="button" className="notif__mark" onClick={() => void reload()}>
+                ลองใหม่
+              </button>
+            </p>
+          ) : entries.length === 0 ? (
             <p className="notif__empty">ยังไม่มีการแจ้งเตือน</p>
           ) : (
             <ul className="notif__list">

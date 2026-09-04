@@ -407,6 +407,39 @@ func runReviewFlow(e *env) {
 		return fmt.Errorf("ไม่พบรีวิวที่ไม่มีใบสั่งซื้อในข้อมูลตั้งต้น")
 	})
 
+	section("เก็บกวาดรีวิวที่ flow นี้เขียนขึ้น")
+
+	// รีวิวสุภาพจบ flow ด้วยสถานะ PUBLISHED ตามที่เคสก่อนหน้าต้องการ
+	// ถ้าทิ้งไว้มันจะค้างอยู่บนหน้าร้านตลอดไป และเพิ่มขึ้นอีกหนึ่งแถวทุกครั้งที่รัน smoke
+	// — เคยสะสมจนหนังสือเล่ม 116 มีรีวิว 5 ดาวซ้ำกัน 13 อัน จนคะแนนเฉลี่ยของเล่มนั้นเพี้ยน
+	// (ปัญหาเดียวกับที่ flow_book / flow_purchasing / flow_inventory เคยเป็นมาแล้ว)
+	//
+	// ใช้ REMOVE ไม่ใช่ HIDE เพราะ REMOVED เป็นปลายทาง จึงกลับมาเผยแพร่เองไม่ได้
+	check("ลบรีวิวทดสอบออกจากแคตตาล็อกหน้าร้าน", func() error {
+		body, err := post(sales, fmt.Sprintf("/api/reviews/%d/moderate", cleanReviewID),
+			map[string]any{"action": "REMOVE"}, 200)
+		if err != nil {
+			return err
+		}
+		if err := expect(body["status"], "REMOVED"); err != nil {
+			return err
+		}
+
+		// ยืนยันจากฝั่งหน้าร้านจริง ไม่ใช่แค่สถานะของแถว
+		detail, err := get("", fmt.Sprintf("/api/catalogue/%d", reviewCleanBookID))
+		if err != nil {
+			return err
+		}
+		rows, _ := detail["reviews"].([]any)
+		for _, row := range rows {
+			item, _ := row.(map[string]any)
+			if int(item["reviewId"].(float64)) == cleanReviewID {
+				return fmt.Errorf("รีวิวทดสอบ %d ยังโผล่อยู่ในแคตตาล็อกหน้าร้าน", cleanReviewID)
+			}
+		}
+		return nil
+	})
+
 	section("คืนยอดสต็อกที่ flow รีวิวตัดไป")
 
 	check("คืนยอดทั้งสองเล่มกลับเป็นค่าเดิม", func() error {

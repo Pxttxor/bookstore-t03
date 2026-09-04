@@ -1,10 +1,13 @@
-# docker-compose.yml — PostgreSQL สำหรับพัฒนา/ทดสอบ backend
+# docker-compose.yml — PostgreSQL + pgAdmin สำหรับพัฒนา/ทดสอบ backend
 #
-# ใช้ได้ทั้งบนเครื่องตัวเองและบน Raspberry Pi (image postgres:17 มีทั้ง amd64 และ arm64)
-#   docker compose up -d          เปิดฐานข้อมูล
-#   docker compose ps             ดูสถานะ (ต้องขึ้น healthy)
+# ใช้ได้ทั้งบนเครื่องตัวเองและบน Raspberry Pi
+# (ทั้ง postgres:17 และ dpage/pgadmin4:9 มี image ทั้ง amd64 และ arm64)
+#   docker compose up -d          เปิดฐานข้อมูล + pgAdmin
+#   docker compose ps             ดูสถานะ (db ต้องขึ้น healthy)
 #   docker compose down           ปิด (ข้อมูลยังอยู่ใน volume)
 #   docker compose down -v        ปิดพร้อมลบข้อมูลทั้งหมด — ใช้ตอนอยาก seed ใหม่
+#
+#   อยากเปิดเฉพาะฐานข้อมูล ไม่เอา pgAdmin:  docker compose up -d db
 #
 # พอร์ตฝั่งเครื่องเป็น 5433 ไม่ใช่ 5432 เพื่อไม่ให้ชนกับ PostgreSQL ตัวอื่นที่อาจรันอยู่แล้ว
 # แก้รหัสผ่านด้วยตัวแปรแวดล้อม POSTGRES_PASSWORD (ค่าปริยาย bookstore)
@@ -34,5 +37,35 @@ services:
       timeout: 5s
       retries: 10
 
+  # pgAdmin — ดูและแก้ข้อมูลในฐานผ่านเว็บ ไม่ต้องลง psql บนเครื่อง
+  #
+  # เปิดที่ http://localhost:5050 (หรือ http://<ip ของ Pi>:5050 ถ้ารันบน Pi)
+  # เข้าด้วย PGADMIN_DEFAULT_EMAIL / PGADMIN_DEFAULT_PASSWORD ข้างล่าง
+  #
+  # เซิร์ฟเวอร์ "bookstore-t03 (db)" ถูกลงทะเบียนไว้ให้แล้วจาก servers.json
+  # กดเข้าไปแล้วใส่รหัสผ่านของ role `bookstore` (ค่าปริยาย bookstore · ตัวเดียวกับใน .env)
+  pgadmin:
+    # พินไว้ที่เมเจอร์เดียว เหมือนที่ db พิน postgres:17 — กัน image เปลี่ยนใต้เท้าเพื่อน
+    image: dpage/pgadmin4:9
+    container_name: bookstore-t03-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@bookhaven.co.th}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-bookstore}
+      # ไม่ต้องถามรหัสผ่านหลักซ้ำอีกชั้นหลังล็อกอินแล้ว — เป็นเครื่องมือสำหรับพัฒนา
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      # ปิด popup ชวนอัปเกรดทุกครั้งที่เปิด
+      PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: "False"
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    ports:
+      - "5050:80"
+    volumes:
+      - bookstore_t03_pgadmin:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   bookstore_t03_pgdata:
+  bookstore_t03_pgadmin:

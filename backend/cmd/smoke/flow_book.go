@@ -268,4 +268,23 @@ func runBookFlow(e *env) {
 		}
 		return nil
 	})
+
+	section("เก็บกวาดหลังทดสอบ")
+	// เล่มทดสอบต้องไม่ค้างอยู่ในสถานะ ACTIVE — แคตตาล็อกหน้าร้านอ่านเฉพาะเล่มที่ขายอยู่
+	// ถ้าปล่อยไว้ ทุกรอบที่รัน smoke จะมี "หนังสือทดสอบระบบ" เพิ่มขึ้นหน้าร้านอีกหนึ่งเล่ม
+	// (ไม่มีเส้นทางลบหนังสือ การปิดการขายคือการเก็บกวาดที่ถูกต้องตามโดเมน)
+	check("ปิดการขายเล่มทดสอบ ไม่ให้ค้างในแคตตาล็อกหน้าร้าน", func() error {
+		if _, err := post(sales, fmt.Sprintf("/api/books/%d/status", bookID),
+			map[string]any{"status": "INACTIVE"}, 200); err != nil {
+			return err
+		}
+		index, err := catalogueByID()
+		if err != nil {
+			return err
+		}
+		if _, ok := index[bookID]; ok {
+			return fmt.Errorf("เล่มทดสอบ %d ยังโผล่หน้าร้านหลังปิดการขาย", bookID)
+		}
+		return nil
+	})
 }

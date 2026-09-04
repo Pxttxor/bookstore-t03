@@ -1,7 +1,8 @@
-// Package middleware — ชั้นห่อ handler: ยืนยันตัวตน ตรวจสิทธิ์ CORS log และกัน panic
+// Package middleware — ชั้นห่อ handler: ยืนยันตัวตน ตรวจสิทธิ์ CORS บีบอัด log และกัน panic
 package middleware
 
 import (
+	"compress/gzip"
 	"context"
 	"log"
 	"net/http"
@@ -94,6 +95,76 @@ func CORS(origins []string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// Compress — บีบอัด response ด้วย gzip เมื่อผู้เรียกรับได้
+//
+// ข้อความที่ API ตอบกลับเป็นภาษาไทยเกือบทั้งหมด ซึ่ง UTF-8 ใช้ 3 ไบต์ต่อตัวอักษร
+// รายการผู้จัดจำหน่ายพร้อมหนังสือที่เสนอขาย หรือใบสั่งซื้อทั้งชุด จึงหนักกว่าที่เห็นบนจอมาก
+// และฐานข้อมูลกับผู้ใช้อยู่คนละเครือข่าย (Pi) ระยะทางจึงเป็นต้นทุนจริง
+//
+// เบราว์เซอร์ส่ง Accept-Encoding ให้เองทุกคำขอ ส่วน http.Client ของ cmd/smoke
+// ปล่อยให้ Transport เติมเองแล้วคลายกลับให้อัตโนมัติ จึงไม่ต้องแก้ฝั่งผู้เรียกเลยสักที่
+func Compress(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// ตั้ง Vary ทุกครั้งที่ผลลัพธ์ขึ้นกับ header นี้ ไม่ใช่เฉพาะตอนที่บีบอัดจริง
+		// ไม่งั้น cache ตัวกลางอาจส่งเนื้อหาที่บีบอัดแล้วให้ผู้เรียกที่รับไม่ได้
+		w.Header().Add("Vary", "Accept-Encoding")
+
+		writer := &gzipWriter{ResponseWriter: w}
+		defer func() {
+			if err := writer.Close(); err != nil {
+				log.Printf("[gzip] ปิดตัวบีบอัดไม่สำเร็จ: %v", err)
+			}
+		}()
+		next.ServeHTTP(writer, r)
+	})
+}
+
+// gzipWriter — สร้าง *gzip.Writer ตอนรู้สถานะแล้วเท่านั้น
+//
+// 204 (httpx.NoContent) กับ 304 ห้ามมี body ตามสเปก HTTP ถ้าสร้างตัวบีบอัดไว้ล่วงหน้า
+// การปิดมันจะเขียน header กับ trailer ของ gzip ลงไปเป็น body ของ response ที่ห้ามมี
+type gzipWriter struct {
+	http.ResponseWriter
+	gz          *gzip.Writer
+	wroteHeader bool
+}
+
+func (w *gzipWriter) WriteHeader(status int) {
+	if w.wroteHeader {
+		return
+	}
+	w.wroteHeader = true
+
+	if status != http.StatusNoContent && status != http.StatusNotModified {
+		// ความยาวหลังบีบอัดไม่เท่าของเดิม ปล่อยให้ Go ใช้ chunked encoding แทน
+		w.Header().Del("Content-Length")
+		w.Header().Set("Content-Encoding", "gzip")
+		w.gz = gzip.NewWriter(w.ResponseWriter)
+	}
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *gzipWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	if w.gz == nil {
+		return w.ResponseWriter.Write(b)
+	}
+	return w.gz.Write(b)
+}
+
+func (w *gzipWriter) Close() error {
+	if w.gz == nil {
+		return nil
+	}
+	return w.gz.Close()
 }
 
 // Recover — กัน panic ของ handler ไม่ให้ล้มทั้งเซิร์ฟเวอร์

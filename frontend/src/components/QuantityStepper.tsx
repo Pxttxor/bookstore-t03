@@ -24,7 +24,7 @@ export default function QuantityStepper({
         className="qty__btn"
         onClick={dec}
         disabled={value <= min}
-        aria-label="Decrease quantity"
+        aria-label="ลดจำนวน"
       >
         <Icon name="minus" size={16} />
       </button>
@@ -36,7 +36,7 @@ export default function QuantityStepper({
         className="qty__btn"
         onClick={inc}
         disabled={value >= max}
-        aria-label="Increase quantity"
+        aria-label="เพิ่มจำนวน"
       >
         <Icon name="plus" size={16} />
       </button>

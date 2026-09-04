@@ -6,6 +6,8 @@ import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import BookPicker from '../components/BookPicker'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
@@ -26,13 +28,14 @@ interface Row {
 
 export default function StockCountFormPage() {
   const { user } = useAuth()
-  const { findByBookId, saveStockCount } = useInventory()
+  const { findByBookId, saveStockCount, loading, error, reload } = useInventory()
   const { notify } = useToast()
   const navigate = useNavigate()
 
   const [rows, setRows] = useState<Row[]>([])
   const [picking, setPicking] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const role = user!.role
 
@@ -46,6 +49,28 @@ export default function StockCountFormPage() {
             description="การตรวจนับเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
             action={{ label: 'กลับไปหน้ารอบตรวจนับ', onClick: () => navigate('/admin/stock/counts') }}
           />
+        </section>
+      </div>
+    )
+  }
+
+  // ยอดในระบบของแต่ละเล่มมาจาก useInventory() — ถ้ายังโหลดไม่เสร็จจะอ่านได้ 0 ทุกเล่ม
+  // แล้วผลต่างที่คำนวณได้จะผิดทั้งใบ จึงต้องรอให้ข้อมูลมาครบก่อนเปิดฟอร์ม
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดยอดคงเหลือ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
         </section>
       </div>
     )
@@ -77,21 +102,30 @@ export default function StockCountFormPage() {
     // The flow only warns about notifying the manager when something is off; a clean
     // round saves straight away.
     if (mismatches.length === 0) {
-      persist()
+      void persist()
       return
     }
     setConfirming(true)
   }
 
-  const persist = () => {
-    const count = saveStockCount({
-      countedBy: user!.name,
-      items: rows.map((row) => ({
-        bookId: row.bookId,
-        systemQty: row.systemQty,
-        countedQty: counted(row),
-      })),
-    })
+  const persist = async () => {
+    if (saving) return
+    setSaving(true)
+    let count
+    try {
+      // ผู้ตรวจนับมาจาก JWT · ยอดในระบบเซิร์ฟเวอร์อ่านเองตอนบันทึก
+      // (ค่าที่หน้าจอถืออยู่อาจล้าสมัยไปแล้วถ้ามีการเคลื่อนไหวระหว่างนับ)
+      count = await saveStockCount({
+        items: rows.map((row) => ({
+          bookId: row.bookId,
+          countedQty: counted(row),
+        })),
+      })
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'บันทึกรอบตรวจนับไม่สำเร็จ')
+      setSaving(false)
+      return
+    }
     setConfirming(false)
     notify('success', 'บันทึกเสร็จสิ้น')
     navigate(`/admin/stock/counts/${count.countId}`)
@@ -238,7 +272,12 @@ export default function StockCountFormPage() {
               >
                 ยกเลิก
               </button>
-              <button type="button" className="btn btn-primary btn-sm" onClick={persist}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={saving}
+                onClick={() => void persist()}
+              >
                 ตกลง
               </button>
             </>

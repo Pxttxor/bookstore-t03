@@ -1,181 +1,144 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import {
-  useNotifications,
-  type NotificationDraft,
-} from '../notifications/NotificationContext'
-import {
-  canTransition,
-  formatOrderCode,
-  orderItemCount,
-  SEED_ORDERS,
-  type CustomerOrder,
-  type OrderItem,
-  type OrderStatus,
-} from './orders'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { apiGet, apiPost } from '../../api/client'
+import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { useNotifications } from '../notifications/NotificationContext'
+import { type CustomerOrder, type OrderStatus } from './orders'
 
-const STORAGE_KEY = 'bookhaven.orders.v1'
+// ข้อมูลอยู่ในตาราง customer_order / customer_order_item /
+// customer_order_status_history ของ PostgreSQL แล้ว
+// (ชื่อตารางเป็น customer_order ไม่ใช่ order เพราะ ORDER เป็นคำสงวนของ SQL)
+// เดิมเก็บใน localStorage คีย์ bookhaven.orders.v1
+//
+// เซิร์ฟเวอร์กรองให้ตามผู้เรียกอยู่แล้ว: พนักงานเห็นทุกใบ ลูกค้าเห็นเฉพาะของตัวเอง
+const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
-  customerName: string
-  customerEmail?: string
   shippingAddress: string
-  items: OrderItem[]
-  subtotal: number
-  discountAmount?: number
-  netAmount: number
+  /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
+  items: { bookId: number; quantity: number }[]
   slipFileName?: string
+  bankId?: number
 }
 
 export interface StatusChangeOpts {
   note?: string
   /** Required when moving to SHIPPED — the delivery staff records these. */
   tracking?: string
-  carrier?: string
+  carrierId?: number
 }
 
 interface OrderValue {
   orders: CustomerOrder[]
+  loading: boolean
+  error: string | null
+  reload: () => Promise<void>
   findOrder: (orderId: number) => CustomerOrder | undefined
-  /** Customer.placeOrder(): records a WEBSITE order and alerts the sales staff. */
-  placeOrder: (draft: OrderDraft) => CustomerOrder
-  /** Order.updateStatus(s): guarded transition + timeline entry + role notifications. */
-  updateStatus: (orderId: number, next: OrderStatus, opts?: StatusChangeOpts) => CustomerOrder
+  /** Customer.placeOrder() — เซิร์ฟเวอร์คิดราคาจากตาราง book และแจ้งฝ่ายขายให้เอง */
+  placeOrder: (draft: OrderDraft) => Promise<CustomerOrder>
+  /**
+   * Order.updateStatus(s)
+   *
+   * backend ไม่มีเส้นทางเปลี่ยนสถานะแบบรวม — แต่ละก้าวมี endpoint ของตัวเองพร้อม role guard
+   * และเขียน timeline + แจ้งเตือน (+ ตัดสต็อกตอนแพ็ก) ในทรานแซกชันเดียว
+   * ตารางข้างล่างจึงแปลงสถานะปลายทางเป็น endpoint ที่ถูกต้อง
+   */
+  updateStatus: (
+    orderId: number,
+    next: OrderStatus,
+    opts?: StatusChangeOpts,
+  ) => Promise<void>
 }
 
 const OrderContext = createContext<OrderValue | null>(null)
 
-function read(): CustomerOrder[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return SEED_ORDERS
-    const parsed = JSON.parse(raw) as CustomerOrder[]
-    return Array.isArray(parsed) ? parsed : SEED_ORDERS
-  } catch {
-    return SEED_ORDERS
-  }
+// สถานะปลายทาง → เส้นทางที่ต้องเรียก (ดู registerOrderRoutes ใน backend/internal/handler/order.go)
+const STATUS_ROUTES: Record<OrderStatus, string | null> = {
+  STOCK_CONFIRMED: 'confirm-stock',
+  WAITING_PAYMENT: 'await-payment',
+  VERIFYING_PAYMENT: 'payment',
+  PAID: 'verify-payment',
+  REJECTED: 'reject-payment',
+  PACKING: 'pack',
+  READY_TO_SHIP: 'ready',
+  SHIPPED: 'ship',
+  DELIVERED: 'deliver',
+  CANCELLED: 'cancel',
+  // สถานะตั้งต้นเกิดตอนสร้างใบ ไม่มีเส้นทางให้ย้อนกลับมา
+  PENDING_CONFIRM: null,
 }
-
-function write(orders: CustomerOrder[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
-}
-
-const today = () => new Date().toISOString().slice(0, 10)
 
 export function OrderProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<CustomerOrder[]>(read)
-  const { push } = useNotifications()
+  const { user } = useAuth()
+  const { reload: reloadNotifications } = useNotifications()
+
+  // Provider นี้อยู่ที่ main.tsx จึงครอบหน้าร้านด้วย · ผู้ที่ยังไม่ล็อกอินไม่มี token
+  // จะได้ 401 ทุกครั้งที่เปิดหน้าแรก จึงยิงเฉพาะตอนล็อกอินแล้ว
+  const { data, loading, error, reload, apply } = useResource(loadOrders, user !== null)
 
   const value = useMemo<OrderValue>(() => {
-    const persist = (next: CustomerOrder[]) => {
-      write(next)
-      setOrders(next)
+    const orders = data ?? []
+
+    // ทุกก้าวของคำสั่งซื้อทำให้เซิร์ฟเวอร์ออกแจ้งเตือนอย่างน้อยหนึ่งใบ
+    const refresh = async () => {
+      await Promise.all([reload(), reloadNotifications()])
     }
 
-    const findOrder = (orderId: number) => orders.find((o) => o.orderId === orderId)
-
-    const notifyBoth = (
-      to: NotificationDraft['to'],
-      kind: NotificationDraft['kind'],
-      title: string,
-      body: string,
-      link: string,
-    ) =>
-      push(
-        (['in-app', 'email'] as NotificationDraft['channel'][]).map((channel) => ({
-          to,
-          kind,
-          title,
-          body,
-          link,
-          channel,
-        })),
-      )
-
-    const placeOrder = (draft: OrderDraft) => {
-      const orderId = orders.reduce((max, o) => Math.max(max, o.orderId), 1000) + 1
-      const now = new Date().toISOString()
-      const order: CustomerOrder = {
-        orderId,
-        channel: 'WEBSITE',
-        orderDate: today(),
-        customerName: draft.customerName,
-        customerEmail: draft.customerEmail,
+    const placeOrder = async (draft: OrderDraft) => {
+      // customerId / channel เซิร์ฟเวอร์เติมให้เองเมื่อผู้เรียกเป็นลูกค้าที่ล็อกอินอยู่
+      // ยอดเงินก็คิดจากราคาในตาราง book ไม่ใช่ค่าที่หน้าจอส่งไป
+      const order = await apiPost<CustomerOrder>('/api/orders', {
         shippingAddress: draft.shippingAddress,
-        status: 'PENDING_CONFIRM',
-        subtotal: draft.subtotal,
-        discountAmount: draft.discountAmount ?? 0,
-        netAmount: draft.netAmount,
-        slipFileName: draft.slipFileName,
+        slipFileName: draft.slipFileName ?? '',
+        bankId: draft.bankId,
         items: draft.items,
-        timeline: [{ status: 'PENDING_CONFIRM', changedDate: now }],
-      }
-
-      persist([...orders, order])
-
-      notifyBoth(
-        'sales',
-        'ORDER_PLACED',
-        'มีคำสั่งซื้อใหม่จากลูกค้า',
-        `${formatOrderCode(orderId)} · ${order.customerName} · ${orderItemCount(order)} เล่ม · ` +
-          `รอยืนยันคำสั่งซื้อและตรวจสอบการชำระเงิน`,
-        `/admin/orders/${orderId}`,
-      )
+      })
+      apply((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)])
+      await refresh()
       return order
     }
 
-    const updateStatus = (orderId: number, next: OrderStatus, opts: StatusChangeOpts = {}) => {
-      const current = findOrder(orderId)
-      if (!current) throw new Error('ไม่พบคำสั่งซื้อ')
-      if (!canTransition(current.status, next)) {
-        throw new Error(`เปลี่ยนสถานะจาก ${current.status} ไป ${next} ไม่ได้`)
-      }
+    const updateStatus = async (
+      orderId: number,
+      next: OrderStatus,
+      opts: StatusChangeOpts = {},
+    ) => {
+      const route = STATUS_ROUTES[next]
+      if (!route) throw new Error(`เปลี่ยนสถานะไป ${next} ไม่ได้`)
 
-      const now = new Date().toISOString()
-      const updated: CustomerOrder = {
-        ...current,
-        status: next,
-        timeline: [...current.timeline, { status: next, changedDate: now, note: opts.note }],
-      }
-
+      // body ต้องตรงกับ struct ของแต่ละ endpoint เป๊ะ ๆ — `httpx.Decode` เปิด
+      // DisallowUnknownFields ไว้ ส่ง note ไปให้เส้นทางที่ไม่รับจะได้ 422 ทันที
+      // เส้นทางที่ไม่อ่าน body เลย (confirm-stock · await-payment · verify-payment ·
+      // pack · ready · deliver) รับ {} ได้ตามปกติ
+      let body: Record<string, unknown> = {}
       if (next === 'SHIPPED') {
-        updated.shipment = {
-          trackingNumber: opts.tracking?.trim() || `TH-${orderId}`,
-          carrier: opts.carrier ?? 'ไปรษณีย์ไทย',
-          recipientName: current.customerName,
-          shippedDate: today(),
-          status: 'SHIPPED',
+        // POST /api/orders/{id}/ship เปิดแถว shipment ในทรานแซกชันเดียวกัน จึงต้องมี body
+        // recipientName เว้นได้ ระบบเติมชื่อลูกค้าให้
+        body = {
+          carrierId: opts.carrierId ?? 1,
+          trackingNumber: opts.tracking?.trim() ?? '',
         }
-      }
-      if (next === 'DELIVERED' && updated.shipment) {
-        updated.shipment = { ...updated.shipment, status: 'DELIVERED' }
-      }
-
-      persist(orders.map((o) => (o.orderId === orderId ? updated : o)))
-
-      if (next === 'READY_TO_SHIP') {
-        notifyBoth(
-          'delivery',
-          'ORDER_READY_TO_SHIP',
-          'มีพัสดุพร้อมจัดส่ง',
-          `${formatOrderCode(orderId)} · ${updated.customerName} · ${orderItemCount(updated)} เล่ม · แพ็กเสร็จ พร้อมนำจ่าย`,
-          `/admin/orders/${orderId}`,
-        )
-      }
-      if (next === 'DELIVERED') {
-        notifyBoth(
-          'sales',
-          'ORDER_DELIVERED',
-          'จัดส่งสำเร็จ',
-          `${formatOrderCode(orderId)} · ${updated.customerName} · พนักงานจัดส่งยืนยันส่งถึงแล้ว`,
-          `/admin/orders/${orderId}`,
-        )
+      } else if (next === 'CANCELLED' || next === 'REJECTED') {
+        body = { note: opts.note ?? '' }
+      } else if (next === 'VERIFYING_PAYMENT') {
+        const order = orders.find((row) => row.orderId === orderId)
+        body = { slipFileName: opts.note?.trim() || order?.slipFileName || '' }
       }
 
-      return updated
+      await apiPost(`/api/orders/${orderId}/${route}`, body)
+      await refresh()
     }
 
-    return { orders, findOrder, placeOrder, updateStatus }
-  }, [orders, push])
+    return {
+      orders,
+      loading,
+      error,
+      reload,
+      findOrder: (orderId: number) => orders.find((o) => o.orderId === orderId),
+      placeOrder,
+      updateStatus,
+    }
+  }, [data, loading, error, reload, reloadNotifications, apply])
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
 }

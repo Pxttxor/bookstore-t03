@@ -3,6 +3,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
+import ErrorState from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import StatusBadge from '../components/StatusBadge'
 import { useBooks } from '../books/BookContext'
 import { useInventory } from '../inventory/InventoryContext'
@@ -22,7 +24,7 @@ export default function StockCountDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { findById } = useBooks()
-  const { findCount, reports } = useInventory()
+  const { findCount, reports, loading, error, reload } = useInventory()
   const navigate = useNavigate()
 
   const role = user!.role
@@ -38,6 +40,27 @@ export default function StockCountDetailPage() {
             description="ประวัติการตรวจนับเปิดให้พนักงานคลังสินค้าและผู้จัดการร้านเท่านั้น"
             action={{ label: 'กลับไปหน้าหลัก', onClick: () => navigate('/admin') }}
           />
+        </section>
+      </div>
+    )
+  }
+
+  // ต้องมาก่อนการเช็ค "ไม่พบข้อมูล" ไม่งั้นระหว่างโหลดจะขึ้นว่าไม่พบทุกครั้งที่เปิดหน้า
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดประวัติการตรวจนับ…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={error} onRetry={() => void reload()} />
         </section>
       </div>
     )
