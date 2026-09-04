@@ -46,6 +46,9 @@ var (
 	// roleReviewAudience — คนที่เปิดดูรีวิวได้ · ลูกค้าเห็นเฉพาะของตัวเอง (service กรองให้)
 	roleReviewAudience = []model.Role{model.RoleSales, model.RoleManager, model.RoleCustomer}
 
+	// roleReviewOwner — เจ้าของรีวิวคือลูกค้า หรือผู้จัดการดูแลระบบ
+	roleReviewOwner = []model.Role{model.RoleCustomer, model.RoleManager}
+
 	// roleOrderAdmin — ยกเลิกคำสั่งซื้อได้ทั้งฝ่ายขายและผู้จัดการ
 	roleOrderAdmin = []model.Role{model.RoleSales, model.RoleManager}
 	roleCustomer   = []model.Role{model.RoleCustomer}

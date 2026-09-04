@@ -14,6 +14,7 @@ import { type CustomerOrder, type OrderStatus } from './orders'
 const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
+  customerName?: string
   shippingAddress: string
   /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
   items: { bookId: number; quantity: number }[]
@@ -88,6 +89,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       // customerId / channel เซิร์ฟเวอร์เติมให้เองเมื่อผู้เรียกเป็นลูกค้าที่ล็อกอินอยู่
       // ยอดเงินก็คิดจากราคาในตาราง book ไม่ใช่ค่าที่หน้าจอส่งไป
       const order = await apiPost<CustomerOrder>('/api/orders', {
+        customerName: draft.customerName?.trim() || undefined,
         shippingAddress: draft.shippingAddress,
         slipFileName: draft.slipFileName ?? '',
         bankId: draft.bankId,

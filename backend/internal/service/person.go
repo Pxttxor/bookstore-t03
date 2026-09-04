@@ -223,8 +223,11 @@ func (s *PersonService) UpdateProfile(current Identity, input ProfileInput) (*re
 	firstName := strings.TrimSpace(input.FirstName)
 	lastName := strings.TrimSpace(input.LastName)
 	address := strings.TrimSpace(input.Address)
-	if firstName == "" || lastName == "" || address == "" {
-		return nil, model.Validation("REQUIRED_FIELDS", "กรุณากรอกข้อมูลให้ครบทุกช่องที่มีเครื่องหมาย *")
+	if firstName == "" || lastName == "" {
+		return nil, model.Validation("REQUIRED_FIELDS", "กรุณากรอกชื่อและนามสกุล")
+	}
+	if address == "" {
+		address = row.Customer.Address
 	}
 
 	person := row.Person

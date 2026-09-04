@@ -64,6 +64,7 @@ type OrderLineInput struct {
 // ฝ่ายขายที่รับออร์เดอร์ทางโทรศัพท์หรือข้อความต้องระบุทั้งสองอย่าง
 type PlaceOrderInput struct {
 	CustomerID      int                `json:"customerId"`
+	CustomerName    string             `json:"customerName,omitempty"`
 	Channel         model.OrderChannel `json:"channel"`
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
@@ -195,8 +196,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	}
 
 	now := time.Now().UTC()
+	customerName := strings.TrimSpace(input.CustomerName)
+	if customerName == "" {
+		customerName = customer.Person.Name()
+	}
+
 	order := &model.Order{
 		CustomerID:      customerID,
+		CustomerName:    customerName,
 		Channel:         channel,
 		OrderDate:       now,
 		ShippingAddress: address,
@@ -503,11 +510,15 @@ func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input Shi
 
 	recipient := strings.TrimSpace(input.RecipientName)
 	if recipient == "" {
-		row, err := s.people.FindCustomer(order.CustomerID)
-		if err != nil {
-			return err
+		if order.CustomerName != "" {
+			recipient = order.CustomerName
+		} else {
+			row, err := s.people.FindCustomer(order.CustomerID)
+			if err != nil {
+				return err
+			}
+			recipient = row.Person.Name()
 		}
-		recipient = row.Person.Name()
 	}
 
 	now := time.Now()
@@ -663,9 +674,13 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 	}
 
 	for i, order := range orders {
+		custName := order.CustomerName
+		if custName == "" {
+			custName = names[order.CustomerID]
+		}
 		views[i] = OrderView{
 			Order:         order,
-			CustomerName:  names[order.CustomerID],
+			CustomerName:  custName,
 			CustomerEmail: emails[order.CustomerID],
 			Books:         books,
 		}

@@ -163,15 +163,35 @@ func (r *ReviewRepository) Create(db *gorm.DB, review *model.Review) error {
 	return db.Create(review).Error
 }
 
-// Save — เขียนสถานะและธงคำไม่เหมาะสมกลับลงหัวเอกสาร
-// เนื้อรีวิวไม่แก้หลังส่งแล้ว (หน้าจอไม่มีปุ่มแก้ไข) จึงไม่อยู่ในชุดที่เขียนกลับ
+// Save — บันทึกการเปลี่ยนแปลงของรีวิวกลับลงฐานข้อมูล
 func (r *ReviewRepository) Save(tx *gorm.DB, review *model.Review) error {
 	return tx.Model(&model.Review{}).
 		Where("review_id = ?", review.ReviewID).
 		Updates(map[string]any{
-			"status":  review.Status,
-			"flagged": review.Flagged,
+			"rating":   review.Rating,
+			"headline": review.Headline,
+			"comment":  review.Comment,
+			"status":   review.Status,
+			"flagged":  review.Flagged,
 		}).Error
+}
+
+// Delete — ลบรีวิวพร้อมคำตอบกลับและรายงานที่เกี่ยวข้อง
+func (r *ReviewRepository) Delete(tx *gorm.DB, reviewID int) error {
+	if err := tx.Where("review_id = ?", reviewID).Delete(&model.ReviewReply{}).Error; err != nil {
+		return err
+	}
+	if err := tx.Where("review_id = ?", reviewID).Delete(&model.ReviewReport{}).Error; err != nil {
+		return err
+	}
+	result := tx.Delete(&model.Review{}, "review_id = ?", reviewID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return model.ErrReviewNotFound
+	}
+	return nil
 }
 
 // AddReplies — บันทึกคำตอบกลับที่เพิ่งเพิ่มเข้ามา

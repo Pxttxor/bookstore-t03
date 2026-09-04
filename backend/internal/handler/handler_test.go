@@ -179,6 +179,8 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodPost, "/api/rewards/1/redeem"},
 		{http.MethodGet, "/api/redemptions"},
 		{http.MethodPost, "/api/reviews"},
+		{http.MethodPut, "/api/reviews/1"},
+		{http.MethodDelete, "/api/reviews/1"},
 		{http.MethodGet, "/api/reviews"},
 		{http.MethodGet, "/api/reviews/1"},
 		{http.MethodGet, "/api/books/1/reviews"},

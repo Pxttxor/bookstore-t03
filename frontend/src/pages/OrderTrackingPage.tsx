@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Icon from '../components/Icon'
 import RatingStars from '../components/RatingStars'
@@ -6,9 +6,9 @@ import BookCover from '../components/BookCover'
 import LoadingState from '../admin/components/LoadingState'
 import ErrorState from '../admin/components/ErrorState'
 import EmptyState from '../admin/components/EmptyState'
-import { apiPost } from '../api/client'
-import { ApiError } from '../api/client'
+import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client'
 import { formatPrice } from '../data/money'
+import { useAuth } from '../auth/AuthContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import {
   formatOrderCode,
@@ -23,20 +23,53 @@ type StepStatus = 'done' | 'current' | 'todo'
 // คำเดียวกับ ORDER_STATUS_LABELS ของหลังร้าน เรียงตาม milestoneOf() ทั้งห้าขั้น
 const STEP_LABELS = ['สั่งซื้อแล้ว', 'ชำระเงินแล้ว', 'กำลังแพ็กสินค้า', 'จัดส่งแล้ว', 'ส่งถึงแล้ว']
 
-// ReviewForm — เขียนรีวิวจริงลงตาราง review
-//
-// เดิมกดส่งแล้วขึ้น "ขอบคุณสำหรับรีวิว!" โดยไม่ส่งอะไรเลย
-// ตอนนี้ยิง POST /api/reviews จริง — เซิร์ฟเวอร์หาใบที่ DELIVERED ของเล่มนี้ให้เอง
-// แล้วติดป้าย "ซื้อสินค้าจริง" · รีวิวเข้าคิวตรวจสอบของพนักงานก่อนขึ้นหน้าร้าน
-function ReviewForm({ bookId, title }: { bookId: number; title: string }) {
+interface CustomerReview {
+  reviewId: number
+  bookId: number
+  orderId?: number
+  orderCode?: string
+  rating: number
+  headline?: string
+  comment: string
+  status: 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'REMOVED'
+  statusLabel?: string
+  createdDate?: string
+}
+
+interface ReviewFormProps {
+  bookId: number
+  title: string
+  existingReview?: CustomerReview
+  onRefresh: () => void | Promise<void>
+}
+
+// ReviewForm — จัดการรีวิวของลูกค้า (เขียนใหม่ / แก้ไข / ลบ)
+function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProps) {
+  const [isEditing, setIsEditing] = useState(false)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
-  const submit = async () => {
-    if (sending) return
+  const startEdit = () => {
+    if (!existingReview) return
+    setRating(existingReview.rating)
+    setComment(existingReview.comment)
+    setError('')
+    setSuccessMsg('')
+    setIsEditing(true)
+  }
+
+  const cancelEdit = () => {
+    setIsEditing(false)
+    setError('')
+    setSuccessMsg('')
+  }
+
+  const submitNew = async () => {
+    if (submitting) return
     if (rating === 0) {
       setError('กรุณาให้คะแนนก่อนส่งรีวิว')
       return
@@ -45,54 +78,240 @@ function ReviewForm({ bookId, title }: { bookId: number; title: string }) {
       setError('กรุณาเขียนความเห็นก่อนส่งรีวิว')
       return
     }
-    setSending(true)
+    if (comment.trim().length > 75) {
+      setError('ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร')
+      return
+    }
+    setSubmitting(true)
     setError('')
+    setSuccessMsg('')
     try {
-      // body ต้องมีเฉพาะฟิลด์ที่ service.ReviewInput ประกาศ (DisallowUnknownFields)
       await apiPost('/api/reviews', { bookId, rating, comment: comment.trim() })
-      setSent(true)
+      setRating(0)
+      setComment('')
+      setSuccessMsg('ส่งรีวิวแล้ว รอพนักงานตรวจสอบก่อนเผยแพร่')
+      await onRefresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'ส่งรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     } finally {
-      setSending(false)
+      setSubmitting(false)
     }
   }
 
+  const saveEdit = async () => {
+    if (submitting || !existingReview) return
+    if (rating === 0) {
+      setError('กรุณาให้คะแนนก่อนบันทึก')
+      return
+    }
+    if (comment.trim() === '') {
+      setError('กรุณาเขียนความเห็นก่อนบันทึก')
+      return
+    }
+    if (comment.trim().length > 75) {
+      setError('ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร')
+      return
+    }
+    setSubmitting(true)
+    setError('')
+    setSuccessMsg('')
+    try {
+      await apiPut(`/api/reviews/${existingReview.reviewId}`, { rating, comment: comment.trim() })
+      setIsEditing(false)
+      setSuccessMsg('แก้ไขรีวิวสำเร็จแล้ว')
+      await onRefresh()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'แก้ไขรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const deleteReview = async () => {
+    if (deleting || !existingReview) return
+    if (!window.confirm('คุณต้องการลบรีวิวนี้ใช่หรือไม่? เมื่อลบแล้วจะไม่สามารถกู้คืนได้')) {
+      return
+    }
+    setDeleting(true)
+    setError('')
+    setSuccessMsg('')
+    try {
+      await apiDelete(`/api/reviews/${existingReview.reviewId}`)
+      setIsEditing(false)
+      setRating(0)
+      setComment('')
+      await onRefresh()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'ลบรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // กรณีมีรีวิวแล้วและไม่ได้อยู่ในโหมดแก้ไข → แสดงรีวิวพร้อมปุ่ม แก้ไข / ลบ
+  if (existingReview && !isEditing) {
+    return (
+      <div className="track-review">
+        <div className="track-review__book">
+          <BookCover bookId={bookId} title={title} size="sm" />
+          <div className="track-review__book-info">
+            <h4>{title}</h4>
+            <div className="track-review__status-row">
+              <span className={`track-review__badge is-${existingReview.status.toLowerCase()}`}>
+                {existingReview.status === 'PUBLISHED' ? (
+                  <>
+                    <Icon name="check-circle" size={14} /> เผยแพร่แล้ว
+                  </>
+                ) : existingReview.status === 'HIDDEN' ? (
+                  <>
+                    <Icon name="eye-off" size={14} /> ถูกซ่อน
+                  </>
+                ) : (
+                  <>
+                    <Icon name="clock" size={14} /> รอพนักงานตรวจสอบ
+                  </>
+                )}
+              </span>
+              {existingReview.createdDate && (
+                <span className="track-review__date">
+                  รีวิวเมื่อ {new Date(existingReview.createdDate).toLocaleDateString('th-TH')}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="track-review__existing-content">
+          <div className="track-review__existing-rating">
+            <RatingStars value={existingReview.rating} size={18} />
+            <span className="track-review__rating-num">{existingReview.rating}/5</span>
+          </div>
+          <p className="track-review__comment-text">{existingReview.comment}</p>
+        </div>
+
+        {error && <p className="track-review__error">{error}</p>}
+        {successMsg && (
+          <p className="track-review__success">
+            <Icon name="check-circle" size={15} /> {successMsg}
+          </p>
+        )}
+
+        <div className="track-review__actions">
+          <button
+            type="button"
+            className="btn btn-outline btn-sm track-review__btn-edit"
+            onClick={startEdit}
+          >
+            <Icon name="edit" size={15} /> แก้ไขรีวิว
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline-danger btn-sm track-review__btn-delete"
+            onClick={() => void deleteReview()}
+            disabled={deleting}
+          >
+            <Icon name="trash" size={15} /> {deleting ? 'กำลังลบ…' : 'ลบรีวิว'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // กรณีมีรีวิวแล้วและกดแก้ไข → แสดงแบบฟอร์มแก้ไข
+  if (existingReview && isEditing) {
+    return (
+      <div className="track-review">
+        <div className="track-review__book">
+          <BookCover bookId={bookId} title={title} size="sm" />
+          <div className="track-review__book-info">
+            <h4>{title}</h4>
+            <span className="track-review__editing-badge">กำลังแก้ไขรีวิวของคุณ</span>
+          </div>
+        </div>
+
+        <div className="track-review__rate">
+          <span>แก้ไขคะแนน</span>
+          <RatingStars value={rating} interactive size={22} onChange={setRating} />
+        </div>
+        <div className="track-review__field">
+          <div className="track-review__field-header">
+            <span>แก้ไขความเห็น</span>
+            <span className={`track-review__char-count ${comment.length >= 75 ? 'is-max' : ''}`}>
+              {comment.length}/75 ตัวอักษร
+            </span>
+          </div>
+          <textarea
+            rows={3}
+            maxLength={75}
+            placeholder="หนังสือเล่มนี้เป็นอย่างไรบ้าง (ไม่เกิน 75 ตัวอักษร)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+        </div>
+        {error && <p className="track-review__error">{error}</p>}
+        <div className="track-review__actions">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => void saveEdit()}
+            disabled={submitting}
+          >
+            {submitting ? 'กำลังบันทึก…' : 'บันทึกการแก้ไข'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={cancelEdit}
+            disabled={submitting}
+          >
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // กรณียังไม่เคยรีวิว → แสดงแบบฟอร์มเขียนรีวิวตามปกติ
   return (
     <div className="track-review">
       <div className="track-review__book">
         <BookCover bookId={bookId} title={title} size="sm" />
         <h4>{title}</h4>
       </div>
-      {sent ? (
-        <p className="track-review__thanks">
-          <Icon name="check-circle" size={18} /> ส่งรีวิวแล้ว รอพนักงานตรวจสอบก่อนเผยแพร่
+
+      <div className="track-review__rate">
+        <span>ให้คะแนน</span>
+        <RatingStars value={rating} interactive size={22} onChange={setRating} />
+      </div>
+      <div className="track-review__field">
+        <div className="track-review__field-header">
+          <span>เขียนรีวิว</span>
+          <span className={`track-review__char-count ${comment.length >= 75 ? 'is-max' : ''}`}>
+            {comment.length}/75 ตัวอักษร
+          </span>
+        </div>
+        <textarea
+          rows={3}
+          maxLength={75}
+          placeholder="หนังสือเล่มนี้เป็นอย่างไรบ้าง (ไม่เกิน 75 ตัวอักษร)"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
+      </div>
+      {error && <p className="track-review__error">{error}</p>}
+      {successMsg && (
+        <p className="track-review__success">
+          <Icon name="check-circle" size={15} /> {successMsg}
         </p>
-      ) : (
-        <>
-          <div className="track-review__rate">
-            <span>ให้คะแนน</span>
-            <RatingStars value={rating} interactive size={22} onChange={setRating} />
-          </div>
-          <label className="track-review__field">
-            <span>เขียนรีวิว</span>
-            <textarea
-              rows={3}
-              placeholder="หนังสือเล่มนี้เป็นอย่างไรบ้าง"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-          </label>
-          {error && <p className="track-review__error">{error}</p>}
-          <button
-            className="btn btn-primary track-review__submit"
-            onClick={() => void submit()}
-            disabled={sending}
-          >
-            {sending ? 'กำลังส่ง…' : 'ส่งรีวิว'}
-          </button>
-        </>
       )}
+      <button
+        type="button"
+        className="btn btn-primary btn-sm track-review__submit"
+        onClick={() => void submitNew()}
+        disabled={submitting}
+      >
+        {submitting ? 'กำลังส่ง…' : 'ส่งรีวิว'}
+      </button>
     </div>
   )
 }
@@ -147,6 +366,29 @@ export default function OrderTrackingPage() {
 }
 
 function RealOrderView({ order }: { order: CustomerOrder }) {
+  const { user } = useAuth()
+  const [reviews, setReviews] = useState<CustomerReview[]>([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
+
+  const loadReviews = useCallback(async () => {
+    if (!user) return
+    try {
+      const data = await apiGet<CustomerReview[]>('/api/reviews')
+      setReviews(data)
+    } catch {
+      // ละเว้นหากดึงรีวิวไม่สำเร็จ
+    } finally {
+      setLoadingReviews(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (order.status === 'DELIVERED' && user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void loadReviews()
+    }
+  }, [order.status, user, loadReviews])
+
   const steps = buildSteps(order)
   const activeIndex = Math.max(0, steps.findIndex((s) => s.status === 'current'))
   const progress =
@@ -266,11 +508,34 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               <h3 className="track__panel-title">
                 <Icon name="star" size={18} filled /> รีวิวและให้คะแนน
               </h3>
-              <div className="track__reviews">
-                {order.items.map((line) => (
-                  <ReviewForm key={line.bookId} bookId={line.bookId} title={line.title} />
-                ))}
-              </div>
+              {loadingReviews && reviews.length === 0 ? (
+                <div className="track-review__loading">
+                  <Icon name="clock" size={16} /> กำลังโหลดข้อมูลรีวิว…
+                </div>
+              ) : (
+                <div className="track__reviews">
+                  {order.items.map((line) => {
+                    const existingReview =
+                      reviews.find(
+                        (r) =>
+                          r.bookId === line.bookId &&
+                          (r.orderId == null || r.orderId === order.orderId) &&
+                          r.status !== 'REMOVED'
+                      ) ||
+                      reviews.find((r) => r.bookId === line.bookId && r.status !== 'REMOVED')
+
+                    return (
+                      <ReviewForm
+                        key={line.bookId}
+                        bookId={line.bookId}
+                        title={line.title}
+                        existingReview={existingReview}
+                        onRefresh={loadReviews}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </section>
           )}
         </div>
