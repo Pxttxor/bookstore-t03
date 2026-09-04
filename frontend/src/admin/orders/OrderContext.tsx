@@ -3,7 +3,7 @@ import { apiGet, apiPost } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import { useAuth } from '../../auth/AuthContext'
 import { useNotifications } from '../notifications/NotificationContext'
-import { STOREFRONT_BOOK_IDS, type CustomerOrder, type OrderStatus } from './orders'
+import { type CustomerOrder, type OrderStatus } from './orders'
 
 // ข้อมูลอยู่ในตาราง customer_order / customer_order_item /
 // customer_order_status_history ของ PostgreSQL แล้ว
@@ -15,8 +15,8 @@ const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
   shippingAddress: string
-  /** slug ของหน้าร้าน — แปลงเป็นรหัสหนังสือของแคตตาล็อกหลังก่อนส่ง */
-  items: { slug: string; quantity: number }[]
+  /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
+  items: { bookId: number; quantity: number }[]
   slipFileName?: string
 }
 
@@ -84,20 +84,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
 
     const placeOrder = async (draft: OrderDraft) => {
-      const items = draft.items.map((line) => {
-        const bookId = STOREFRONT_BOOK_IDS[line.slug]
-        if (bookId === undefined) {
-          throw new Error(`ไม่พบหนังสือ ${line.slug} ในแคตตาล็อกของระบบ`)
-        }
-        return { bookId, quantity: line.quantity }
-      })
-
       // customerId / channel เซิร์ฟเวอร์เติมให้เองเมื่อผู้เรียกเป็นลูกค้าที่ล็อกอินอยู่
       // ยอดเงินก็คิดจากราคาในตาราง book ไม่ใช่ค่าที่หน้าจอส่งไป
       const order = await apiPost<CustomerOrder>('/api/orders', {
         shippingAddress: draft.shippingAddress,
         slipFileName: draft.slipFileName ?? '',
-        items,
+        items: draft.items,
       })
       await refresh()
       return order

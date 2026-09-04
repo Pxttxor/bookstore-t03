@@ -88,3 +88,44 @@
     transform: none;
   }
 }
+
+/* ป้ายสินค้าหมด — ยอดคงเหลือจริงจาก inventory_item
+   เดิมการ์ดไม่เคยบอกสถานะสต็อกเลย ลูกค้าจึงหยิบเล่มที่หมดใส่ตะกร้าได้ */
+.book-card__soldout {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ปกสำรองไม่ใช่ <img> จึงต้องซูมด้วยกฎของตัวเอง ไม่งั้นเล่มที่ไม่มีปกจะนิ่งอยู่เล่มเดียว */
+.book-card:hover .book-card__cover .book-cover--fallback {
+  transform: scale(1.04);
+}
+.book-card__cover .book-cover--fallback {
+  transition: transform 0.3s ease;
+}
+
+.book-card__add:disabled {
+  background: var(--status-neutral-bg);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+/* ปุ่มที่กดไม่ได้ต้องเห็นตลอด ไม่ใช่โผล่ตอน hover เหมือนปุ่มปกติ
+   ไม่งั้นผู้ใช้จะเห็นแค่การ์ดว่าง ๆ แล้วไม่รู้ว่าเพิ่มไม่ได้เพราะอะไร */
+.book-card__add:disabled,
+.book-card:hover .book-card__add:disabled {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.book-card__rating--none {
+  color: var(--text-muted);
+  font-size: 12px;
+}

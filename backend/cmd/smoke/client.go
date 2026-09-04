@@ -162,6 +162,28 @@ func expectError(method, path, token string, payload any, wantStatus int, wantCo
 }
 
 // onHand — ยอดคงเหลือปัจจุบันของหนังสือเล่มหนึ่ง (คืน -1 ถ้าอ่านไม่ได้)
+// restoreStock — ดึงยอดคงเหลือกลับมาที่เดิมหลังจบ flow ที่ขยับสต็อก
+//
+// smoke เขียนลงฐานข้อมูลจริงที่ทั้งทีมใช้ร่วมกัน ถ้าไม่คืนยอด หน้าร้านจะโชว์จำนวนที่สะสม
+// มาจากการทดสอบ และหน้าแจ้งเตือนจุดสั่งซื้อจะเงียบไปเฉย ๆ โดยไม่มีอะไรฟ้อง
+func restoreStock(token string, bookID, want int) {
+	diff := want - onHand(token, bookID)
+	if diff == 0 {
+		return
+	}
+	_, err := post(token, "/api/inventory/adjust", map[string]any{
+		"lines": []any{map[string]any{
+			"bookId":         bookID,
+			"quantityChange": diff,
+			"reason":         "คืนยอดหลังการทดสอบระบบ (smoke)",
+			"referenceDoc":   "SMOKE",
+		}},
+	}, 201)
+	if err != nil {
+		fmt.Printf("  คืนยอดคงเหลือเล่ม %d ไม่สำเร็จ: %v\n", bookID, err)
+	}
+}
+
 func onHand(token string, bookID int) int {
 	items, err := getList(token, "/api/inventory")
 	if err != nil {

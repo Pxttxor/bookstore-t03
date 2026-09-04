@@ -70,6 +70,38 @@ func (r *ReviewRepository) List(filter ReviewFilter) ([]ReviewRow, error) {
 	return r.attach(reviews)
 }
 
+// RatingSummary — คะแนนรวมของหนังสือหนึ่งเล่ม นับเฉพาะรีวิวที่เผยแพร่แล้ว
+type RatingSummary struct {
+	Average float64
+	Count   int
+}
+
+// RatingsByBook — คะแนนเฉลี่ยของทุกเล่มในคำสั่งเดียว
+//
+// หน้าร้านแสดงดาวบนการ์ดทุกใบ ถ้าถามทีละเล่มจะเป็น N+1 จึง GROUP BY ทีเดียว
+// นับเฉพาะ PUBLISHED เหมือน ForBook() — รีวิวที่รอตรวจหรือถูกซ่อนต้องไม่มีผลกับคะแนนที่ลูกค้าเห็น
+func (r *ReviewRepository) RatingsByBook() (map[int]RatingSummary, error) {
+	var rows []struct {
+		BookID  int
+		Average float64
+		Count   int
+	}
+	err := r.db.Model(&model.Review{}).
+		Select("book_id, AVG(rating) AS average, COUNT(*) AS count").
+		Where("status = ?", model.ReviewStatusPublished).
+		Group("book_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	summary := make(map[int]RatingSummary, len(rows))
+	for _, row := range rows {
+		summary[row.BookID] = RatingSummary{Average: row.Average, Count: row.Count}
+	}
+	return summary, nil
+}
+
 func (r *ReviewRepository) Find(db *gorm.DB, reviewID int) (*ReviewRow, error) {
 	review, err := r.find(db, reviewID)
 	if err != nil {

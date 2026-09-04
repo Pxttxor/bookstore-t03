@@ -81,6 +81,19 @@
   box-shadow: 0 0 0 3px rgba(37, 196, 168, 0.15);
 }
 
+/* ช่องที่ตรวจไม่ผ่าน — ล้อ .admin-input--error / .admin-field__error ของหลังร้าน */
+.field__input--error {
+  border-color: var(--danger);
+}
+.field__input--error:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+.field__error {
+  font-size: 14px;
+  color: var(--danger);
+}
+
 .checkout__save {
   display: inline-flex;
   align-items: center;

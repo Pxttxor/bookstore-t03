@@ -159,6 +159,14 @@
   cursor: not-allowed;
 }
 
+/* เหตุผลที่ปุ่มยืนยันยังกดไม่ได้ — title ของปุ่ม disabled ไม่ขึ้นในเบราว์เซอร์ส่วนใหญ่ */
+.pay__hint {
+  margin-top: -20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .pay__footer {
   display: flex;
   align-items: center;

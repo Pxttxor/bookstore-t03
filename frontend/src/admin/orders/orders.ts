@@ -1,10 +1,11 @@
 // Customer-order types (Order / OrderItem / OrderStatusHistory + Shipment) follow the
 // team's analysis class diagram, which is authoritative on names and enums.
 //
-// A customer order is kept self-contained: it snapshots the book title, unit price and
-// quantity rather than linking to the InventoryItem (the storefront keys books by a slug
-// string, inventory by a numeric bookId), and it does not touch the Payment subsystem.
-// See the "deliberate deviations" note in the project README.
+// คำสั่งซื้อสแน็ปช็อตชื่อเรื่อง/ราคา/จำนวนไว้ในแถวของตัวเอง เพื่อให้ประวัติการสั่งซื้อ
+// ไม่เปลี่ยนตามเมื่อราคาหน้าปกถูกแก้ทีหลัง · อ้างหนังสือด้วย `bookId` ตัวเดียวกับที่หน้าร้านใช้
+//
+// **การเปลี่ยนสถานะตัดสินที่เซิร์ฟเวอร์** (`OrderService.advance`) — หน้าจอไม่มีตาราง
+// transition ของตัวเองอีกชุด เพราะสองชุดมีโอกาสเพี้ยนจากกันโดยไม่มีอะไรจับ
 
 import type { BadgeTone } from '../components/StatusBadge'
 
@@ -26,50 +27,11 @@ export type OrderChannel = 'WEBSITE' | 'MESSAGE' | 'PHONE'
 export type ShipmentStatus = 'PREPARING' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED'
 
 export interface OrderItem {
-  /**
-   * รหัสหนังสือในแคตตาล็อกหลัง (`book.book_id`) — เป็นตัวเลขตามที่ตาราง
-   * `customer_order_item` และ `orderItemDTO` ฝั่ง Go ใช้
-   *
-   * เดิมเป็น slug ของหน้าร้านเพราะคำสั่งซื้อเก็บใน localStorage แยกจากแคตตาล็อกหลัง
-   * หน้าติดตามพัสดุที่ต้องการปกหนังสือแปลงกลับเป็น slug ผ่าน `slugForBookId()`
-   */
+  /** รหัสหนังสือในแคตตาล็อก (`book.book_id`) — คีย์เดียวกันทั้งหน้าร้านและหลังร้าน */
   bookId: number
   title: string
   unitPrice: number
   quantity: number
-}
-
-/**
- * สะพานเชื่อมแคตตาล็อกหน้าร้าน (key ด้วย slug + ไฟล์รูปปก) กับแคตตาล็อกหลัง (key ด้วยตัวเลข)
- *
- * `frontend/CLAUDE.md` บันทึกไว้ว่าสองชุดนี้แยกกันโดยตั้งใจ และหน้าร้านยังคงเป็น static
- * แต่คำสั่งซื้อต้องลงตาราง `customer_order_item` ซึ่งมี FK ชี้ไป `book` จึงต้องมีแผนที่นี้
- * จับคู่ด้วยชื่อเรื่องที่ตรงกันทุกตัวอักษรระหว่าง `src/data/books.ts` กับ `SEED_BOOKS`
- */
-export const STOREFRONT_BOOK_IDS: Record<string, number> = {
-  'atomic-habits': 101,
-  'the-alchemist': 102,
-  circe: 103,
-  'project-hail-mary': 104,
-  'klara-and-the-sun': 105,
-  dune: 106,
-  'a-little-life': 107,
-  'normal-people': 108,
-  'the-midnight-library': 109,
-  'the-song-of-achilles': 110,
-  'crying-in-h-mart': 111,
-  'lessons-in-chemistry': 112,
-  'evelyn-hugo': 113,
-  'where-the-crawdads-sing': 114,
-}
-
-const BOOK_ID_SLUGS: Record<number, string> = Object.fromEntries(
-  Object.entries(STOREFRONT_BOOK_IDS).map(([slug, bookId]) => [bookId, slug]),
-)
-
-/** slug ของหน้าร้านสำหรับรหัสหนังสือหนึ่งตัว — คืน undefined ถ้าเล่มนั้นไม่ได้ขายหน้าร้าน */
-export function slugForBookId(bookId: number): string | undefined {
-  return BOOK_ID_SLUGS[bookId]
 }
 
 export interface OrderStatusHistory {
@@ -152,29 +114,6 @@ export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
 
 /** Delivery companies the delivery staff picks from when recording a shipment. */
 export const CARRIERS = ['DHL Express', 'Kerry Express', 'ไปรษณีย์ไทย', 'J&T Express', 'Flash Express'] as const
-
-/* ── State machine (Order.updateStatus) ─────────────────────────────────── */
-
-// Allowed forward transitions. The storefront always attaches a slip at checkout, so a
-// web order skips WAITING_PAYMENT straight to VERIFYING_PAYMENT; WAITING_PAYMENT is kept
-// for orders placed through other channels that have not paid yet.
-export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_CONFIRM: ['STOCK_CONFIRMED', 'CANCELLED', 'REJECTED'],
-  STOCK_CONFIRMED: ['VERIFYING_PAYMENT', 'WAITING_PAYMENT', 'CANCELLED'],
-  WAITING_PAYMENT: ['VERIFYING_PAYMENT', 'CANCELLED'],
-  VERIFYING_PAYMENT: ['PAID', 'REJECTED'],
-  PAID: ['PACKING', 'CANCELLED'],
-  PACKING: ['READY_TO_SHIP'],
-  READY_TO_SHIP: ['SHIPPED'],
-  SHIPPED: ['DELIVERED'],
-  DELIVERED: [],
-  CANCELLED: [],
-  REJECTED: [],
-}
-
-export function canTransition(from: OrderStatus, to: OrderStatus) {
-  return ORDER_TRANSITIONS[from].includes(to)
-}
 
 // The five milestones shown on the customer tracking timeline and the back-office detail
 // stepper. CANCELLED / REJECTED sit outside the happy path and render their own banner.

@@ -10,6 +10,12 @@ import "fmt"
 func runPurchasingFlow(e *env) {
 	warehouse, manager := e.warehouse, e.manager
 
+	// สายนี้รับของเข้าและส่งคืนของจริงบนเล่ม 101 สุทธิแล้ว +10 ทุกรอบ
+	// ถ้าไม่คืน ยอดคงเหลือจะโตขึ้นทุกครั้งที่รัน จนหน้าร้านกับรายงานของทีมอ่านตัวเลขไม่ออก
+	// (กติกาเดียวกับ flow_order.go ที่คืนสต็อกทุกเล่มในใบตอนจบ)
+	stockAtStart := onHand(warehouse, 101)
+	defer restoreStock(warehouse, 101, stockAtStart)
+
 	section("U5 แจ้งเตือนสินค้าถึงจุดสั่งซื้อ")
 
 	// ล้างจุดสั่งซื้อของเล่มที่ใช้ทดสอบก่อน เพราะเคสถัดไปตรวจสถานะ "ยังไม่ตั้งค่า"

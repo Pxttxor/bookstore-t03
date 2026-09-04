@@ -9,8 +9,7 @@ import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import { useToast } from '../components/ToastContext'
-import { getBook } from '../../data/books'
-import { slugForBookId } from '../orders/orders'
+import { coverFor } from '../../data/covers'
 import { useReviews } from '../reviews/ReviewContext'
 import {
   formatThaiRelativeTime,
@@ -417,10 +416,8 @@ export default function ReviewManagerPage() {
           />
         ) : (
           rows.map((review) => {
-            // รหัสหนังสือเป็นของแคตตาล็อกหลัง · รูปปกอยู่ในแคตตาล็อกหน้าร้านที่ key ด้วย slug
-            const bookSlug = slugForBookId(review.bookId)
-            const bookCover =
-              review.coverUrl || (bookSlug ? getBook(bookSlug)?.cover : undefined)
+            // รูปปกอยู่ในโปรเจกต์ ไม่ใช่คอลัมน์ในตาราง book — ค้นจาก bookId ตรง ๆ
+            const bookCover = review.coverUrl || coverFor(review.bookId)
             const report = review.report
             const isSpam = report?.category === 'spam' || report?.reason?.includes('สแปม')
             const isService = report?.category === 'service' || report?.reason?.includes('บริการ') || report?.reason?.includes('ขนส่ง')

@@ -111,7 +111,7 @@ export default function App() {
 
       <Route element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="book/:id" element={<BookDetailPage />} />
+        <Route path="book/:bookId" element={<BookDetailPage />} />
         <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
         <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
         <Route path="order/:id" element={<OrderTrackingPage />} />

@@ -10,9 +10,10 @@ import (
 	"bookstore-t03/internal/service"
 )
 
-// registerCatalogueRoutes — สินค้าคงคลัง (ตารางประกอบ รองรับ U5)
+// registerInventoryRoutes — สินค้าคงคลัง (ตารางประกอบ รองรับ U5)
+// ชื่อเดิมคือ registerCatalogueRoutes ซึ่งชนกับแคตตาล็อกหน้าร้านใน catalogue.go
 // เส้นทางของหนังสืออยู่ที่ registerBookRoutes ใน book.go
-func (h *Handler) registerCatalogueRoutes(register registrar) {
+func (h *Handler) registerInventoryRoutes(register registrar) {
 	register("GET /api/inventory", roleOffice, h.listInventory)                             // can.viewStock
 	register("GET /api/inventory/alerts", roleWarehouse, h.reorderAlerts)                   // U5 · can.viewAlerts
 	register("PUT /api/inventory/{bookId}/reorder-point", roleWarehouse, h.setReorderPoint) // U5 · can.setReorderPoint

@@ -3,7 +3,7 @@ import Icon from '../components/Icon'
 import { useAuth } from '../auth/AuthContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import StatusBadge from '../admin/components/StatusBadge'
-import { formatPrice } from '../data/books'
+import { formatPrice } from '../data/money'
 import {
   formatOrderCode,
   orderItemCount,

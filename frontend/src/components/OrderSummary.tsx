@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { formatPrice } from '../data/books'
+import BookCover from './BookCover'
+import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
 import './OrderSummary.css'
 
@@ -26,9 +27,14 @@ export default function OrderSummary({
       ) : (
         <ul className="summary__list">
           {lines.map(({ book, qty }) => (
-            <li key={book.id} className="summary__item">
+            <li key={book.bookId} className="summary__item">
               <div className="summary__thumb">
-                <img src={book.cover} alt={book.title} loading="lazy" decoding="async" />
+                <BookCover
+                  bookId={book.bookId}
+                  title={book.title}
+                  author={book.author}
+                  size="sm"
+                />
                 {qty > 1 && <span className="summary__qty">{qty}</span>}
               </div>
               <div className="summary__info">

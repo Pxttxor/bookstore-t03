@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
-import { formatPrice } from '../data/books'
+import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import './CheckoutPaymentPage.css'
@@ -11,6 +11,10 @@ interface ShippingState {
   mobile?: string
   shippingAddress?: string
 }
+
+// ข้อจำกัดของไฟล์สลิป ตรงกับที่หน้าจอเขียนไว้ว่า "Supports JPG, PNG, PDF (Max 5MB)"
+const MAX_SLIP_BYTES = 5 * 1024 * 1024
+const SLIP_PATTERN = /\.(jpe?g|png|pdf)$/i
 
 // Placeholder graphic only, this is not a scannable payment code.
 function QrPlaceholder() {
@@ -47,24 +51,54 @@ export default function CheckoutPaymentPage() {
   const { subtotal, lines, clear } = useCart()
   const { placeOrder } = useOrders()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [fileName, setFileName] = useState<string>('')
+  const [slip, setSlip] = useState<File | null>(null)
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
 
   const amount = subtotal
+  const shipping = (state ?? {}) as ShippingState
+  const shippingAddress = shipping.shippingAddress?.trim() ?? ''
+
+  // เก็บไฟล์ทั้งก้อนเพื่อตรวจชนิดและขนาดได้ · ที่ส่งขึ้นเซิร์ฟเวอร์ยังเป็นชื่อไฟล์อย่างเดียว
+  // (โปรเจกต์นี้ไม่มีที่เก็บไฟล์ตามที่บันทึกไว้ใน frontend/CLAUDE.md)
+  const pickSlip = (file: File | undefined) => {
+    const reject = (message: string) => {
+      setSlip(null)
+      setError(message)
+      // ล้างค่าใน input ไม่งั้นเลือกไฟล์เดิมซ้ำจะไม่ยิง onChange อีก
+      if (fileRef.current) fileRef.current.value = ''
+    }
+    if (!file) {
+      reject('กรุณาแนบหลักฐานการชำระเงิน')
+      return
+    }
+    if (!SLIP_PATTERN.test(file.name)) {
+      reject('รองรับเฉพาะไฟล์ JPG, PNG หรือ PDF')
+      return
+    }
+    if (file.size > MAX_SLIP_BYTES) {
+      reject('ไฟล์สลิปต้องมีขนาดไม่เกิน 5MB')
+      return
+    }
+    setSlip(file)
+    setError('')
+  }
 
   const confirm = async () => {
     if (placing) return
+    if (!slip) {
+      setError('กรุณาแนบหลักฐานการชำระเงิน')
+      return
+    }
     setPlacing(true)
     setError('')
-    const shipping = (state ?? {}) as ShippingState
     try {
       // ชื่อลูกค้าและยอดเงินเซิร์ฟเวอร์คิดเอง (จากบัญชีที่ล็อกอินและราคาในตาราง book)
       // หน้าจอส่งแค่ที่อยู่จัดส่ง รายการหนังสือ และชื่อไฟล์สลิป
       const order = await placeOrder({
-        shippingAddress: shipping.shippingAddress?.trim() || '—',
-        items: lines.map((line) => ({ slug: line.book.id, quantity: line.qty })),
-        slipFileName: fileName || undefined,
+        shippingAddress,
+        items: lines.map((line) => ({ bookId: line.book.bookId, quantity: line.qty })),
+        slipFileName: slip.name,
       })
       clear()
       navigate(`/order/${order.orderId}`)
@@ -73,6 +107,16 @@ export default function CheckoutPaymentPage() {
       setPlacing(false)
     }
   }
+
+  // เข้าหน้านี้ตรง ๆ ทาง URL (หรือรีเฟรช) จะไม่มีที่อยู่ติดมาใน location.state
+  // ต้องกลับไปกรอกก่อน ไม่ใช่ปล่อยให้สั่งซื้อโดยไม่มีที่อยู่
+  if (!shippingAddress) return <Navigate to="/checkout/shipping" replace />
+
+  const blockedReason = lines.length === 0
+    ? 'ตะกร้าสินค้าว่าง ยังสั่งซื้อไม่ได้'
+    : !slip
+      ? 'กรุณาแนบหลักฐานการชำระเงินก่อนกดยืนยัน'
+      : ''
 
   return (
     <div className="pay page-shell">
@@ -90,7 +134,7 @@ export default function CheckoutPaymentPage() {
           <p className="pay__scan-note">Please scan the QR code above to pay.</p>
           <div className="pay__amount">
             <span>Amount</span>
-            <strong>{lines.length ? formatPrice(amount) : '$0.00'}</strong>
+            <strong>{formatPrice(lines.length ? amount : 0)}</strong>
           </div>
         </section>
 
@@ -105,8 +149,8 @@ export default function CheckoutPaymentPage() {
           >
             <Icon name="upload" size={32} />
             <span className="pay__drop-main">
-              {fileName ? (
-                fileName
+              {slip ? (
+                slip.name
               ) : (
                 <>
                   Drag &amp; drop your receipt here or <b>browse</b>
@@ -119,7 +163,7 @@ export default function CheckoutPaymentPage() {
               type="file"
               accept=".jpg,.jpeg,.png,.pdf"
               hidden
-              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
+              onChange={(e) => pickSlip(e.target.files?.[0])}
             />
           </button>
 
@@ -141,11 +185,14 @@ export default function CheckoutPaymentPage() {
       <button
         className="btn btn-primary pay__confirm"
         onClick={() => void confirm()}
-        disabled={lines.length === 0 || placing}
+        disabled={blockedReason !== '' || placing}
+        title={blockedReason || undefined}
       >
         <Icon name="check" size={18} />
         Confirm Payment
       </button>
+
+      {blockedReason && <p className="pay__hint">{blockedReason}</p>}
 
       <div className="pay__footer">
         <button className="pay__help">
