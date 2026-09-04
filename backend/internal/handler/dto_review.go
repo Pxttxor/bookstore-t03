@@ -38,6 +38,9 @@ type reviewDTO struct {
 	CustomerName     string             `json:"customerName"`
 	BookID           int                `json:"bookId"`
 	BookTitle        string             `json:"bookTitle"`
+	Author           string             `json:"author"`
+	ISBN             string             `json:"isbn"`
+	Price            float64            `json:"price"`
 	OrderID          *int               `json:"orderId,omitempty"`
 	OrderCode        string             `json:"orderCode,omitempty"`
 	VerifiedPurchase bool               `json:"verifiedPurchase"`
@@ -78,6 +81,9 @@ func toReviewDTO(row repository.ReviewRow) reviewDTO {
 		CustomerName:     row.Customer.Name(),
 		BookID:           review.BookID,
 		BookTitle:        row.Book.Title,
+		Author:           row.Book.Author,
+		ISBN:             row.Book.ISBN,
+		Price:            row.Book.Price,
 		OrderID:          review.OrderID,
 		VerifiedPurchase: review.IsVerifiedPurchase(),
 		Rating:           review.Rating,

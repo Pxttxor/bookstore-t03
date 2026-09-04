@@ -43,6 +43,7 @@ type orderDTO struct {
 	SlipFileName    string             `json:"slipFileName,omitempty"`
 	ItemCount       int                `json:"itemCount"`
 	Closed          bool               `json:"closed"`
+	CanCancel       bool               `json:"canCancel"`
 	Items           []orderItemDTO     `json:"items"`
 	Timeline        []orderHistoryDTO  `json:"timeline"`
 }
@@ -95,6 +96,7 @@ func toOrderDTO(view service.OrderView) orderDTO {
 
 	dto := orderDTO{
 		OrderID:         order.OrderID,
+		CanCancel:       order.CanTransitionTo(model.OrderStatusCancelled),
 		Code:            model.FormatOrderCode(order.OrderID),
 		CustomerID:      order.CustomerID,
 		CustomerName:    view.CustomerName,

@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
 import type { Promotion } from './promotions'
 
 // ข้อมูลอยู่ในตาราง promotion ของ PostgreSQL แล้ว
@@ -42,7 +44,8 @@ const toBody = (draft: PromotionDraft, status: Promotion['status']) => ({
 })
 
 export function PromotionProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, reload, apply } = useResource(loadPromotions)
+  const { user } = useAuth()
+  const { data, loading, error, reload, apply } = useResource(loadPromotions, !!user && can.viewPromotions(user.role))
 
   const value = useMemo<PromotionValue>(() => {
     const promotions = data ?? []

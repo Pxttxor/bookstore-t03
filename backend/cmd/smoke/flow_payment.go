@@ -26,7 +26,14 @@ func paymentOf(token string, orderID int) (map[string]any, error) {
 
 // openUnpaidOrder — สั่งซื้อหนึ่งใบแล้วยืนยันสต็อก คืนรหัสใบกับยอดสุทธิ
 func openUnpaidOrder(customer, sales string) (int, float64, error) {
-	body, err := post(customer, "/api/orders", paymentOrderBody([]any{orderLine(orderBookID, 1)}), 201)
+	profile, err := get(customer, "/api/customers/me")
+	if err != nil {
+		return 0, 0, err
+	}
+	input := paymentOrderBody([]any{orderLine(orderBookID, 1)})
+	input["customerId"] = profile["customerId"]
+	input["channel"] = "PHONE"
+	body, err := post(sales, "/api/orders", input, 201)
 	if err != nil {
 		return 0, 0, err
 	}

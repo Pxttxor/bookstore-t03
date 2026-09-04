@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost, apiPut } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
 import { useInventory } from '../inventory/InventoryContext'
 import { useNotifications } from '../notifications/NotificationContext'
 import {
@@ -102,7 +104,8 @@ const toRequisitionBody = (draft: RequisitionDraft, submit: boolean) => ({
 })
 
 export function PurchasingProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, reload } = useResource(loadPurchasing)
+  const { user } = useAuth()
+  const { data, loading, error, reload } = useResource(loadPurchasing, !!user && can.viewPurchasing(user.role))
   const { reload: reloadInventory } = useInventory()
   const { reload: reloadNotifications } = useNotifications()
 

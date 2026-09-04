@@ -58,6 +58,8 @@ export interface CustomerOrder {
   customerEmail?: string
   shippingAddress: string
   status: OrderStatus
+  /** Server-derived transition guard; role permissions are checked separately. */
+  canCancel?: boolean
   subtotal: number
   discountAmount: number
   netAmount: number

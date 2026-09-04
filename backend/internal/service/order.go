@@ -180,11 +180,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	}
 
 	address := strings.TrimSpace(input.ShippingAddress)
-	if address == "" {
-		address = customer.Customer.Address // ใช้ที่อยู่ในโปรไฟล์ถ้าไม่ได้กรอกมาใหม่
+	if address == "" && channel != model.OrderChannelWebsite {
+		address = strings.TrimSpace(customer.Customer.Address)
 	}
-	if address == "" {
+	if address == "" || address == "—" || address == "-" {
 		return nil, model.ErrAddressRequired
+	}
+	if channel == model.OrderChannelWebsite && strings.TrimSpace(input.SlipFileName) == "" {
+		return nil, model.ErrSlipRequired
 	}
 	if len(input.Items) == 0 {
 		return nil, model.ErrNoOrderItems

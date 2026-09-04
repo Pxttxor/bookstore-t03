@@ -1,14 +1,17 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { useAuth } from '../../auth/AuthContext'
+import { can } from '../permissions'
+import { useOrders } from '../orders/OrderContext'
+import { ORDER_STATUS_LABELS, formatOrderCode } from '../orders/orders'
 import type { ModerateAction, Review, ReviewReply, ReviewStatus } from './reviews'
 
 // ข้อมูลอยู่ในตาราง review / review_reply / review_report ของ PostgreSQL แล้ว
 // เดิมเก็บใน localStorage คีย์ bookhaven.reviews.v5
 //
-// `reviewDTO` ฝั่ง Go มีเฉพาะฟิลด์ที่ฐานข้อมูลถือจริง ส่วนฟิลด์ตกแต่งของหน้าจอ
-// (รูปปก · avatar · ราคา · ผู้แต่ง) หน้าจอไปหาจากแคตตาล็อกหน้าร้านเองอยู่แล้ว
-// จึงปล่อยว่างไว้ ทุกตัวประกาศเป็น optional อยู่แล้ว
+// Book metadata comes from reviewDTO's existing database join. Order metadata
+// is joined from OrderContext; absent relationships stay absent, never mocked.
 interface ReviewApiReply {
   replyId: number
   replyText: string
@@ -31,6 +34,9 @@ interface ReviewApiRow {
   customerName: string
   bookId: number
   bookTitle: string
+  author?: string
+  isbn?: string
+  price?: number
   orderCode?: string
   verifiedPurchase: boolean
   rating: number
@@ -60,6 +66,9 @@ const toReview = (row: ReviewApiRow): Review => ({
   reviewId: row.reviewId,
   bookId: row.bookId,
   bookTitle: row.bookTitle,
+  author: row.author,
+  isbn: row.isbn,
+  price: row.price,
   customerName: row.customerName,
   verifiedPurchase: row.verifiedPurchase,
   rating: row.rating,
@@ -126,10 +135,20 @@ interface ReviewValue {
 const ReviewContext = createContext<ReviewValue | null>(null)
 
 export function ReviewProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, reload, apply } = useResource(loadReviews)
+  const { user } = useAuth()
+  const { orders } = useOrders()
+  const { data, loading, error, reload, apply } = useResource(loadReviews, !!user && can.moderateReview(user.role))
 
   const value = useMemo<ReviewValue>(() => {
-    const reviews = data ?? []
+    const ordersByCode = new Map(orders.map((order) => [formatOrderCode(order.orderId), order]))
+    const reviews = (data ?? []).map((review) => {
+      const order = review.orderId ? ordersByCode.get(review.orderId) : undefined
+      return {
+        ...review,
+        orderDate: order?.orderDate,
+        deliveryStatus: order ? ORDER_STATUS_LABELS[order.status] : undefined,
+      }
+    })
 
     // ตรวจสอบและตอบกลับคืน reviewDTO แถวเดิมที่อัปเดตแล้ว (ตัวเดียวกับที่ลิสต์ใช้)
     // แปลงด้วย toReview ตัวเดียวกันแล้วต่อลงชุดเดิม — รวมผลของรายงานที่ปิดไปพร้อมกันด้วย
@@ -177,7 +196,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
         await reload()
       },
     }
-  }, [data, loading, error, reload, apply])
+  }, [data, loading, error, reload, apply, orders])
 
   return <ReviewContext.Provider value={value}>{children}</ReviewContext.Provider>
 }
