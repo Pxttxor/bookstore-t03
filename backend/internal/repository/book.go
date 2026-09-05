@@ -71,6 +71,25 @@ func (r *BookRepository) Exists(bookID int) (bool, error) {
 	return count > 0, err
 }
 
+// ExistingIDs — ตรวจว่า id ไหนมีอยู่จริงบ้างจากรายการที่ให้มา ครั้งเดียวแทนการ Exists ทีละเล่ม
+// ใช้ตอนตรวจฟอร์มที่มีหนังสือหลายเล่มพร้อมกัน (เช่น SCR-12/13 รายการหนังสือของผู้จัดจำหน่าย)
+func (r *BookRepository) ExistingIDs(bookIDs []int) (map[int]bool, error) {
+	found := make(map[int]bool, len(bookIDs))
+	if len(bookIDs) == 0 {
+		return found, nil
+	}
+	var ids []int
+	if err := r.db.Model(&model.Book{}).
+		Where("book_id IN ?", bookIDs).
+		Pluck("book_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		found[id] = true
+	}
+	return found, nil
+}
+
 // Find — หนังสือหนึ่งเล่ม · รับ *gorm.DB เข้ามาเพื่อให้เรียกจากในทรานแซกชันได้
 func (r *BookRepository) Find(db *gorm.DB, bookID int) (*model.Book, error) {
 	return firstBook(db.Where("book_id = ?", bookID))

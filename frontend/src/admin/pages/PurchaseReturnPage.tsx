@@ -41,6 +41,8 @@ interface DraftLine {
 // ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
 // รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function PurchaseReturnPage() {
+  const { id } = useParams()
+  const [search] = useSearchParams()
   const { loading, error, reload } = usePurchasing()
 
   if (loading) {
@@ -63,7 +65,8 @@ export default function PurchaseReturnPage() {
     )
   }
 
-  return <PurchaseReturnForm />
+  // ต้อง remount เมื่อเปลี่ยน id หรือ ?po= — ใบใหม่ที่อ้างอิง PO คนละใบก็ต้องเริ่มฟอร์มใหม่เหมือนกัน
+  return <PurchaseReturnForm key={id ?? `new-${search.get('po') ?? ''}`} />
 }
 
 function PurchaseReturnForm() {
@@ -227,8 +230,6 @@ function PurchaseReturnForm() {
       await recordCompensation(existing.returnId, {
         type: compensationType,
         note: compensationNote.trim(),
-        at: new Date().toISOString(),
-        by: user!.name,
       })
       notify('success', `ปิดรายการ ${formatReturnCode(existing.returnId)} เรียบร้อยแล้ว`)
     } catch (err) {

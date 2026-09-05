@@ -378,4 +378,104 @@ func runPurchasingFlow(e *env) {
 		return expectStatus("POST", fmt.Sprintf("/api/returns/%d/compensation", returnID), warehouse,
 			map[string]any{"type": "CREDIT_NOTE", "note": ""}, 409)
 	})
+
+	section("SCR-24 Abnormal (U8) ยกเลิกใบสั่งซื้อ")
+
+	// ใบนี้รับของเข้าเล่ม 103 บางส่วนก่อนยกเลิก ต้องคืนยอดตอนจบเหมือนเล่ม 101 ด้านบน
+	stock103AtStart := onHand(warehouse, 103)
+	defer restoreStock(warehouse, 103, stock103AtStart)
+
+	check("ยกเลิกใบที่รับครบแล้ว (poID จาก U9) → 409 PO_ALREADY_CLOSED", func() error {
+		return expectError("POST", fmt.Sprintf("/api/purchase-orders/%d/cancel", poID), warehouse,
+			map[string]any{"reason": ""}, 409, "PO_ALREADY_CLOSED")
+	})
+
+	// อ่านก่อนเปิด PR ใหม่ — ต้องเป็นฐานที่ยังไม่มียอดผูกพันของใบทดสอบนี้เลย ไม่งั้นส่วนต่างจะ
+	// เทียบ "เต็มจำนวนตอนอนุมัติ" กับ "จำนวนที่รับจริงตอนยกเลิก" แทนที่จะเทียบกับศูนย์
+	var committedBefore float64
+	check("อ่านยอดผูกพันก่อนเปิด PR ใหม่", func() error {
+		body, err := get(manager, "/api/purchasing/budget")
+		if err != nil {
+			return err
+		}
+		committedBefore = body["committed"].(float64)
+		return nil
+	})
+
+	var cancelPOID int
+	check("เปิด PR ใหม่แล้วอนุมัติจนได้ PO สำหรับทดสอบยกเลิก", func() error {
+		body, err := post(warehouse, "/api/requisitions", map[string]any{
+			"supplierId": 1,
+			"items":      []any{map[string]any{"bookId": 103, "quantity": 5, "unitPrice": 310}},
+			"submit":     true,
+		}, 201)
+		if err != nil {
+			return err
+		}
+		cancelPRID := int(body["prId"].(float64))
+		approved, err := post(manager, fmt.Sprintf("/api/requisitions/%d/approve", cancelPRID),
+			map[string]any{"overBudgetNote": ""}, 201)
+		if err != nil {
+			return err
+		}
+		cancelPOID = int(approved["poId"].(float64))
+		return expect(approved["status"], "APPROVED")
+	})
+
+	check("ส่ง/ยืนยัน/รับของบางส่วน (2 จาก 5) ก่อนยกเลิก", func() error {
+		if _, err := post(warehouse, fmt.Sprintf("/api/purchase-orders/%d/send", cancelPOID), nil, 200); err != nil {
+			return err
+		}
+		if _, err := post(warehouse, fmt.Sprintf("/api/purchase-orders/%d/confirm", cancelPOID),
+			map[string]any{"expectedDeliveryDate": daysFromNow(10)}, 200); err != nil {
+			return err
+		}
+		body, err := post(warehouse, fmt.Sprintf("/api/purchase-orders/%d/receipts", cancelPOID), map[string]any{
+			"deliveryNoteNo": "DN-CANCEL-TEST",
+			"lines": []any{
+				map[string]any{"bookId": 103, "receivedQty": 2, "condition": "NORMAL", "note": ""},
+			},
+		}, 201)
+		if err != nil {
+			return err
+		}
+		return expect(body["status"], "PARTIAL")
+	})
+
+	check("ยกเลิกใบที่รับบางส่วนได้ (RECEIVED_PARTIAL → CANCELLED)", func() error {
+		body, err := post(warehouse, fmt.Sprintf("/api/purchase-orders/%d/cancel", cancelPOID),
+			map[string]any{"reason": "ผู้จัดจำหน่ายเลิกส่งกลางคัน"}, 200)
+		if err != nil {
+			return err
+		}
+		return expect(body["status"], "CANCELLED")
+	})
+	check("ยกเลิกซ้ำ → 409 PO_ALREADY_CLOSED", func() error {
+		return expectError("POST", fmt.Sprintf("/api/purchase-orders/%d/cancel", cancelPOID), warehouse,
+			map[string]any{"reason": ""}, 409, "PO_ALREADY_CLOSED")
+	})
+	check("ยอดผูกพันของใบที่ยกเลิกนับตามจำนวนที่รับจริง (2 เล่ม) ไม่ใช่ที่สั่ง (5 เล่ม) หรือศูนย์", func() error {
+		body, err := get(manager, "/api/purchasing/budget")
+		if err != nil {
+			return err
+		}
+		delta := body["committed"].(float64) - committedBefore
+		want := 2 * 310.0
+		if delta < want-0.01 || delta > want+0.01 {
+			return fmt.Errorf("ยอดผูกพันเปลี่ยน %.2f ต้องการ %.2f (รับจริง 2 เล่ม × 310)", delta, want)
+		}
+		return nil
+	})
+	check("ผู้จัดการได้รับแจ้งเตือน ORDER_CANCELLED", func() error {
+		rows, err := getList(manager, "/api/notifications")
+		if err != nil {
+			return err
+		}
+		for _, entry := range rows {
+			if entry.(map[string]any)["kind"] == "ORDER_CANCELLED" {
+				return nil
+			}
+		}
+		return fmt.Errorf("ไม่พบการแจ้งเตือน ORDER_CANCELLED")
+	})
 }

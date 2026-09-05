@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"bookstore-t03/internal/model"
 )
@@ -52,21 +53,28 @@ func (r *SupplierRepository) List(filter SupplierFilter) ([]model.Supplier, erro
 
 // FindByID — ผู้จัดจำหน่ายหนึ่งรายพร้อมหนังสือ ประวัติแก้ไข และข้อมูลการปิดใช้งาน
 func (r *SupplierRepository) FindByID(supplierID int) (*model.Supplier, error) {
-	return r.findWith(r.db, supplierID)
-}
-
-// FindByIDTx — เหมือน FindByID แต่ล็อกแถวไว้ในทรานแซกชัน (SELECT ... FOR UPDATE)
-func (r *SupplierRepository) FindByIDTx(tx *gorm.DB, supplierID int) (*model.Supplier, error) {
-	return r.findWith(tx, supplierID)
-}
-
-func (r *SupplierRepository) findWith(db *gorm.DB, supplierID int) (*model.Supplier, error) {
 	var supplier model.Supplier
-	err := db.
+	err := r.db.
 		Preload("Books", func(q *gorm.DB) *gorm.DB { return q.Order("book_id") }).
 		Preload("Books.Book").
 		Preload("EditHistory", func(q *gorm.DB) *gorm.DB { return q.Order("at") }).
 		Preload("Deactivation").
+		First(&supplier, "supplier_id = ?", supplierID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, model.ErrSupplierNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &supplier, nil
+}
+
+// LockSupplier — อ่านผู้จัดจำหน่ายพร้อมล็อกแถวไว้ (SELECT ... FOR UPDATE) กันปิดใช้งานซ้อนกันสองครั้ง (U3)
+// ไม่ preload ความสัมพันธ์ เพราะ FOR UPDATE กับ Preload ใช้พร้อมกันไม่ได้ (GORM ยิงคนละคำสั่ง)
+// และ Supplier.Deactivate() ต้องการแค่ status
+func (r *SupplierRepository) LockSupplier(tx *gorm.DB, supplierID int) (*model.Supplier, error) {
+	var supplier model.Supplier
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		First(&supplier, "supplier_id = ?", supplierID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, model.ErrSupplierNotFound
@@ -141,15 +149,14 @@ func (r *SupplierRepository) Update(supplier *model.Supplier, entry *model.Suppl
 }
 
 // Deactivate — ตั้งสถานะเป็น CANCELLED พร้อมบันทึกเหตุผล (U3)
-// ตรวจว่าไม่มีใบสั่งซื้อคงค้างอยู่ที่ service ก่อนเรียกเมธอดนี้
-func (r *SupplierRepository) Deactivate(supplierID int, deactivation *model.SupplierDeactivation) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.Supplier{}).
-			Where("supplier_id = ?", supplierID).
-			Update("status", model.SupplierStatusCancelled).Error; err != nil {
-			return err
-		}
-		// ปิดใช้งานซ้ำไม่ได้อยู่แล้ว แต่ใช้ Save เพื่อให้เขียนทับได้ถ้าเคยมีแถวค้าง
-		return tx.Save(deactivation).Error
-	})
+// รับ tx เข้ามาเสมอ — ต้องอยู่ในทรานแซกชันเดียวกับ LockSupplier/OutstandingOrderCount ของ service
+// ไม่งั้นใบสั่งซื้อใหม่แทรกเข้ามาระหว่างตรวจกับเขียนได้
+func (r *SupplierRepository) Deactivate(tx *gorm.DB, supplierID int, deactivation *model.SupplierDeactivation) error {
+	if err := tx.Model(&model.Supplier{}).
+		Where("supplier_id = ?", supplierID).
+		Update("status", model.SupplierStatusCancelled).Error; err != nil {
+		return err
+	}
+	// ปิดใช้งานซ้ำไม่ได้อยู่แล้ว แต่ใช้ Save เพื่อให้เขียนทับได้ถ้าเคยมีแถวค้าง
+	return tx.Save(deactivation).Error
 }

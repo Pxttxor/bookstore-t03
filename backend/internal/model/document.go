@@ -35,15 +35,3 @@ func DocumentTotal[T Line](lines []T) float64 {
 	}
 	return total
 }
-
-// CommittedAmount — ยอดผูกพันจากใบสั่งซื้อที่ยังไม่ถูกยกเลิก ใช้คิดงบคงเหลือบน SCR-23
-func CommittedAmount(orders []PurchaseOrder) float64 {
-	var total float64
-	for _, po := range orders {
-		if po.Status == POStatusCancelled {
-			continue
-		}
-		total += DocumentTotal(po.Items)
-	}
-	return total
-}

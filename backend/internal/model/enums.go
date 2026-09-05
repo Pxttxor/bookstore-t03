@@ -214,6 +214,7 @@ const (
 	NotifyPRApproved       NotificationKind = "PR_APPROVED"
 	NotifyPRRejected       NotificationKind = "PR_REJECTED"
 	NotifyGRRecorded       NotificationKind = "GR_RECORDED"
+	NotifyOrderCancelled   NotificationKind = "ORDER_CANCELLED"
 	NotifyReturnEscalated  NotificationKind = "RETURN_ESCALATED"
 	NotifyStockDiscrepancy NotificationKind = "STOCK_DISCREPANCY"
 	NotifyOrderPlaced      NotificationKind = "ORDER_PLACED"

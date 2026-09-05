@@ -96,12 +96,7 @@ export default function SupplierDetailPage() {
   const onConfirmDeactivate = async (reason: string, note: string) => {
     try {
       // at / by เซิร์ฟเวอร์เติมจาก JWT ให้เอง หน้าจอส่งแค่เหตุผลกับหมายเหตุ
-      await deactivate(supplier.supplierId, {
-        reason,
-        note,
-        at: new Date().toISOString(),
-        by: user!.name,
-      })
+      await deactivate(supplier.supplierId, { reason, note })
       setConfirming(false)
       notify('success', `ปิดใช้งาน ${supplier.companyName} เรียบร้อยแล้ว`)
     } catch (err) {

@@ -29,6 +29,7 @@ import './RequisitionFormPage.css'
 // ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
 // รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function RequisitionFormPage() {
+  const { id } = useParams()
   const { loading, error, reload } = usePurchasing()
 
   if (loading) {
@@ -51,7 +52,10 @@ export default function RequisitionFormPage() {
     )
   }
 
-  return <RequisitionForm />
+  // ต้อง remount เมื่อเปลี่ยน id — ฟอร์มตั้งค่าเริ่มต้นของ supplier/รายการด้วย useState
+  // ซึ่งอ่านค่าครั้งเดียวตอน mount · React Router ไม่ remount เองเมื่อ param เปลี่ยนบน route
+  // เดียวกัน (เช่น เปิดใบที่ถูกตีกลับสองใบติดจากกระดิ่งแจ้งเตือน) ไม่งั้นฟอร์มจะค้างข้อมูลใบเก่า
+  return <RequisitionForm key={id ?? 'new'} />
 }
 
 function RequisitionForm() {

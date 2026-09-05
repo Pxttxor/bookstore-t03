@@ -16,8 +16,6 @@ func NewPurchasingRepository(db *gorm.DB) *PurchasingRepository {
 	return &PurchasingRepository{db: db}
 }
 
-func (r *PurchasingRepository) DB() *gorm.DB { return r.db }
-
 // ── ใบขอสั่งซื้อ ────────────────────────────────────────────────────────
 
 type RequisitionFilter struct {
@@ -183,13 +181,21 @@ func (r *PurchasingRepository) SaveOrderHeader(tx *gorm.DB, po *model.PurchaseOr
 		}).Error
 }
 
-// SaveOrderItems — เขียนจำนวนที่รับแล้วกลับลงทุกรายการ (U9)
-func (r *PurchasingRepository) SaveOrderItems(tx *gorm.DB, po *model.PurchaseOrder) error {
-	for _, item := range po.Items {
-		if err := tx.Model(&model.PurchaseOrderItem{}).
-			Where("po_id = ? AND book_id = ?", po.POID, item.BookID).
-			Update("received_qty", item.ReceivedQty).Error; err != nil {
-			return err
+// SaveOrderItems — เขียนจำนวนที่รับแล้วกลับลงเฉพาะรายการที่ใบรับสินค้ารอบนี้แตะ (U9)
+// เดิมเขียนทับทุกรายการของ PO ทุกครั้งที่รับของ ทั้งที่มีแค่บางเล่มที่เปลี่ยนจริงในแต่ละรอบ
+// และทำระหว่างถือ FOR UPDATE ของ PO อยู่
+func (r *PurchasingRepository) SaveOrderItems(tx *gorm.DB, po *model.PurchaseOrder, touchedBookIDs []int) error {
+	for _, bookID := range touchedBookIDs {
+		for _, item := range po.Items {
+			if item.BookID != bookID {
+				continue
+			}
+			if err := tx.Model(&model.PurchaseOrderItem{}).
+				Where("po_id = ? AND book_id = ?", po.POID, item.BookID).
+				Update("received_qty", item.ReceivedQty).Error; err != nil {
+				return err
+			}
+			break
 		}
 	}
 	return nil
@@ -206,6 +212,28 @@ func (r *PurchasingRepository) OutstandingOrderCount(db *gorm.DB, supplierID int
 		Where("supplier_id = ? AND status NOT IN ?", supplierID, closed).
 		Count(&count).Error
 	return count, err
+}
+
+// CommittedAmount — ยอดผูกพันของใบสั่งซื้อทั้งหมด ใช้คิดงบคงเหลือบน SCR-23 (U7)
+//
+// รวมระดับรายการ (quantity × unit_price) ไม่ใช่ total_amount ของหัวเอกสาร เพราะคอลัมน์นั้น
+// อาจค้างถ้าไม่มีใครเรียก RecalculateTotal() ซ้ำ · ใบที่ CANCELLED นับเฉพาะจำนวนที่ "รับจริง"
+// (received_qty) ไม่ใช่ 0 เพราะของที่รับเข้าคลังไปแล้วก่อนยกเลิกยังเป็นภาระงบประมาณจริง (ดู
+// PurchaseOrder.Reject — ยกเลิกได้จาก RECEIVED_PARTIAL ซึ่งมีรับของมาแล้วบางส่วน)
+//
+// เดิมโหลด PO ทุกใบพร้อม preload รายการทั้งหมดมาบวกใน Go — เปลี่ยนเป็น SQL aggregate ตัวเดียว
+func (r *PurchasingRepository) CommittedAmount(db *gorm.DB) (float64, error) {
+	var total float64
+	err := db.Model(&model.PurchaseOrderItem{}).
+		Joins("JOIN purchase_order ON purchase_order.po_id = purchase_order_item.po_id").
+		Select(`COALESCE(SUM(
+			CASE WHEN purchase_order.status = ?
+				THEN purchase_order_item.received_qty * purchase_order_item.unit_price
+				ELSE purchase_order_item.quantity * purchase_order_item.unit_price
+			END
+		), 0)`, model.POStatusCancelled).
+		Scan(&total).Error
+	return total, err
 }
 
 // ── ใบรับสินค้า ─────────────────────────────────────────────────────────
@@ -247,14 +275,34 @@ func (r *PurchasingRepository) ListReturns(poID int) ([]model.PurchaseReturn, er
 }
 
 func (r *PurchasingRepository) FindReturn(returnID int) (*model.PurchaseReturn, error) {
+	return r.findReturn(r.db, returnID, false)
+}
+
+// LockReturn — อ่านใบส่งคืนพร้อมล็อกแถว กันส่งเรื่อง/บันทึกการชดเชยซ้อนกันสองครั้ง (U10)
+func (r *PurchasingRepository) LockReturn(tx *gorm.DB, returnID int) (*model.PurchaseReturn, error) {
+	return r.findReturn(tx, returnID, true)
+}
+
+func (r *PurchasingRepository) findReturn(db *gorm.DB, returnID int, lock bool) (*model.PurchaseReturn, error) {
+	query := db.Preload("Items", func(q *gorm.DB) *gorm.DB { return q.Order("book_id") })
+	if lock {
+		// ล็อกเฉพาะแถวแม่ — ใส่ FOR UPDATE พร้อม preload ไม่ได้ เพราะ GORM ยิงคนละคำสั่ง
+		query = db.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+
 	var entry model.PurchaseReturn
-	err := r.db.Preload("Items", func(q *gorm.DB) *gorm.DB { return q.Order("book_id") }).
-		First(&entry, "return_id = ?", returnID).Error
+	err := query.First(&entry, "return_id = ?", returnID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, model.ErrReturnNotFound
 	}
 	if err != nil {
 		return nil, err
+	}
+	if lock {
+		if err := db.Order("book_id").
+			Find(&entry.Items, "return_id = ?", returnID).Error; err != nil {
+			return nil, err
+		}
 	}
 	return &entry, nil
 }

@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState'
 import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import LineItemsTable from '../components/LineItemsTable'
+import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import Stepper from '../components/Stepper'
 import { useToast } from '../components/ToastContext'
@@ -59,6 +60,7 @@ export default function OrderDetailPage() {
     returnsForOrder,
     sendOrder,
     confirmOrder,
+    cancelOrder,
     loading,
     error,
     reload,
@@ -70,6 +72,8 @@ export default function OrderDetailPage() {
   const [deliveryDate, setDeliveryDate] = useState('')
   const [dateError, setDateError] = useState('')
   const [working, setWorking] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
   // The clock is captured once on mount: how long the supplier has been silent only
   // needs to be right when the screen opens, and reading it during render is impure.
   const [now] = useState(() => Date.now())
@@ -128,6 +132,9 @@ export default function OrderDetailPage() {
   const receipts = receiptsForOrder(order.poId)
   const returns = returnsForOrder(order.poId)
   const mayHandle = can.sendOrder(role)
+  // ยกเลิกไม่ได้เมื่อใบปิดรายการแล้ว (เซิร์ฟเวอร์ตอบ 409 PO_ALREADY_CLOSED ซ้ำอีกชั้น)
+  const closed = display === 'RECEIVED_FULL' || display === 'RETURNED' || display === 'CANCELLED'
+  const mayCancel = can.cancelPurchaseOrder(role) && !closed
 
   const daysSinceSent = order.sentAt
     ? Math.floor((now - new Date(order.sentAt).getTime()) / 86400000)
@@ -165,6 +172,21 @@ export default function OrderDetailPage() {
     }
   }
 
+  const cancel = async () => {
+    if (working) return
+    setWorking(true)
+    try {
+      await cancelOrder(order.poId, cancelReason.trim())
+      notify('success', `ยกเลิก ${formatPOCode(order.poId)} แล้ว`)
+      setCancelling(false)
+      setCancelReason('')
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'ยกเลิกใบสั่งซื้อไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
+  }
+
   return (
     <div className="admin-page po-detail">
       <Breadcrumb
@@ -193,6 +215,16 @@ export default function OrderDetailPage() {
             <Icon name="file-text" size={18} />
             ดาวน์โหลด PDF
           </button>
+          {mayCancel && (
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={() => setCancelling(true)}
+            >
+              <Icon name="close" size={18} />
+              ยกเลิกใบสั่งซื้อ
+            </button>
+          )}
         </div>
       </div>
 
@@ -365,6 +397,45 @@ export default function OrderDetailPage() {
       <p className="po-detail__total">
         ยอดรวมใบสั่งซื้อ <strong>฿ {formatBaht(documentTotal(order.items))}</strong>
       </p>
+
+      {cancelling && (
+        <Modal
+          title={`ยกเลิก ${formatPOCode(order.poId)}`}
+          onClose={() => setCancelling(false)}
+          footer={
+            <>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCancelling(false)}>
+                ปิด
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                disabled={working}
+                onClick={() => void cancel()}
+              >
+                <Icon name="close" size={15} />
+                ยืนยันยกเลิกใบสั่งซื้อ
+              </button>
+            </>
+          }
+        >
+          <p>
+            ใบสั่งซื้อนี้จะถูกยกเลิก และปิดใช้งานผู้จัดจำหน่ายรายนี้ได้ถ้าไม่มีใบอื่นค้างอยู่
+            {order.items.some((item) => item.receivedQty > 0) &&
+              ' ของที่รับเข้าคลังไปแล้วจะยังอยู่ในสต็อกเหมือนเดิม ระบบจะไม่ตัดออก'}
+          </p>
+          <label className="admin-field">
+            <span className="admin-field__label">เหตุผล (ถ้ามี)</span>
+            <textarea
+              className="admin-input"
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="เช่น ผู้จัดจำหน่ายแจ้งเลิกส่งกลางคัน..."
+            />
+          </label>
+        </Modal>
+      )}
     </div>
   )
 }

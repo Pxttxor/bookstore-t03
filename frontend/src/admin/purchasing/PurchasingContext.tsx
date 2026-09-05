@@ -55,6 +55,15 @@ export interface ReturnDraft {
   items: PurchaseReturnItem[]
 }
 
+// ใส่แถวใหม่ต่อท้าย (id ยังไม่เคยมีในชุด) หรือแทนที่แถวเดิม (id มีอยู่แล้ว) เรียงตาม id
+// ให้ตรงกับ ORDER BY ของ repository เสมอ — ใช้แทน reload() เมื่อเซิร์ฟเวอร์คืนแถวที่อัปเดต
+// แล้วมาให้ครบสิ่งที่เปลี่ยนในเอกสารใบนั้นเอง โดยไม่กระทบเอกสารอื่น
+function upsertById<T>(list: T[], row: T, id: (item: T) => number): T[] {
+  const exists = list.some((item) => id(item) === id(row))
+  if (exists) return list.map((item) => (id(item) === id(row) ? row : item))
+  return [...list, row].sort((a, b) => id(a) - id(b))
+}
+
 interface PurchasingValue {
   requisitions: PurchaseRequisition[]
   orders: PurchaseOrder[]
@@ -80,12 +89,14 @@ interface PurchasingValue {
   rejectRequisition: (prId: number, reason: string) => Promise<void>
   sendOrder: (poId: number) => Promise<void>
   confirmOrder: (poId: number, expectedDeliveryDate: string) => Promise<void>
+  /** SCR-24 Abnormal (U8) — ผู้จัดจำหน่ายเลิกส่งกลางคัน ยกเลิกใบสั่งซื้อได้ (ยกเว้นใบที่ปิดแล้ว) */
+  cancelOrder: (poId: number, reason?: string) => Promise<void>
   /** U9 — เซิร์ฟเวอร์เพิ่มยอดสต็อกให้เอง หน้าจอไม่ต้องเรียกปรับสต็อกซ้ำ */
   receiveGoods: (poId: number, draft: GoodsReceiptDraft) => Promise<GoodsReceipt>
   /** U10 — เซิร์ฟเวอร์ตัดสต็อกให้เอง */
   createReturn: (poId: number, draft: ReturnDraft) => Promise<PurchaseReturn>
   escalateReturn: (returnId: number, note: string) => Promise<void>
-  recordCompensation: (returnId: number, compensation: Compensation) => Promise<void>
+  recordCompensation: (returnId: number, input: Pick<Compensation, 'type' | 'note'>) => Promise<void>
 }
 
 const PurchasingContext = createContext<PurchasingValue | null>(null)
@@ -104,7 +115,10 @@ const toRequisitionBody = (draft: RequisitionDraft, submit: boolean) => ({
 
 export function PurchasingProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const { data, loading, error, reload } = useResource(loadPurchasing, !!user && can.viewPurchasing(user.role))
+  const { data, loading, error, reload, apply } = useResource(
+    loadPurchasing,
+    !!user && can.viewPurchasing(user.role),
+  )
   const { reload: reloadInventory } = useInventory()
   const { reload: reloadNotifications } = useNotifications()
 
@@ -114,13 +128,11 @@ export function PurchasingProvider({ children }: { children: ReactNode }) {
     const receipts = data?.receipts ?? []
     const returns = data?.returns ?? []
 
-    // งานจัดซื้อแต่ละอย่างมีผลข้างเคียงฝั่งเซิร์ฟเวอร์ไม่เท่ากัน — โหลดใหม่เฉพาะชุดที่เปลี่ยนจริง
-    //
-    // เดิมเรียกทั้งสามชุดทุกครั้ง ทำให้กดรับสินค้าหนึ่งครั้งได้คำขอตามหลังเก้าอัน
-    // ทั้งที่บางงาน (ส่งใบสั่งซื้อ · ยืนยันวันส่ง) ไม่แตะสต็อกและไม่ออกแจ้งเตือนเลย
-    //
-    // เอกสารจัดซื้อต้องโหลดใหม่เสมอ เพราะทุกงานเปลี่ยนสถานะเอกสารอย่างน้อยหนึ่งใบ
-    // และ `/api/purchasing/budget` คิดจากใบที่ยังคงค้างอยู่
+    // บางงาน (ออก PO ใหม่ตอนอนุมัติ · เพิ่มยอดสต็อกตอนรับของ · ปิด PO ตอนคืนครบ · ยอดงบที่เปลี่ยน
+    // ตอนยกเลิก) เปลี่ยนมากกว่าที่ endpoint นั้นคืนมาให้ — ใช้ reload() ทั้งชุดเฉพาะงานพวกนี้
+    // ส่วนงานที่เปลี่ยนแค่เอกสารใบเดียวและเซิร์ฟเวอร์คืนแถวที่อัปเดตแล้วมาให้ครบ ใช้ apply()
+    // แทน ไม่งั้น reload() จะตั้ง loading:true แล้วทำให้ตัวห่อของฟอร์ม (เช่น RequisitionFormPage)
+    // unmount ฟอร์มทิ้งกลางคัน ข้อมูลที่ผู้ใช้พิมพ์ค้างอยู่หายไปเงียบ ๆ
     const refresh = async (also: { stock?: boolean; alerts?: boolean } = {}) => {
       await Promise.all([
         reload(),
@@ -128,6 +140,22 @@ export function PurchasingProvider({ children }: { children: ReactNode }) {
         ...(also.alerts ? [reloadNotifications()] : []),
       ])
     }
+
+    const applyRequisition = (row: PurchaseRequisition) =>
+      apply((current) => ({
+        ...current,
+        requisitions: upsertById(current.requisitions, row, (pr) => pr.prId),
+      }))
+    const applyOrder = (row: PurchaseOrder) =>
+      apply((current) => ({
+        ...current,
+        orders: upsertById(current.orders, row, (po) => po.poId),
+      }))
+    const applyReturn = (row: PurchaseReturn) =>
+      apply((current) => ({
+        ...current,
+        returns: upsertById(current.returns, row, (rt) => rt.returnId),
+      }))
 
     const saveRequisition = async (
       draft: RequisitionDraft,
@@ -139,8 +167,9 @@ export function PurchasingProvider({ children }: { children: ReactNode }) {
         prId === undefined
           ? await apiPost<PurchaseRequisition>('/api/requisitions', body)
           : await apiPut<PurchaseRequisition>(`/api/requisitions/${prId}`, body)
+      applyRequisition(saved)
       // เซิร์ฟเวอร์แจ้งผู้จัดการเฉพาะตอนที่ใบถูกยื่น — บันทึกร่างไว้เฉย ๆ ไม่ออกแจ้งเตือน
-      await refresh({ alerts: submit })
+      if (submit) await reloadNotifications()
       return saved
     }
 
@@ -174,17 +203,26 @@ export function PurchasingProvider({ children }: { children: ReactNode }) {
         return order
       },
       rejectRequisition: async (prId, reason) => {
-        await apiPost(`/api/requisitions/${prId}/reject`, { reason })
-        await refresh({ alerts: true })
+        const updated = await apiPost<PurchaseRequisition>(`/api/requisitions/${prId}/reject`, { reason })
+        applyRequisition(updated)
+        await reloadNotifications()
       },
       // ส่งใบและยืนยันวันส่งเปลี่ยนแค่สถานะเอกสาร ไม่แตะสต็อกและไม่ออกแจ้งเตือน
       sendOrder: async (poId) => {
-        await apiPost(`/api/purchase-orders/${poId}/send`)
-        await refresh()
+        const updated = await apiPost<PurchaseOrder>(`/api/purchase-orders/${poId}/send`)
+        applyOrder(updated)
       },
       confirmOrder: async (poId, expectedDeliveryDate) => {
-        await apiPost(`/api/purchase-orders/${poId}/confirm`, { expectedDeliveryDate })
-        await refresh()
+        const updated = await apiPost<PurchaseOrder>(`/api/purchase-orders/${poId}/confirm`, {
+          expectedDeliveryDate,
+        })
+        applyOrder(updated)
+      },
+      // ยอดผูกพันงบประมาณเปลี่ยนตอนยกเลิก (ใบ CANCELLED นับตามจำนวนที่รับจริง) และแจ้งผู้จัดการ
+      // เสมอ — เปลี่ยนมากกว่าที่ endpoint นี้คืนมาให้ จึง reload() ทั้งชุดเหมือน approve/receive
+      cancelOrder: async (poId, reason) => {
+        await apiPost(`/api/purchase-orders/${poId}/cancel`, { reason: reason ?? '' })
+        await refresh({ alerts: true })
       },
       receiveGoods: async (poId, draft) => {
         const receipt = await apiPost<GoodsReceipt>(
@@ -221,19 +259,18 @@ export function PurchasingProvider({ children }: { children: ReactNode }) {
         return created
       },
       escalateReturn: async (returnId, note) => {
-        await apiPost(`/api/returns/${returnId}/escalate`, { note })
-        await refresh({ alerts: true })
+        const updated = await apiPost<PurchaseReturn>(`/api/returns/${returnId}/escalate`, { note })
+        applyReturn(updated)
+        await reloadNotifications()
       },
-      recordCompensation: async (returnId, compensation) => {
-        await apiPost(`/api/returns/${returnId}/compensation`, {
-          type: compensation.type,
-          note: compensation.note,
-        })
-        // ชดเชยแบบ REPLACEMENT เพิ่มสต็อกคืน · แบบอื่นไม่แตะ แต่แยกไม่ได้จากฝั่งนี้
-        await refresh({ stock: true })
+      recordCompensation: async (returnId, input) => {
+        const updated = await apiPost<PurchaseReturn>(`/api/returns/${returnId}/compensation`, input)
+        applyReturn(updated)
+        // ชดเชยแบบ REPLACEMENT เพิ่มสต็อกคืน · แบบอื่นไม่แตะ แต่แยกไม่ได้จากฝั่งนี้ จึง reload เผื่อไว้เสมอ
+        await reloadInventory()
       },
     }
-  }, [data, loading, error, reload, reloadInventory, reloadNotifications])
+  }, [data, loading, error, reload, apply, reloadInventory, reloadNotifications])
 
   return <PurchasingContext.Provider value={value}>{children}</PurchasingContext.Provider>
 }

@@ -137,12 +137,22 @@ func (po *PurchaseOrder) Approve() error {
 	return nil
 }
 
-// Reject — PENDING_APPROVAL → CANCELLED (class diagram: +reject())
-// POStatus ไม่มีค่า REJECTED — ใบสั่งซื้อที่ถูกปฏิเสธถือเป็น CANCELLED
+// Reject — ยกเลิกใบสั่งซื้อ → CANCELLED (class diagram: +reject())
+// POStatus ไม่มีค่า REJECTED — ใบสั่งซื้อที่ถูกปฏิเสธ/ยกเลิกถือเป็น CANCELLED
+//
+// ยกเลิกได้จากทุกสถานะที่เอกสารยังไม่ปิด (PENDING_APPROVAL/APPROVED/CONFIRMED/RECEIVED_PARTIAL)
+// ปิดไม่ได้เมื่อใบถึงจุดจบแล้ว (RECEIVED_FULL รับครบ · RETURNED คืนครบ · CANCELLED ยกเลิกไปแล้ว)
+//
+// SCR-24 Abnormal (U8): ผู้จัดจำหน่ายแจ้งเลิกส่งกลางคัน — ถ้าไม่มีทางออกนี้ ใบที่ค้าง
+// RECEIVED_PARTIAL ตลอดไปจะทำให้ OutstandingOrderCount นับเป็นคงค้างถาวร แล้ว U3 ปิดใช้งาน
+// ผู้จัดจำหน่ายรายนั้นไม่ได้เลย (ดู README หัวข้อจุดที่ต่างจาก class diagram)
+//
+// **ไม่คืนสต็อกที่รับเข้ามาแล้ว** — received_qty ที่มีอยู่คือของจริงในคลัง ไม่ใช่ของที่ต้องเคลียร์คืน
 func (po *PurchaseOrder) Reject() error {
-	if po.Status != POStatusPendingApproval {
-		return Conflict("PO_NOT_PENDING",
-			"ปฏิเสธไม่ได้: สถานะปัจจุบันคือ "+po.Status.Label())
+	switch po.Status {
+	case POStatusReceivedFull, POStatusReturned, POStatusCancelled:
+		return Conflict("PO_ALREADY_CLOSED",
+			"ยกเลิกไม่ได้: ใบสั่งซื้อปิดรายการแล้ว สถานะปัจจุบันคือ "+po.Status.Label())
 	}
 	po.Status = POStatusCancelled
 	return nil
