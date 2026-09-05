@@ -116,7 +116,13 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     setError('')
     setSuccessMsg('')
     try {
-      await apiPut(`/api/reviews/${existingReview.reviewId}`, { rating, comment: comment.trim() })
+      // ต้องส่ง headline กลับไปด้วยแม้ฟอร์มนี้ไม่มีช่องแก้ไข — service.UpdateReviewInput
+      // เขียนทับ Headline แบบไม่มีเงื่อนไข ไม่ส่ง = ค่าเดิมหายเงียบ ๆ
+      await apiPut(`/api/reviews/${existingReview.reviewId}`, {
+        rating,
+        headline: existingReview.headline ?? '',
+        comment: comment.trim(),
+      })
       setIsEditing(false)
       setSuccessMsg('แก้ไขรีวิวสำเร็จแล้ว')
       await onRefresh()
