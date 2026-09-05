@@ -149,6 +149,12 @@ const MENU: MenuGroup[] = [
         allowed: can.adjustStock,
       },
       {
+        label: 'ประวัติการปรับยอด',
+        to: '/admin/stock/adjustments',
+        icon: 'clipboard',
+        allowed: can.viewAdjustmentHistory,
+      },
+      {
         label: 'ตรวจนับสต็อก',
         to: '/admin/stock/counts',
         icon: 'clipboard',

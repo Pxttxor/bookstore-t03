@@ -25,6 +25,7 @@ const BookFormPage = lazy(() => import('./admin/pages/BookFormPage'))
 const AdminBookDetailPage = lazy(() => import('./admin/pages/BookDetailPage'))
 const StockListPage = lazy(() => import('./admin/pages/StockListPage'))
 const StockAdjustPage = lazy(() => import('./admin/pages/StockAdjustPage'))
+const StockAdjustmentHistoryPage = lazy(() => import('./admin/pages/StockAdjustmentHistoryPage'))
 const StockCountListPage = lazy(() => import('./admin/pages/StockCountListPage'))
 const StockCountFormPage = lazy(() => import('./admin/pages/StockCountFormPage'))
 const StockCountDetailPage = lazy(() => import('./admin/pages/StockCountDetailPage'))
@@ -91,6 +92,7 @@ export default function App() {
         <Route path="stock" element={<StockListPage />} />
         <Route path="stock/low" element={<StockListPage />} />
         <Route path="stock/adjust" element={<StockAdjustPage />} />
+        <Route path="stock/adjustments" element={<StockAdjustmentHistoryPage />} />
         <Route path="stock/counts" element={<StockCountListPage />} />
         <Route path="stock/counts/new" element={<StockCountFormPage />} />
         <Route path="stock/counts/:id" element={<StockCountDetailPage />} />
