@@ -142,10 +142,19 @@ func runPersonFlow(e *env) {
 		}
 		return expect(body["address"], "99 ที่อยู่ใหม่หลังแก้โปรไฟล์ กรุงเทพฯ 10110")
 	})
-	check("แก้โปรไฟล์โดยเว้นช่องบังคับ → 422 REQUIRED_FIELDS", func() error {
+	check("แก้โปรไฟล์โดยเว้นชื่อ/นามสกุล → 422 REQUIRED_FIELDS", func() error {
 		return expectError("PUT", "/api/customers/me", e.customer, map[string]any{
-			"firstName": "ทดสอบ", "lastName": "ระบบ", "address": "",
+			"firstName": "", "lastName": "", "address": "99 ที่อยู่ใหม่หลังแก้โปรไฟล์ กรุงเทพฯ 10110",
 		}, 422, "REQUIRED_FIELDS")
+	})
+	check("แก้โปรไฟล์โดยเว้นที่อยู่ → ใช้ที่อยู่เดิม ไม่ error", func() error {
+		body, err := put(e.customer, "/api/customers/me", map[string]any{
+			"firstName": "ทดสอบ", "lastName": "ระบบ", "phone": "089-111-1111", "address": "",
+		}, 200)
+		if err != nil {
+			return err
+		}
+		return expect(body["address"], "99 ที่อยู่ใหม่หลังแก้โปรไฟล์ กรุงเทพฯ 10110")
 	})
 	check("ลูกค้าเข้าหน้าผู้จัดจำหน่ายไม่ได้ → 403", func() error {
 		return expectStatus("GET", "/api/suppliers", e.customer, nil, 403)
