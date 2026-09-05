@@ -74,6 +74,12 @@ type ConfirmInput struct {
 	ExpectedDeliveryDate string `json:"expectedDeliveryDate"`
 }
 
+// CancelInput — เหตุผลลงไปในข้อความแจ้งเตือนผู้จัดการเท่านั้น ไม่มีคอลัมน์ของตัวเอง
+// (เลี่ยงการแก้ตาราง schema 15 ตารางที่ส่งอาจารย์ไปแล้ว) เว้นว่างได้
+type CancelInput struct {
+	Reason string `json:"reason"`
+}
+
 type ReceiptLineInput struct {
 	BookID      int    `json:"bookId"`
 	ReceivedQty int    `json:"receivedQty"`
@@ -305,16 +311,15 @@ func (s *PurchasingService) SubmitRequisition(prID int) (*model.PurchaseRequisit
 
 // validateRequisition — กฎของ SCR-21
 func (s *PurchasingService) validateRequisition(input RequisitionInput) error {
-	if err := s.assertSupplierActive(input.SupplierID); err != nil {
-		return err
-	}
-	if len(input.Items) == 0 {
-		return model.ErrEmptyItems
-	}
-
 	supplier, err := s.suppliers.FindByID(input.SupplierID)
 	if err != nil {
 		return err
+	}
+	if !supplier.IsActive() {
+		return model.ErrSupplierInactive
+	}
+	if len(input.Items) == 0 {
+		return model.ErrEmptyItems
 	}
 
 	seen := make(map[int]bool, len(input.Items))
@@ -353,11 +358,10 @@ func (s *PurchasingService) assertSupplierActive(supplierID int) error {
 
 // Budget — งบประมาณและยอดผูกพันปัจจุบัน (แถบบน SCR-23)
 func (s *PurchasingService) Budget() (*BudgetSummary, error) {
-	orders, err := s.purchasing.ListOrders(repository.PurchaseOrderFilter{})
+	committed, err := s.purchasing.CommittedAmount(s.db)
 	if err != nil {
 		return nil, err
 	}
-	committed := model.CommittedAmount(orders)
 	return &BudgetSummary{
 		Budget:    model.PurchaseBudget,
 		Committed: committed,
@@ -383,12 +387,13 @@ func (s *PurchasingService) ApproveRequisition(prID int, input ApproveInput, by 
 			return err
 		}
 
-		orders, err := s.purchasing.ListOrders(repository.PurchaseOrderFilter{})
+		// อ่านยอดผูกพันก่อน CreateOrder เสมอ ไม่งั้นใบที่กำลังจะออกจะถูกนับซ้ำเข้าไปในยอดผูกพันเอง
+		committed, err := s.purchasing.CommittedAmount(tx)
 		if err != nil {
 			return err
 		}
 		total := model.DocumentTotal(requisition.Items)
-		if model.CommittedAmount(orders)+total > model.PurchaseBudget &&
+		if committed+total > model.PurchaseBudget &&
 			strings.TrimSpace(input.OverBudgetNote) == "" {
 			return model.ErrOverBudget
 		}
@@ -510,6 +515,41 @@ func (s *PurchasingService) ConfirmOrder(poID int, input ConfirmInput) (*model.P
 			return err
 		}
 		return s.purchasing.SaveOrderHeader(tx, order)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.purchasing.FindOrder(poID)
+}
+
+// CancelOrder — SCR-24 Abnormal (U8): ผู้จัดจำหน่ายเลิกส่งกลางคัน หรือไม่ส่งเลย
+//
+// ไม่มีเส้นทางยกเลิกมาก่อน ทำให้ใบที่ค้าง RECEIVED_PARTIAL ตลอดกาลบล็อก U3 ปิดใช้งาน
+// ผู้จัดจำหน่ายรายนั้นถาวร (OutstandingOrderCount นับ PO ที่ไม่ใช่ RECEIVED_FULL/RETURNED/CANCELLED
+// ว่าคงค้าง) · ใช้ PurchaseOrder.Reject() ที่ class diagram ประกาศไว้เป็นทางเข้า CANCELLED
+// แทนการเพิ่มเมธอดใหม่ · **ไม่คืนสต็อกที่รับเข้ามาแล้ว** เพราะของอยู่ในคลังจริง
+func (s *PurchasingService) CancelOrder(poID int, input CancelInput, by Identity) (*model.PurchaseOrder, error) {
+	reason := strings.TrimSpace(input.Reason)
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		order, err := s.purchasing.LockOrder(tx, poID)
+		if err != nil {
+			return err
+		}
+		if err := order.Reject(); err != nil {
+			return err
+		}
+		if err := s.purchasing.SaveOrderHeader(tx, order); err != nil {
+			return err
+		}
+
+		body := model.FormatPOCode(poID) + " ถูกยกเลิกโดย " + by.Name
+		if reason != "" {
+			body += " · เหตุผล: " + reason
+		}
+		return s.notify(tx, model.RoleManager, model.NotifyOrderCancelled,
+			"ใบสั่งซื้อถูกยกเลิก", body,
+			fmt.Sprintf("/admin/purchasing/po/%d", poID))
 	})
 	if err != nil {
 		return nil, err

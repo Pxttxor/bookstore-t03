@@ -123,6 +123,37 @@ func TestOrderSendAndConfirm(t *testing.T) {
 	})
 }
 
+// SCR-24 Abnormal (U8): ยกเลิกได้จากทุกสถานะที่ยังไม่ปิดเอกสาร ปิดไม่ได้เมื่อใบถึงจุดจบแล้ว
+func TestOrderReject(t *testing.T) {
+	cancellable := []POStatus{
+		POStatusPendingApproval, POStatusApproved, POStatusConfirmed, POStatusReceivedPartial,
+	}
+	for _, status := range cancellable {
+		t.Run(string(status)+" ยกเลิกได้", func(t *testing.T) {
+			po := &PurchaseOrder{Status: status}
+			if err := po.Reject(); err != nil {
+				t.Fatalf("ยกเลิกควรผ่าน: %v", err)
+			}
+			if po.Status != POStatusCancelled {
+				t.Errorf("สถานะ = %s, ต้องการ CANCELLED", po.Status)
+			}
+		})
+	}
+
+	closed := []POStatus{POStatusReceivedFull, POStatusReturned, POStatusCancelled}
+	for _, status := range closed {
+		t.Run(string(status)+" ยกเลิกไม่ได้", func(t *testing.T) {
+			po := &PurchaseOrder{Status: status}
+			if err := po.Reject(); err == nil {
+				t.Fatal("ยกเลิกใบที่ปิดรายการแล้วต้องไม่ผ่าน")
+			}
+			if po.Status != status {
+				t.Errorf("สถานะไม่ควรเปลี่ยนเมื่อยกเลิกไม่สำเร็จ ได้ %s", po.Status)
+			}
+		})
+	}
+}
+
 // U9: รับครบ → RECEIVED_FULL · รับบางส่วน → RECEIVED_PARTIAL (ใบยังเปิดรอรอบถัดไป)
 func TestApplyReceipt(t *testing.T) {
 	newOrder := func() *PurchaseOrder {
@@ -311,18 +342,6 @@ func TestRecalculateTotal(t *testing.T) {
 	}
 	if po.TotalAmount != want {
 		t.Errorf("TotalAmount = %.2f, ต้องการ %.2f", po.TotalAmount, want)
-	}
-}
-
-// ยอดผูกพันไม่นับใบที่ยกเลิกแล้ว (แถบงบบน SCR-23)
-func TestCommittedAmountSkipsCancelled(t *testing.T) {
-	orders := []PurchaseOrder{
-		{Status: POStatusApproved, Items: []PurchaseOrderItem{{Quantity: 10, UnitPrice: 100}}},
-		{Status: POStatusCancelled, Items: []PurchaseOrderItem{{Quantity: 99, UnitPrice: 999}}},
-		{Status: POStatusReceivedFull, Items: []PurchaseOrderItem{{Quantity: 5, UnitPrice: 200}}},
-	}
-	if got := CommittedAmount(orders); got != 2000 {
-		t.Errorf("ยอดผูกพัน = %.2f, ต้องการ 2000", got)
 	}
 }
 

@@ -18,6 +18,9 @@ export const can = {
   createRequisition: (role: Role) => role === 'warehouse',
   approveRequisition: (role: Role) => role === 'manager',
   sendOrder: (role: Role) => role === 'warehouse',
+  // SCR-24 Abnormal (U8): ผู้จัดจำหน่ายเลิกส่งกลางคัน — สิทธิ์ชุดเดียวกับ sendOrder/receiveGoods
+  // ตั้งชื่อยาวกว่า cancelOrder เพื่อไม่ชนกับ cancelOrder ของคำสั่งซื้อลูกค้าด้านล่าง
+  cancelPurchaseOrder: (role: Role) => role === 'warehouse',
   receiveGoods: (role: Role) => role === 'warehouse',
   createReturn: (role: Role) => role === 'warehouse',
 

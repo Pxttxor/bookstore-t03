@@ -119,7 +119,7 @@ func (s *PurchasingService) EscalateReturn(returnID int, input EscalateInput) (*
 	note := strings.TrimSpace(input.Note)
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		entry, err := s.purchasing.FindReturn(returnID)
+		entry, err := s.purchasing.LockReturn(tx, returnID)
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func (s *PurchasingService) RecordCompensation(returnID int, input CompensationI
 	kind := model.CompensationType(strings.TrimSpace(input.Type))
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		entry, err := s.purchasing.FindReturn(returnID)
+		entry, err := s.purchasing.LockReturn(tx, returnID)
 		if err != nil {
 			return err
 		}

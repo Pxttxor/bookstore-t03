@@ -61,7 +61,11 @@ func (s *PurchasingService) ReceiveGoods(poID int, input ReceiptInput, by Identi
 		if err := s.purchasing.CreateReceipt(tx, receipt); err != nil {
 			return err
 		}
-		if err := s.purchasing.SaveOrderItems(tx, order); err != nil {
+		touchedBookIDs := make([]int, len(receipt.Items))
+		for i, item := range receipt.Items {
+			touchedBookIDs[i] = item.BookID
+		}
+		if err := s.purchasing.SaveOrderItems(tx, order, touchedBookIDs); err != nil {
 			return err
 		}
 		if err := s.purchasing.SaveOrderHeader(tx, order); err != nil {

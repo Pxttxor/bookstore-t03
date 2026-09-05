@@ -160,7 +160,7 @@ func (s *SupplierService) Deactivate(supplierID int, input DeactivateInput, by s
 	}
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		supplier, err := s.suppliers.FindByIDTx(tx, supplierID)
+		supplier, err := s.suppliers.LockSupplier(tx, supplierID)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func (s *SupplierService) Deactivate(supplierID int, input DeactivateInput, by s
 			return err
 		}
 
-		return s.suppliers.Deactivate(supplierID, &model.SupplierDeactivation{
+		return s.suppliers.Deactivate(tx, supplierID, &model.SupplierDeactivation{
 			SupplierID: supplierID,
 			Reason:     strings.TrimSpace(input.Reason),
 			Note:       strings.TrimSpace(input.Note),
@@ -214,6 +214,15 @@ func (s *SupplierService) validate(input SupplierInput) error {
 		return model.ErrInvalidEmail
 	}
 
+	bookIDs := make([]int, len(input.Books))
+	for i, book := range input.Books {
+		bookIDs[i] = book.BookID
+	}
+	existing, err := s.books.ExistingIDs(bookIDs)
+	if err != nil {
+		return err
+	}
+
 	seen := make(map[int]bool, len(input.Books))
 	for _, book := range input.Books {
 		if seen[book.BookID] {
@@ -221,11 +230,7 @@ func (s *SupplierService) validate(input SupplierInput) error {
 		}
 		seen[book.BookID] = true
 
-		exists, err := s.books.Exists(book.BookID)
-		if err != nil {
-			return err
-		}
-		if !exists {
+		if !existing[book.BookID] {
 			return model.ErrBookNotFound
 		}
 		if book.SupplyPrice <= 0 {

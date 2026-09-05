@@ -25,7 +25,7 @@ interface SupplierValue {
   add: (draft: SupplierDraft) => Promise<Supplier>
   /** ผู้แก้ไขมาจาก JWT ฝั่งเซิร์ฟเวอร์ หน้าจอไม่ต้องส่งชื่อมาเอง */
   update: (supplierId: number, draft: SupplierDraft) => Promise<Supplier>
-  deactivate: (supplierId: number, deactivation: Deactivation) => Promise<void>
+  deactivate: (supplierId: number, input: Pick<Deactivation, 'reason' | 'note'>) => Promise<void>
 }
 
 const SupplierContext = createContext<SupplierValue | null>(null)
@@ -86,12 +86,9 @@ export function SupplierProvider({ children }: { children: ReactNode }) {
       return updated
     }
 
-    // at / by ของ Deactivation เซิร์ฟเวอร์เติมเอง ส่งไปด้วยจะโดน DisallowUnknownFields ปฏิเสธ
-    const deactivate = async (supplierId: number, deactivation: Deactivation) => {
-      const updated = await apiPost<Supplier>(`/api/suppliers/${supplierId}/deactivate`, {
-        reason: deactivation.reason,
-        note: deactivation.note,
-      })
+    // at / by ของ Deactivation เซิร์ฟเวอร์เติมเอง หน้าจอจึงส่งแค่เหตุผลกับหมายเหตุ
+    const deactivate = async (supplierId: number, input: Pick<Deactivation, 'reason' | 'note'>) => {
+      const updated = await apiPost<Supplier>(`/api/suppliers/${supplierId}/deactivate`, input)
       apply(replace(updated))
     }
 

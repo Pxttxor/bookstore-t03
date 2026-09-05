@@ -36,6 +36,7 @@ func (h *Handler) registerPurchasingRoutes(register registrar) {
 	register("GET /api/purchase-orders/{id}", rolePurchasing, h.getPurchaseOrder)
 	register("POST /api/purchase-orders/{id}/send", roleWarehouse, h.sendOrder)       // U8 · can.sendOrder
 	register("POST /api/purchase-orders/{id}/confirm", roleWarehouse, h.confirmOrder) // U8
+	register("POST /api/purchase-orders/{id}/cancel", roleWarehouse, h.cancelOrder)   // U8 Abnormal · can.cancelOrder
 	register("GET /api/purchase-orders/{id}/receipts", rolePurchasing, h.listOrderReceipts)
 	register("POST /api/purchase-orders/{id}/receipts", roleWarehouse, h.receiveGoods) // U9 · can.receiveGoods
 	register("GET /api/purchase-orders/{id}/returns", rolePurchasing, h.listOrderReturns)
@@ -306,6 +307,31 @@ func (h *Handler) confirmOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	order, err := h.purchasing.ConfirmOrder(poID, body)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, toPurchaseOrderDTO(*order))
+}
+
+// cancelOrder — SCR-24 Abnormal (U8): ผู้จัดจำหน่ายเลิกส่งกลางคัน
+func (h *Handler) cancelOrder(w http.ResponseWriter, r *http.Request) {
+	poID, err := httpx.PathInt(r, "id")
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	current, err := identity(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var body service.CancelInput
+	if err := httpx.Decode(r, &body); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	order, err := h.purchasing.CancelOrder(poID, body, *current)
 	if err != nil {
 		httpx.Error(w, err)
 		return

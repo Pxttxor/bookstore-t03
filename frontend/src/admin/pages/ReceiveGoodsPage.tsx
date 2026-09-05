@@ -35,6 +35,7 @@ interface DraftLine {
 // ซึ่งอ่านค่าครั้งเดียวตอน mount · ถ้าปล่อยให้ mount ตั้งแต่ยังโหลดไม่เสร็จ
 // รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function ReceiveGoodsPage() {
+  const { id } = useParams()
   const { loading, error, reload } = usePurchasing()
 
   if (loading) {
@@ -57,7 +58,8 @@ export default function ReceiveGoodsPage() {
     )
   }
 
-  return <ReceiveGoodsForm />
+  // ต้อง remount เมื่อเปลี่ยน id — เข้าชุดเดียวกับ BookFormPage/SupplierFormPage
+  return <ReceiveGoodsForm key={id ?? 'new'} />
 }
 
 function ReceiveGoodsForm() {

@@ -53,6 +53,25 @@ export default function ReorderAlertsPage() {
     [items, suppliers],
   )
 
+  // ต้องตรวจหลัง hook ทั้งหมดทำงานแล้ว ไม่ใช่ early return ก่อน useMemo — ไม่งั้นชน Rules of Hooks
+  // ข้อมูล SCR-20 เป็นสิทธิ์ของคลังสินค้าเท่านั้น (can.viewStock ที่ InventoryProvider ใช้กรองการโหลด
+  // กว้างกว่านี้ — ครอบคลุมผู้จัดการและฝ่ายขายด้วย ซึ่งไม่ควรเห็นหน้านี้)
+  if (!can.viewAlerts(role)) {
+    return (
+      <div className="admin-page">
+        <Breadcrumb items={[{ label: 'หน้าหลัก', to: '/admin' }, { label: 'แจ้งเตือนสต็อก' }]} />
+        <section className="admin-card">
+          <EmptyState
+            icon="lock"
+            title="บทบาทของคุณไม่มีสิทธิ์ดูแจ้งเตือนสินค้าถึงจุดสั่งซื้อ"
+            description="หน้านี้เป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
+            action={{ label: 'กลับไปหน้าหลัก', onClick: () => navigate('/admin') }}
+          />
+        </section>
+      </div>
+    )
+  }
+
   const selectable = rows.filter((row) => row.supplier?.status === 'ACTIVE')
   const chosen = rows.filter((row) => selected.includes(row.item.bookId))
   const supplierIds = [...new Set(chosen.map((row) => row.supplier?.supplierId))]
