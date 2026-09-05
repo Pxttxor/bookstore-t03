@@ -5,8 +5,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import type { Promotion } from './promotions'
 
-// ข้อมูลอยู่ในตาราง promotion ของ PostgreSQL แล้ว
-// เดิมเก็บใน localStorage คีย์ bookhaven.promotions.v1
+// ข้อมูลอยู่ในตาราง promotion ของ PostgreSQL
 const loadPromotions = () => apiGet<Promotion[]>('/api/promotions')
 
 export type PromotionDraft = Omit<Promotion, 'promotionId' | 'status'>

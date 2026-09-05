@@ -1,4 +1,4 @@
-// order.go — คำสั่งซื้อของลูกค้า (เจ้าของคลาส: จิรพนธ์ อยู่หลาย)
+// order.go — คำสั่งซื้อของลูกค้า
 // อ้างอิง class diagram: Sub1-Order.md
 //
 //	Customer "1" --> "*" Order : places

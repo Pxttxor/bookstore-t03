@@ -139,7 +139,7 @@ func (c CompensationType) IsValid() bool {
 	return false
 }
 
-// BookStatus — สถานะหนังสือ (คลาสของระบบย่อยข้อมูลหนังสือ)
+// BookStatus — สถานะหนังสือ
 type BookStatus string
 
 const (
@@ -155,7 +155,7 @@ func (s BookStatus) IsValid() bool {
 	return false
 }
 
-// StockTxnType — ประเภทการเคลื่อนไหวสต็อก (คลาสของระบบย่อยสินค้าคงคลัง)
+// StockTxnType — ประเภทการเคลื่อนไหวสต็อก
 type StockTxnType string
 
 const (

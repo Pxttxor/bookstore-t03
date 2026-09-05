@@ -273,11 +273,30 @@ func describeChanges(before, after *model.Supplier) string {
 			changed = append(changed, f.label)
 		}
 	}
-	if len(before.Books) != len(after.Books) {
+	if booksChanged(before.Books, after.Books) {
 		changed = append(changed, "รายการหนังสือ")
 	}
 	if len(changed) == 0 {
 		return "บันทึกข้อมูลโดยไม่มีการเปลี่ยนแปลง"
 	}
 	return "แก้ไข " + strings.Join(changed, ", ")
+}
+
+// booksChanged — เทียบเนื้อรายการหนังสือ ไม่ใช่แค่จำนวนเล่ม การแก้ราคาส่งหรือ lead time
+// โดยจำนวนเล่มเท่าเดิมต้องนับเป็นการเปลี่ยนแปลงด้วย
+func booksChanged(before, after []model.SupplierBook) bool {
+	if len(before) != len(after) {
+		return true
+	}
+	index := make(map[int]model.SupplierBook, len(before))
+	for _, b := range before {
+		index[b.BookID] = b
+	}
+	for _, a := range after {
+		b, ok := index[a.BookID]
+		if !ok || b.SupplyPrice != a.SupplyPrice || b.LeadTimeDays != a.LeadTimeDays {
+			return true
+		}
+	}
+	return false
 }

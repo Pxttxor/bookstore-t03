@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    // ฟังทุก network interface ไม่ใช่แค่ 127.0.0.1 — เครื่องอื่นในวง ZeroTier/LAN
+    // จึงเปิด http://<ip ของ Pi>:5173 ได้ (ค่าเริ่มต้นของ Vite ผูกแค่ localhost)
+    host: true,
+  },
   build: {
     rollupOptions: {
       output: {

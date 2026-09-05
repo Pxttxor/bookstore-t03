@@ -8,7 +8,6 @@ import { type CustomerOrder, type OrderStatus } from './orders'
 // ข้อมูลอยู่ในตาราง customer_order / customer_order_item /
 // customer_order_status_history ของ PostgreSQL แล้ว
 // (ชื่อตารางเป็น customer_order ไม่ใช่ order เพราะ ORDER เป็นคำสงวนของ SQL)
-// เดิมเก็บใน localStorage คีย์ bookhaven.orders.v1
 //
 // เซิร์ฟเวอร์กรองให้ตามผู้เรียกอยู่แล้ว: พนักงานเห็นทุกใบ ลูกค้าเห็นเฉพาะของตัวเอง
 const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')

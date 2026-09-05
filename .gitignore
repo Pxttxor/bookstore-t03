@@ -46,3 +46,15 @@ lerna-debug.log*
 
 # --- เอกสารประกอบ ไม่ใช่ source code ---
 ชี้แจงการส่งงาน.pdf
+
+# --- บันทึกกระบวนการทำงาน / รายงาน — ไม่ใช่ส่วนของตัวระบบ ---
+# แนวเดียวกับ CLAUDE.md / .claude/ ด้านบน · README.md ของ backend/ กับ frontend/
+# เป็นเอกสารระบบ จึงไม่เข้าเงื่อนไขนี้
+#
+# หมายเหตุ: PROGRESS.md · BUILD_ERRORS.md · ui-example/README.md ถูก commit ไปแล้ว
+# git จึงยัง track ต่อไป — กฎพวกนี้มีผลกับไฟล์ใหม่ หรือถ้าไฟล์ถูกลบแล้วสร้างใหม่เท่านั้น
+# อยากให้หลุดจาก repo จริง ต้อง `git rm --cached <ไฟล์>` แยกอีกที
+QA_REPORT*.md
+PROGRESS.md
+BUILD_ERRORS.md
+frontend/ui-example/README.md

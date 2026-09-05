@@ -1,4 +1,4 @@
-// delivery.go — จัดการการจัดส่ง (เจ้าของคลาส: ดวงกมล กองพันธ์)
+// delivery.go — จัดการการจัดส่ง
 // อ้างอิง class diagram: Sub1-Delivery.md
 //
 //	Order "1" --> "1" Shipment : shipped via

@@ -15,7 +15,7 @@ const ALL_CATEGORIES = 0
 export default function HomePage() {
   const [params] = useSearchParams()
   // ช่องค้นหาอยู่บน TopNav ส่งค่ามาทาง ?q= · ค้นแบบเดียวกับ Book.search()
-  // ของวุฒิภัทร (ชื่อเรื่อง / ผู้แต่ง / ISBN แบบไม่สนตัวพิมพ์)
+  // (ชื่อเรื่อง / ผู้แต่ง / ISBN แบบไม่สนตัวพิมพ์)
   const query = params.get('q') ?? ''
   const term = query.trim().toLowerCase()
 

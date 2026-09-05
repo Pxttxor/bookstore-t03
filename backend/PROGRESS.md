@@ -166,7 +166,7 @@ git add -A && git commit
 
 | # | เรื่อง | รายละเอียด |
 |---|---|---|
-| A | ป้ายไทยของ `StockCountStatus`/`ApprovalStatus`/`StockLevel` หายไปจาก frontend | `inventory.ts` ถูกตัดเหลือแค่ `InventoryItem`/`StockTransaction` ใน `634200d` (29 ส.ค. · commit ของดวงกมล **ไม่ใช่การ revert เมื่อ 7 ส.ค. อย่างที่เคยเขียนไว้**) · กู้ข้อความเดิมด้วย `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts` แล้วคัดมาตรงตัว |
+| A | ป้ายไทยของ `StockCountStatus`/`ApprovalStatus`/`StockLevel` หายไปจาก frontend | `inventory.ts` ถูกตัดเหลือแค่ `InventoryItem`/`StockTransaction` ใน `634200d` (29 ส.ค. · **ไม่ใช่การ revert เมื่อ 7 ส.ค. อย่างที่เคยเขียนไว้**) · กู้ข้อความเดิมด้วย `git show 28c4fdf:frontend/src/admin/inventory/inventory.ts` แล้วคัดมาตรงตัว |
 | B | `ApplyStockChanges` เดิมปัดยอดติดลบขึ้นเป็นศูนย์ | ถูกสำหรับ U9/U10 แต่จะกลืน abnormal flow ของการปรับยอดด้วยมือ → แยกเป็น `ApplyStrictStockChanges` และให้ service ตรวจยอดรวมทุกเล่มก่อนเขียน |
 | C | อนุมัติผลต่าง = **ตั้งยอดเท่าที่นับได้** ไม่ใช่บวก `variance` | ระหว่างรอผู้จัดการตัดสิน หนังสืออาจเคลื่อนไหวไปแล้ว `variance` ที่เก็บไว้จึงล้าสมัย (พฤติกรรมเดียวกับ `decide()` ฝั่งหน้าจอ) |
 | D | `stock_count_item` ต้องเขียนหลัง `stock_discrepancy_report` | เพราะถือ `report_id` เป็น FK · ลำดับในทรานแซกชันคือ หัวเอกสาร → รายงาน → รายการที่นับ |

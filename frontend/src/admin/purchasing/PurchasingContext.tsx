@@ -17,8 +17,7 @@ import {
 } from './purchasing'
 
 // ข้อมูลอยู่ในตาราง purchase_requisition / purchase_order / goods_receipt /
-// purchase_return (+ ตารางลูก) ของ PostgreSQL แล้ว
-// เดิมเป็น blob ก้อนเดียวใน localStorage คีย์ bookhaven.purchasing.v1
+// purchase_return (+ ตารางลูก) ของ PostgreSQL
 //
 // **สี่ขั้นตอนของ U7/U9/U10 อยู่ในทรานแซกชันเดียวฝั่งเซิร์ฟเวอร์แล้ว** — การออกใบสั่งซื้อ
 // ตอนอนุมัติ · การเพิ่มยอดสต็อกตอนรับสินค้า · การตัดสต็อกตอนส่งคืน · การแจ้งเตือน

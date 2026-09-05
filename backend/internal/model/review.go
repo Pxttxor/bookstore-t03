@@ -1,4 +1,4 @@
-// review.go — จัดการรีวิวลูกค้า (เจ้าของคลาส: ดวงกมล กองพันธ์)
+// review.go — จัดการรีวิวลูกค้า
 // อ้างอิง class diagram: Sub2-Review.md
 //
 //	Customer "1" --> "*" Review : writes

@@ -1,9 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# ไฟล์โค้ดต้องเป็น LF ในเครื่องด้วย ไม่ใช่แค่ในที่เก็บ
-# core.autocrlf=true ของ Windows จะเช็คเอาต์เป็น CRLF ซึ่งทำให้ `gofmt -l .`
-# ขึ้นชื่อทุกไฟล์ (gofmt ยอมรับเฉพาะ LF) แล้ว verify gate ของโปรเจกต์ใช้ไม่ได้จริง
 *.go   text eol=lf
 *.py   text eol=lf
 *.sh   text eol=lf

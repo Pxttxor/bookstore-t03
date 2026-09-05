@@ -87,7 +87,7 @@ export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
 }
 
 /**
- * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram ของดวงกมล
+ * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram
  *
  * **การติดธงเกิดฝั่งเซิร์ฟเวอร์แล้ว** (`Review.Submit` → `model.ProfanityFilter.CheckText`)
  * รายการนี้จึงเหลือไว้เป็น "สัญญา" ที่ `TestProfanityFilterWordsMatchFrontend`

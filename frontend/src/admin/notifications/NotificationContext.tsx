@@ -4,8 +4,7 @@ import { useResource } from '../../api/useResource'
 import { useAuth } from '../../auth/AuthContext'
 import { isEmployee, type Role } from '../../auth/roles'
 
-// ข้อมูลอยู่ในตาราง notification ของ PostgreSQL แล้ว
-// เดิมเก็บใน localStorage คีย์ bookhaven.notifications.v1
+// ข้อมูลอยู่ในตาราง notification ของ PostgreSQL
 //
 // **หน้าจอไม่สร้างการแจ้งเตือนเองอีกแล้ว** — เซิร์ฟเวอร์เขียนแถวให้ในทรานแซกชันเดียวกับ
 // งานธุรกิจที่เป็นต้นเหตุ (อนุมัติใบขอสั่งซื้อ · รับสินค้า · ตรวจนับพบผลต่าง · เปลี่ยนสถานะ

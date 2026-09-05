@@ -1,4 +1,4 @@
-// book.go — ระบบย่อยข้อมูลหนังสือ (เจ้าของ: วุฒิภัทร โกฎแสง)
+// book.go — ระบบย่อยข้อมูลหนังสือ
 // อ้างอิง class diagram: Sub1-Book-Management.md
 //
 //	Category "1" o-- "*" Book : contains
@@ -176,7 +176,7 @@ func bookFieldValue(draft BookDraft, field BookField, naming CategoryNamer) stri
 //
 // ChangedBy เก็บ "ชื่อ" ไม่ใช่รหัสพนักงาน ตามแบบเดียวกับ SupplierEditLog.By
 // class diagram วาดเส้น SalesStaff "1" --> "*" BookChangeLog : records ไว้แต่ไม่ระบุ attribute
-// จึงเป็น deviation ที่ต้องตกลงกับเจ้าของคลาสก่อนรวมงาน (ดู README)
+// จึงเป็น deviation (ดู README)
 type BookChangeLog struct {
 	LogID        int       `gorm:"column:log_id;primaryKey;autoIncrement" json:"logId"`
 	BookID       int       `gorm:"column:book_id;not null;index" json:"bookId"`

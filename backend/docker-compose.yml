@@ -21,7 +21,7 @@ services:
     environment:
       POSTGRES_DB: bookstore_t03
       POSTGRES_USER: bookstore
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bookstore}
+      POSTGRES_PASSWORD: bookstore
       # ต้องบังคับ UTF8 — ข้อมูลเกือบทั้งระบบเป็นภาษาไทย
       # ถ้าปล่อยให้ initdb เลือกเอง (หรือไปตั้ง LANG=C) จะได้ฐานข้อมูลเป็น SQL_ASCII
       # แล้ว driver จะปฏิเสธคำสั่งด้วย "simple protocol queries must be run with client_encoding=UTF8"
