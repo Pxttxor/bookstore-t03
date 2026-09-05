@@ -50,6 +50,13 @@ type ReviewInput struct {
 	Comment  string `json:"comment"`
 }
 
+// UpdateReviewInput — ฟอร์มแก้ไขรีวิวของลูกค้า
+type UpdateReviewInput struct {
+	Rating   int    `json:"rating"`
+	Headline string `json:"headline,omitempty"`
+	Comment  string `json:"comment"`
+}
+
 // ModerateInput — คำสั่งตรวจสอบรีวิวของพนักงาน (`Review.moderate(action)`)
 type ModerateInput struct {
 	Action model.ModerateAction `json:"action"`
@@ -116,6 +123,47 @@ func (s *ReviewService) Submit(current Identity, input ReviewInput) (*repository
 		return nil, err
 	}
 	return s.reviews.Find(s.db, created.ReviewID)
+}
+
+// Update — ลูกค้าแก้ไขรีวิวของตนเอง
+func (s *ReviewService) Update(current Identity, reviewID int, input UpdateReviewInput) (*repository.ReviewRow, error) {
+	if !current.IsCustomer() {
+		return nil, model.ErrForbidden
+	}
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		review, err := s.reviews.FindForUpdate(tx, reviewID)
+		if err != nil {
+			return err
+		}
+		if review.CustomerID != current.CustomerID {
+			return model.ErrForbidden
+		}
+		if review.Status == model.ReviewStatusRemoved {
+			return model.ErrReviewRemoved
+		}
+		if err := review.Update(input.Rating, input.Headline, input.Comment, s.filter); err != nil {
+			return err
+		}
+		return s.reviews.Save(tx, review)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.reviews.Find(s.db, reviewID)
+}
+
+// Delete — ลูกค้าลบรีวิวของตนเอง (หรือผู้จัดการลบ)
+func (s *ReviewService) Delete(current Identity, reviewID int) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		review, err := s.reviews.FindForUpdate(tx, reviewID)
+		if err != nil {
+			return err
+		}
+		if current.IsCustomer() && review.CustomerID != current.CustomerID {
+			return model.ErrForbidden
+		}
+		return s.reviews.Delete(tx, reviewID)
+	})
 }
 
 // List — รายการรีวิว · ลูกค้าเห็นเฉพาะรีวิวของตัวเองเสมอ ไม่ว่าจะส่งตัวกรองอะไรมา

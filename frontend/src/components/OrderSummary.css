@@ -27,7 +27,7 @@
 }
 .summary__item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 .summary__thumb {
@@ -65,20 +65,82 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  gap: 2px;
 }
 .summary__name {
   font-weight: 600;
   color: var(--text-heading);
   font-size: 15px;
+  line-height: 1.3;
 }
 .summary__author {
   font-size: 13px;
   color: var(--text-muted);
 }
+.summary__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.summary__stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface);
+  overflow: hidden;
+}
+.summary__step-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-body);
+  transition: background 0.15s, color 0.15s;
+}
+.summary__step-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--primary-deep);
+}
+.summary__step-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.summary__step-qty {
+  min-width: 24px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-heading);
+  user-select: none;
+}
+.summary__remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm, 4px);
+  transition: color 0.15s, background 0.15s;
+}
+.summary__remove-btn:hover {
+  color: var(--danger, #dc2626);
+  background: rgba(220, 38, 38, 0.08);
+}
 .summary__price {
   font-weight: 600;
   color: var(--primary-deep);
   white-space: nowrap;
+  align-self: flex-start;
 }
 
 .summary__totals {
@@ -107,6 +169,23 @@
 }
 .summary__row--total span:last-child {
   color: var(--primary-deep);
+}
+
+.summary__promo-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: var(--radius-sm, 6px);
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 500;
+}
+.summary__row--discount {
+  color: #16a34a;
+  font-weight: 600;
 }
 
 .summary__footer {

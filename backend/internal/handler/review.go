@@ -20,6 +20,8 @@ import (
 // · คิวรายงานเป็นของผู้จัดการคนเดียว (can.manageReportedReviews)
 func (h *Handler) registerReviewRoutes(register registrar) {
 	register("POST /api/reviews", roleCustomer, h.submitReview)
+	register("PUT /api/reviews/{id}", roleCustomer, h.updateReview)
+	register("DELETE /api/reviews/{id}", roleReviewOwner, h.deleteReview)
 	register("GET /api/reviews", roleReviewAudience, h.listReviews)
 	register("GET /api/reviews/{id}", roleReviewAudience, h.getReview)
 	register("GET /api/books/{id}/reviews", roleAnyUser, h.listBookReviews)
@@ -95,6 +97,38 @@ func (h *Handler) getReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.OK(w, toReviewDTO(*row))
+}
+
+func (h *Handler) updateReview(w http.ResponseWriter, r *http.Request) {
+	current, id, err := currentAndID(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var body service.UpdateReviewInput
+	if err := httpx.Decode(r, &body); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	row, err := h.reviews.Update(*current, id, body)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, toReviewDTO(*row))
+}
+
+func (h *Handler) deleteReview(w http.ResponseWriter, r *http.Request) {
+	current, id, err := currentAndID(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	if err := h.reviews.Delete(*current, id); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.NoContent(w)
 }
 
 // listBookReviews — รีวิวที่ขึ้นหน้าร้านของหนังสือเล่มหนึ่ง (เฉพาะที่ตรวจสอบผ่านแล้ว)

@@ -125,7 +125,7 @@ var (
 		"บัญชีนี้ไม่ได้ถูกระงับอยู่")
 )
 
-// ── ข้อมูลหนังสือ ──────────────────────────────────────────────────
+// ── ข้อมูลหนังสือ ──────────────────────────────────────────────────────
 var (
 	ErrCategoryNotFound = NotFound("CATEGORY_NOT_FOUND", "ไม่พบหมวดหมู่หนังสือ")
 
@@ -153,7 +153,7 @@ var (
 	ErrReportAlreadyDecided = Conflict("REPORT_ALREADY_DECIDED", "รายงานนี้ถูกตัดสินไปแล้ว")
 )
 
-// ── คำสั่งซื้อลูกค้าและโปรโมชั่น ─────────────────────────────────
+// ── คำสั่งซื้อลูกค้าและโปรโมชั่น ───────────────────────────────────────
 var (
 	ErrCustomerOrderNotFound = NotFound("CUSTOMER_ORDER_NOT_FOUND", "ไม่พบคำสั่งซื้อ")
 	ErrPromotionNotFound     = NotFound("PROMOTION_NOT_FOUND", "ไม่พบโปรโมชั่น")
@@ -183,7 +183,7 @@ func OrderTransitionRejected(from, to OrderStatus) *DomainError {
 		"เปลี่ยนสถานะจาก \""+from.Label()+"\" เป็น \""+to.Label()+"\" ไม่ได้")
 }
 
-// ── ตรวจสอบการชำระเงิน ──────────────────────────────────────────────
+// ── ตรวจสอบการชำระเงิน ─────────────────────────────────────────────────
 var (
 	ErrPaymentNotFound       = NotFound("PAYMENT_NOT_FOUND", "ไม่พบข้อมูลการชำระเงิน")
 	ErrPaymentReportNotFound = NotFound("PAYMENT_REPORT_NOT_FOUND", "ไม่พบรายงานการรับชำระเงิน")
@@ -198,7 +198,7 @@ var (
 		"วันเริ่มต้นของรอบรายงานต้องไม่หลังวันสิ้นสุด")
 )
 
-// ── จัดการการจัดส่ง ──────────────────────────────────────────────────
+// ── จัดการการจัดส่ง ────────────────────────────────────────────────────
 var (
 	ErrShipmentNotFound      = NotFound("SHIPMENT_NOT_FOUND", "ไม่พบรายการจัดส่ง")
 	ErrCarrierNotFound       = NotFound("CARRIER_NOT_FOUND", "ไม่พบบริษัทขนส่งที่เลือก")
@@ -218,7 +218,7 @@ func ShipmentTransitionRejected(from, to ShipmentStatus) *DomainError {
 		"เปลี่ยนสถานะพัสดุจาก \""+from.Label()+"\" เป็น \""+to.Label()+"\" ไม่ได้")
 }
 
-// ── ระบบสมาชิกและแต้มสะสม ────────────────────────────────────────────
+// ── ระบบสมาชิกและแต้มสะสม ──────────────────────────────────────────────
 //
 // ระบบย่อยนี้ไม่มีหน้าจอใน Figma spec ให้คัดข้อความ Abnormal มาตรง ๆ
 // จึงเขียนให้เข้าคู่กับชุดที่มีอยู่แล้ว (สั้น บอกสิ่งที่ผู้ใช้ต้องทำต่อ)
@@ -245,7 +245,7 @@ var (
 	ErrInvalidDiscountValue = Validation("INVALID_DISCOUNT_VALUE", "มูลค่าส่วนลดต้องมากกว่าศูนย์")
 )
 
-// ── ระบบย่อยรีวิวลูกค้า ──────────────────────────────────────────────
+// ── ระบบย่อยรีวิวลูกค้า ────────────────────────────────────────────────
 //
 // ข้อความคัดจากหน้าจอ /admin/reviews และหน้าเขียนรีวิวของหน้าร้าน
 var (
@@ -265,6 +265,7 @@ var (
 
 	ErrInvalidRating         = Validation("INVALID_RATING", "กรุณาให้คะแนนระหว่าง 1 ถึง 5 ดาว")
 	ErrEmptyReviewComment    = Validation("EMPTY_REVIEW_COMMENT", "กรุณากรอกข้อความรีวิว")
+	ErrReviewCommentTooLong  = Validation("REVIEW_COMMENT_TOO_LONG", "ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร")
 	ErrEmptyReplyText        = Validation("EMPTY_REPLY_TEXT", "กรุณากรอกข้อความตอบกลับ")
 	ErrEmptyReportReason     = Validation("EMPTY_REPORT_REASON", "กรุณาระบุเหตุผลที่รายงาน")
 	ErrInvalidModerateAction = Validation("INVALID_MODERATE_ACTION", "คำสั่งตรวจสอบรีวิวไม่ถูกต้อง")

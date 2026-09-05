@@ -158,3 +158,69 @@ func TestFormatOrderCode(t *testing.T) {
 		t.Errorf("รหัสคำสั่งซื้อ = %q ต้องการ SO-1001", got)
 	}
 }
+
+func TestOrderWithApplicablePromotions(t *testing.T) {
+	today := mustDateOf(t, "2026-09-05")
+
+	promoCoupon := Promotion{
+		PromotionID: 4, Name: "คูปองต้อนรับสมาชิกใหม่", Type: PromotionTypeCoupon,
+		DiscountValue: 50, IsPercent: false, MinAmount: 500,
+		StartDate: mustDateOf(t, "2026-07-01"), EndDate: mustDateOf(t, "2026-12-31"),
+		Status: PromotionStatusActive,
+	}
+	promoQty := Promotion{
+		PromotionID: 5, Name: "ซื้อครบ 3 เล่มลดเพิ่ม", Type: PromotionTypeBuyXQty,
+		DiscountValue: 10, IsPercent: true, MinQty: 3,
+		StartDate: mustDateOf(t, "2026-08-01"), EndDate: mustDateOf(t, "2026-09-30"),
+		Status: PromotionStatusActive,
+	}
+
+	// 1. ออร์เดอร์ 2 เล่ม รวม 600 บาท -> เข้าเฉพาะ promoCoupon (ยอด >= 500 แต่จำนวน 2 ไม่ถึง 3)
+	order1 := Order{}
+	_ = order1.AddItem(Book{BookID: 101, Price: 300}, 2)
+	order1.CalcTotal()
+
+	if !promoCoupon.IsApplicable(order1, today) {
+		t.Error("order1 (600 บาท) ควรเข้าเงื่อนไข promoCoupon")
+	}
+	if promoQty.IsApplicable(order1, today) {
+		t.Error("order1 (2 เล่ม) ไม่ควรเข้าเงื่อนไข promoQty")
+	}
+	discount1 := promoCoupon.CalcDiscount(order1)
+	if discount1 != 50 {
+		t.Errorf("ส่วนลด order1 = %.2f ต้องการ 50", discount1)
+	}
+
+	// 2. ออร์เดอร์ 3 เล่ม เล่มละ 300 บาท รวม 900 บาท -> เข้าทั้งสองโปรโมชั่น
+	// promoCoupon ให้ 50 บาท, promoQty ให้ 10% ของ 900 = 90 บาท -> promoQty ให้ส่วนลดมากกว่า
+	order2 := Order{}
+	_ = order2.AddItem(Book{BookID: 101, Price: 300}, 3)
+	order2.CalcTotal()
+
+	if !promoCoupon.IsApplicable(order2, today) || !promoQty.IsApplicable(order2, today) {
+		t.Error("order2 ควรเข้าเงื่อนไขทั้งสองโปรโมชั่น")
+	}
+	dCoupon := promoCoupon.CalcDiscount(order2)
+	dQty := promoQty.CalcDiscount(order2)
+	if dCoupon != 50 || dQty != 90 {
+		t.Errorf("dCoupon = %.2f (ต้องการ 50), dQty = %.2f (ต้องการ 90)", dCoupon, dQty)
+	}
+
+	// เลือกโปรที่ดีที่สุด
+	bestPromo := promoCoupon
+	bestDiscount := dCoupon
+	if dQty > bestDiscount {
+		bestPromo = promoQty
+		bestDiscount = dQty
+	}
+	order2.PromotionID = &bestPromo.PromotionID
+	order2.DiscountAmount = bestDiscount
+	order2.CalcTotal()
+
+	if order2.DiscountAmount != 90 {
+		t.Errorf("ส่วนลดต้องเป็น 90 ได้ %.2f", order2.DiscountAmount)
+	}
+	if order2.NetAmount != 810 {
+		t.Errorf("ยอดสุทธิต้องเป็น 810 ได้ %.2f", order2.NetAmount)
+	}
+}

@@ -30,9 +30,9 @@ func (i InventoryItem) IsBelowReorder() bool {
 // StockTransaction — รายการเคลื่อนไหวสต็อก
 // ระบบจัดซื้อสร้างชนิด RECEIVE_IN ตอนรับสินค้า (U9) และ RETURN ตอนส่งคืน (U10)
 //
-// BookID ไม่มีใน class diagram (ข้อ D4 ใน ClassDiagram-Review.md — คลาสนี้เป็นของระบบย่อย
-// สินค้าคงคลัง จึงยังไม่ได้แก้ในเอกสาร) แต่ถ้าไม่มี รายการเคลื่อนไหวจะไม่บอกว่าเป็นหนังสือเล่มไหน
-// และใช้งานจริงไม่ได้ จึงเพิ่มไว้ — เป็น deviation ที่ต้องตกลงกับเจ้าของคลาส
+// BookID ไม่มีใน class diagram (ข้อ D4 ใน ClassDiagram-Review.md ยังไม่ได้แก้ในเอกสาร)
+// แต่ถ้าไม่มี รายการเคลื่อนไหวจะไม่บอกว่าเป็นหนังสือเล่มไหนและใช้งานจริงไม่ได้ จึงเพิ่มไว้
+// เป็น deviation
 type StockTransaction struct {
 	TxnID          int          `gorm:"column:txn_id;primaryKey;autoIncrement" json:"txnId"`
 	BookID         int          `gorm:"column:book_id;not null;index" json:"bookId"`

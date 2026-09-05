@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import { usePayments } from '../admin/payments/PaymentContext'
+import type { Promotion } from '../admin/promotions/promotions'
+import { fetchActivePromotions, findBestPromotion } from '../services/promotionService'
 import './CheckoutPaymentPage.css'
 
 interface ShippingState {
@@ -57,13 +59,31 @@ export default function CheckoutPaymentPage() {
     error: banksError,
     reload: reloadBanks,
   } = usePayments()
+  const [promotions, setPromotions] = useState<Promotion[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const [slip, setSlip] = useState<File | null>(null)
+  const [slipPreviewUrl, setSlipPreviewUrl] = useState<string>('')
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
   const [bankId, setBankId] = useState(0)
 
-  const amount = subtotal
+  useEffect(() => {
+    let unmounted = false
+    fetchActivePromotions().then((list) => {
+      if (!unmounted) setPromotions(list)
+    })
+    return () => {
+      unmounted = true
+    }
+  }, [])
+
+  const totalQty = useMemo(() => lines.reduce((sum, line) => sum + line.qty, 0), [lines])
+  const { promotion: bestPromo, discount } = useMemo(
+    () => findBestPromotion(promotions, subtotal, totalQty),
+    [promotions, subtotal, totalQty],
+  )
+  const netAmount = Math.max(0, subtotal - discount)
+  const amount = netAmount
   const selectedBankId = bankId || banks[0]?.bankId
   const selectedBank = banks.find((bank) => bank.bankId === selectedBankId)
   const shipping = (state ?? {}) as ShippingState
@@ -71,11 +91,11 @@ export default function CheckoutPaymentPage() {
   const recipient = shipping.customerName?.trim() ?? ''
   const mobile = shipping.mobile?.trim() ?? ''
 
-  // เก็บไฟล์ทั้งก้อนเพื่อตรวจชนิดและขนาดได้ · ที่ส่งขึ้นเซิร์ฟเวอร์ยังเป็นชื่อไฟล์อย่างเดียว
-  // (โปรเจกต์นี้ไม่มีที่เก็บไฟล์ตามที่บันทึกไว้ใน frontend/CLAUDE.md)
+  // เก็บไฟล์ทั้งก้อนเพื่อตรวจชนิดและขนาดได้ และแปลงเป็น Data URL เพื่อให้หน้าหลังร้านแสดงรูปภาพได้
   const pickSlip = (file: File | undefined) => {
     const reject = (message: string) => {
       setSlip(null)
+      setSlipPreviewUrl('')
       setError(message)
       // ล้างค่าใน input ไม่งั้นเลือกไฟล์เดิมซ้ำจะไม่ยิง onChange อีก
       if (fileRef.current) fileRef.current.value = ''
@@ -94,6 +114,15 @@ export default function CheckoutPaymentPage() {
     }
     setSlip(file)
     setError('')
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setSlipPreviewUrl(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setSlipPreviewUrl('')
+    }
   }
 
   const confirm = async () => {
@@ -109,14 +138,23 @@ export default function CheckoutPaymentPage() {
     setPlacing(true)
     setError('')
     try {
-      // ชื่อลูกค้าและยอดเงินเซิร์ฟเวอร์คิดเอง (จากบัญชีที่ล็อกอินและราคาในตาราง book)
-      // หน้าจอส่งแค่ที่อยู่จัดส่ง รายการหนังสือ และชื่อไฟล์สลิป
+      // ส่งชื่อผู้รับ ที่อยู่จัดส่ง บัญชีธนาคาร รายการหนังสือ ชื่อไฟล์สลิป และรหัสโปรโมชั่น (ถ้ามี)
       const order = await placeOrder({
+        customerName: recipient,
         bankId: selectedBankId,
         shippingAddress,
         items: lines.map((line) => ({ bookId: line.book.bookId, quantity: line.qty })),
         slipFileName: slip.name,
+        promotionId: bestPromo?.promotionId,
       })
+      if (slipPreviewUrl) {
+        try {
+          localStorage.setItem(`slip_order_${order.orderId}`, slipPreviewUrl)
+          localStorage.setItem(`slip_file_${slip.name}`, slipPreviewUrl)
+        } catch {
+          // หากเกินโควตา localStorage ให้ละเว้น
+        }
+      }
       clear()
       navigate(`/order/${order.orderId}`)
     } catch (err) {
@@ -160,9 +198,40 @@ export default function CheckoutPaymentPage() {
             <QrPlaceholder />
           </div>
           <p className="pay__scan-note">สแกนรหัสด้านบนด้วยแอปธนาคารเพื่อชำระเงิน</p>
+
+          {bestPromo && discount > 0 && (
+            <div className="pay__promo-banner">
+              <Icon name="tag" size={16} />
+              <div className="pay__promo-text">
+                <span>ใช้โปรโมชั่นอัตโนมัติ</span>
+                <strong>{bestPromo.name}</strong>
+              </div>
+              <span className="pay__promo-discount">-{formatPrice(discount)}</span>
+            </div>
+          )}
+
           <div className="pay__amount">
-            <span>ยอดชำระ</span>
-            <strong>{formatPrice(lines.length ? amount : 0)}</strong>
+            {bestPromo && discount > 0 ? (
+              <div className="pay__amount-breakdown">
+                <div className="pay__amount-subrow">
+                  <span>รวมค่าสินค้า</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                <div className="pay__amount-subrow pay__amount-subrow--discount">
+                  <span>ส่วนลด ({bestPromo.name})</span>
+                  <span>-{formatPrice(discount)}</span>
+                </div>
+                <div className="pay__amount-main">
+                  <span>ยอดชำระสุทธิ</span>
+                  <strong>{formatPrice(lines.length ? amount : 0)}</strong>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span>ยอดชำระ</span>
+                <strong>{formatPrice(lines.length ? amount : 0)}</strong>
+              </>
+            )}
           </div>
         </section>
 
@@ -206,17 +275,27 @@ export default function CheckoutPaymentPage() {
             className="pay__drop"
             onClick={() => fileRef.current?.click()}
           >
-            <Icon name="upload" size={32} />
-            <span className="pay__drop-main">
-              {slip ? (
-                slip.name
-              ) : (
-                <>
-                  ลากไฟล์สลิปมาวางที่นี่ หรือ <b>เลือกไฟล์</b>
-                </>
-              )}
-            </span>
-            <span className="pay__drop-sub">รองรับ JPG, PNG หรือ PDF ขนาดไม่เกิน 5MB</span>
+            {slipPreviewUrl ? (
+              <div className="pay__slip-preview">
+                <img src={slipPreviewUrl} alt="ตัวอย่างสลิป" className="pay__slip-preview-img" />
+                <span className="pay__drop-main">{slip?.name}</span>
+                <span className="pay__drop-sub">คลิกเพื่อเปลี่ยนไฟล์รูปสลิป</span>
+              </div>
+            ) : (
+              <>
+                <Icon name="upload" size={32} />
+                <span className="pay__drop-main">
+                  {slip ? (
+                    slip.name
+                  ) : (
+                    <>
+                      ลากไฟล์สลิปมาวางที่นี่ หรือ <b>เลือกไฟล์</b>
+                    </>
+                  )}
+                </span>
+                <span className="pay__drop-sub">รองรับ JPG, PNG หรือ PDF ขนาดไม่เกิน 5MB</span>
+              </>
+            )}
             <input
               ref={fileRef}
               type="file"

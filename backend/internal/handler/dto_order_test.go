@@ -36,6 +36,17 @@ func TestOrderDTOCustomerEmail(t *testing.T) {
 	}
 }
 
+func TestOrderDTOCustomerName(t *testing.T) {
+	view := service.OrderView{
+		Order:        model.Order{OrderID: 1, CustomerID: 10, CustomerName: "riw2222"},
+		CustomerName: "riw2222",
+	}
+	dto := toOrderDTO(view)
+	if dto.CustomerName != "riw2222" {
+		t.Fatalf("expected customerName to be riw2222, got %q", dto.CustomerName)
+	}
+}
+
 func TestOrderDTOShipment(t *testing.T) {
 	view := service.OrderView{
 		Order: model.Order{OrderID: 1039, CustomerID: 6},
@@ -58,4 +69,3 @@ func TestOrderDTOShipment(t *testing.T) {
 		t.Errorf("expected carrier ไปรษณีย์ไทย, got %q", dto.Shipment.Carrier)
 	}
 }
-

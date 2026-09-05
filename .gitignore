@@ -1,0 +1,60 @@
+# --- Claude / AI assistant artifacts ---
+# กันไฟล์ที่บ่งบอกการใช้ AI assistant ไม่ให้เข้า repo (match ทุกระดับ รวม frontend/)
+.claude/
+CLAUDE.md
+
+# --- Node / Vite build ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# --- Logs ---
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Go build output ---
+*.exe
+*.exe~
+*.test
+*.out
+
+# --- Config ---
+# `.env` **ขึ้น repo ได้** ตามที่ตกลงกันในทีม (2 ก.ย. 69) — เป็นโปรเจกต์ที่ทำร่วมกับเพื่อน
+# ทุกคนจึงต้องได้ค่าเชื่อมต่อชุดเดียวกันโดยไม่ต้องส่งไฟล์กันเอง
+#
+# แลกมาด้วย: `backend/.env` มี DSN ของ PostgreSQL (พร้อมรหัสผ่าน) และ `JWT_SECRET`
+# ใครเห็น repo ก็เห็นค่าพวกนี้ · ถ้าวันหนึ่ง repo เปลี่ยนเป็นสาธารณะหรือแชร์ออกนอกทีม
+# ต้องเปลี่ยนรหัสผ่านฐานข้อมูลกับ JWT_SECRET ใหม่ก่อน (ของเก่าจะยังอยู่ใน git history ตลอดไป)
+.env.local
+
+# --- Editor / IDE / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- เอกสารประกอบ ไม่ใช่ source code ---
+ชี้แจงการส่งงาน.pdf
+
+# --- บันทึกกระบวนการทำงาน / รายงาน — ไม่ใช่ส่วนของตัวระบบ ---
+# แนวเดียวกับ CLAUDE.md / .claude/ ด้านบน · README.md ของ backend/ กับ frontend/
+# เป็นเอกสารระบบ จึงไม่เข้าเงื่อนไขนี้
+#
+# หมายเหตุ: PROGRESS.md · BUILD_ERRORS.md · ui-example/README.md ถูก commit ไปแล้ว
+# git จึงยัง track ต่อไป — กฎพวกนี้มีผลกับไฟล์ใหม่ หรือถ้าไฟล์ถูกลบแล้วสร้างใหม่เท่านั้น
+# อยากให้หลุดจาก repo จริง ต้อง `git rm --cached <ไฟล์>` แยกอีกที
+QA_REPORT*.md
+PROGRESS.md
+BUILD_ERRORS.md
+frontend/ui-example/README.md

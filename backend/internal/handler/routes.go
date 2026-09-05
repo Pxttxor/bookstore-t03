@@ -46,6 +46,9 @@ var (
 	// roleReviewAudience — คนที่เปิดดูรีวิวได้ · ลูกค้าเห็นเฉพาะของตัวเอง (service กรองให้)
 	roleReviewAudience = []model.Role{model.RoleSales, model.RoleManager, model.RoleCustomer}
 
+	// roleReviewOwner — เจ้าของรีวิวคือลูกค้า หรือผู้จัดการดูแลระบบ
+	roleReviewOwner = []model.Role{model.RoleCustomer, model.RoleManager}
+
 	// roleOrderAdmin — ยกเลิกคำสั่งซื้อได้ทั้งฝ่ายขายและผู้จัดการ
 	roleOrderAdmin = []model.Role{model.RoleSales, model.RoleManager}
 	roleCustomer   = []model.Role{model.RoleCustomer}
@@ -76,6 +79,7 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	mux.HandleFunc("GET /api/catalogue", h.listCatalogue)
 	mux.HandleFunc("GET /api/catalogue/categories", h.listCatalogueCategories)
 	mux.HandleFunc("GET /api/catalogue/{id}", h.getCatalogueBook)
+	mux.HandleFunc("GET /api/promotions/active", h.listActivePromotions)
 
 	register := registrar(func(pattern string, roles []model.Role, handler http.HandlerFunc) {
 		mux.Handle(pattern, middleware.Chain(handler,

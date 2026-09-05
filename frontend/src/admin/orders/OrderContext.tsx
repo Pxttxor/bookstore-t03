@@ -8,17 +8,18 @@ import { type CustomerOrder, type OrderStatus } from './orders'
 // ข้อมูลอยู่ในตาราง customer_order / customer_order_item /
 // customer_order_status_history ของ PostgreSQL แล้ว
 // (ชื่อตารางเป็น customer_order ไม่ใช่ order เพราะ ORDER เป็นคำสงวนของ SQL)
-// เดิมเก็บใน localStorage คีย์ bookhaven.orders.v1
 //
 // เซิร์ฟเวอร์กรองให้ตามผู้เรียกอยู่แล้ว: พนักงานเห็นทุกใบ ลูกค้าเห็นเฉพาะของตัวเอง
 const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
+  customerName?: string
   shippingAddress: string
   /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
   items: { bookId: number; quantity: number }[]
   slipFileName?: string
   bankId?: number
+  promotionId?: number
 }
 
 export interface StatusChangeOpts {
@@ -88,10 +89,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       // customerId / channel เซิร์ฟเวอร์เติมให้เองเมื่อผู้เรียกเป็นลูกค้าที่ล็อกอินอยู่
       // ยอดเงินก็คิดจากราคาในตาราง book ไม่ใช่ค่าที่หน้าจอส่งไป
       const order = await apiPost<CustomerOrder>('/api/orders', {
+        customerName: draft.customerName?.trim() || undefined,
         shippingAddress: draft.shippingAddress,
         slipFileName: draft.slipFileName ?? '',
         bankId: draft.bankId,
         items: draft.items,
+        promotionId: draft.promotionId,
       })
       apply((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)])
       await refresh()

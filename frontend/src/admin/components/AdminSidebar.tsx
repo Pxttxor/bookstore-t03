@@ -49,13 +49,6 @@ const MENU: MenuGroup[] = [
     heading: 'การชำระเงิน',
     items: [
       {
-        label: 'ตรวจสอบการชำระเงิน',
-        to: '/admin/payments',
-        icon: 'credit-card',
-        allowed: can.viewPayments,
-        end: true,
-      },
-      {
         label: 'รายงานสรุปรับชำระเงิน',
         to: '/admin/payments/report',
         icon: 'bar-chart',
@@ -147,6 +140,12 @@ const MENU: MenuGroup[] = [
         to: '/admin/stock/adjust',
         icon: 'edit',
         allowed: can.adjustStock,
+      },
+      {
+        label: 'ประวัติการปรับยอด',
+        to: '/admin/stock/adjustments',
+        icon: 'clipboard',
+        allowed: can.viewAdjustmentHistory,
       },
       {
         label: 'ตรวจนับสต็อก',

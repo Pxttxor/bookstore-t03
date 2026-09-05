@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// PointExpiryYears — แต้มที่ได้รับมีอายุกี่ปี (ตรงกับ AddDate(1, 0, 0))
+// PointExpiryYears — แต้มที่ได้รับมีอายุกี่ปี
 const PointExpiryYears = 1
 
 // MembershipTier — ระดับสมาชิกที่ผู้จัดการร้านเป็นคนกำหนด (`StoreManager.manageMemberTier()`)

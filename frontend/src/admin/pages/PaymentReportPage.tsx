@@ -96,7 +96,6 @@ export default function PaymentReportPage() {
       <Breadcrumb
         items={[
           { label: 'หน้าหลัก', to: '/admin' },
-          { label: 'ตรวจสอบการชำระเงิน', to: '/admin/payments' },
           { label: 'รายงานสรุปรับชำระเงิน' },
         ]}
       />

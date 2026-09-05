@@ -7,8 +7,7 @@ import { useOrders } from '../orders/OrderContext'
 import { ORDER_STATUS_LABELS, formatOrderCode } from '../orders/orders'
 import type { ModerateAction, Review, ReviewReply, ReviewStatus } from './reviews'
 
-// ข้อมูลอยู่ในตาราง review / review_reply / review_report ของ PostgreSQL แล้ว
-// เดิมเก็บใน localStorage คีย์ bookhaven.reviews.v5
+// ข้อมูลอยู่ในตาราง review / review_reply / review_report ของ PostgreSQL
 //
 // Book metadata comes from reviewDTO's existing database join. Order metadata
 // is joined from OrderContext; absent relationships stay absent, never mocked.

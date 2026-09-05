@@ -122,6 +122,14 @@ func (r *InventoryRepository) TransactionsForBook(bookID int) ([]model.StockTran
 	return txns, err
 }
 
+// AdjustmentTransactions — ประวัติการปรับยอดด้วยมือทั้งหมด ล่าสุดขึ้นก่อน
+func (r *InventoryRepository) AdjustmentTransactions() ([]model.StockTransaction, error) {
+	var txns []model.StockTransaction
+	err := r.db.Where("type = ?", model.StockTxnTypeAdjustment).
+		Order("txn_date DESC, txn_id DESC").Find(&txns).Error
+	return txns, err
+}
+
 // ── การแจ้งเตือน ────────────────────────────────────────────────────────
 
 type NotificationRepository struct{ db *gorm.DB }

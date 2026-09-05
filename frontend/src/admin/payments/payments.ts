@@ -1,4 +1,4 @@
-// ระบบย่อยที่ 1 — ตรวจสอบการชำระเงิน (Payment Verification)
+// ตรวจสอบการชำระเงิน (Payment Verification)
 
 import type { BadgeTone } from '../components/StatusBadge'
 

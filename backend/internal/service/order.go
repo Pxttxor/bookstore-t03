@@ -64,6 +64,7 @@ type OrderLineInput struct {
 // ฝ่ายขายที่รับออร์เดอร์ทางโทรศัพท์หรือข้อความต้องระบุทั้งสองอย่าง
 type PlaceOrderInput struct {
 	CustomerID      int                `json:"customerId"`
+	CustomerName    string             `json:"customerName,omitempty"`
 	Channel         model.OrderChannel `json:"channel"`
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
@@ -102,7 +103,6 @@ type OrderView struct {
 	Promotion     *model.Promotion
 	Shipment      *OrderShipmentInfo
 }
-
 
 // ── อ่าน ────────────────────────────────────────────────────────────────
 
@@ -207,8 +207,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	}
 
 	now := time.Now().UTC()
+	customerName := strings.TrimSpace(input.CustomerName)
+	if customerName == "" {
+		customerName = customer.Person.Name()
+	}
+
 	order := &model.Order{
 		CustomerID:      customerID,
+		CustomerName:    customerName,
 		Channel:         channel,
 		OrderDate:       now,
 		ShippingAddress: address,
@@ -258,23 +264,53 @@ func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order, bankID *int)
 	return s.payments.Create(tx, &payment)
 }
 
-// applyPromotion — ผูกโปรโมชั่นที่ลูกค้าเลือกแล้วคำนวณส่วนลดใหม่
+// applyPromotion — ผูกโปรโมชั่นที่ลูกค้าเลือก หรือค้นหาโปรโมชั่นที่เข้าเงื่อนไขให้อัตโนมัติ แล้วคำนวณส่วนลดใหม่
 func (s *OrderService) applyPromotion(order *model.Order, promotionID *int) error {
-	if promotionID == nil || *promotionID == 0 {
+	today := model.Today()
+
+	// 1. กรณีลูกค้าระบุโปรโมชั่นมาเจาะจง
+	if promotionID != nil && *promotionID > 0 {
+		promotion, err := s.promotions.Find(s.db, *promotionID)
+		if err != nil {
+			return err
+		}
+		if !promotion.IsApplicable(*order, today) {
+			return model.ErrPromotionNotApplicable
+		}
+
+		order.PromotionID = promotionID
+		order.DiscountAmount = promotion.CalcDiscount(*order)
+		order.CalcTotal()
 		return nil
 	}
 
-	promotion, err := s.promotions.Find(s.db, *promotionID)
+	// 2. กรณีไม่ได้ระบุโปรโมชั่นมา (auto-apply): หาโปรโมชั่น ACTIVE ที่เข้าเงื่อนไขทั้งหมด
+	// แล้วเลือกตัวที่ให้ส่วนลดสูงสุดแก่ลูกค้าโดยอัตโนมัติ
+	activePromos, err := s.promotions.Active()
 	if err != nil {
 		return err
 	}
-	if !promotion.IsApplicable(*order, model.Today()) {
-		return model.ErrPromotionNotApplicable
+
+	var bestPromo *model.Promotion
+	var maxDiscount float64
+	for i := range activePromos {
+		promo := &activePromos[i]
+		if promo.IsApplicable(*order, today) {
+			discount := promo.CalcDiscount(*order)
+			if discount > maxDiscount {
+				maxDiscount = discount
+				bestPromo = promo
+			}
+		}
 	}
 
-	order.PromotionID = promotionID
-	order.DiscountAmount = promotion.CalcDiscount(*order)
-	order.CalcTotal()
+	if bestPromo != nil && maxDiscount > 0 {
+		promoID := bestPromo.PromotionID
+		order.PromotionID = &promoID
+		order.DiscountAmount = maxDiscount
+		order.CalcTotal()
+	}
+
 	return nil
 }
 
@@ -515,11 +551,15 @@ func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input Shi
 
 	recipient := strings.TrimSpace(input.RecipientName)
 	if recipient == "" {
-		row, err := s.people.FindCustomer(order.CustomerID)
-		if err != nil {
-			return err
+		if order.CustomerName != "" {
+			recipient = order.CustomerName
+		} else {
+			row, err := s.people.FindCustomer(order.CustomerID)
+			if err != nil {
+				return err
+			}
+			recipient = row.Person.Name()
 		}
-		recipient = row.Person.Name()
 	}
 
 	now := time.Now()
@@ -714,9 +754,13 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 	}
 
 	for i, order := range orders {
+		custName := order.CustomerName
+		if custName == "" {
+			custName = names[order.CustomerID]
+		}
 		views[i] = OrderView{
 			Order:         order,
-			CustomerName:  names[order.CustomerID],
+			CustomerName:  custName,
 			CustomerEmail: emails[order.CustomerID],
 			Books:         books,
 		}

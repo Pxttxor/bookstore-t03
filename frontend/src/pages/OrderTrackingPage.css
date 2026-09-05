@@ -330,8 +330,109 @@
   border: 1px solid var(--border);
 }
 .track-review__book h4 {
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
+}
+.track-review__book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.track-review__status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.track-review__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  line-height: 1.4;
+}
+.track-review__badge.is-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+.track-review__badge.is-published {
+  background: #d1fae5;
+  color: #065f46;
+}
+.track-review__badge.is-hidden {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+.track-review__date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.track-review__editing-badge {
+  display: inline-block;
+  width: fit-content;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-deep);
+  background: rgba(37, 196, 168, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.track-review__existing-content {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.track-review__existing-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.track-review__rating-num {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.track-review__comment-text {
+  margin: 0;
+  color: var(--text-body);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.track-review__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.track-review__btn-edit,
+.track-review__btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.btn-outline-danger {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+.btn-outline-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #dc2626;
 }
 .track-review__rate {
   display: flex;
@@ -346,6 +447,19 @@
   gap: 6px;
   font-size: 14px;
   color: var(--text-body);
+}
+.track-review__field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.track-review__char-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.track-review__char-count.is-max {
+  color: #dc2626;
+  font-weight: 600;
 }
 .track-review__field input,
 .track-review__field textarea {
@@ -407,6 +521,28 @@
 }
 .track-review__submit {
   align-self: flex-start;
+}
+.track-review__error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 0;
+}
+.track-review__success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #059669;
+  font-size: 13px;
+  margin: 0;
+  font-weight: 600;
+}
+.track-review__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 16px 0;
 }
 .track-review__thanks {
   display: inline-flex;

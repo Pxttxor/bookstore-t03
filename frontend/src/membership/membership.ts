@@ -1,4 +1,4 @@
-// ระบบย่อยที่ 2 — ระบบสมาชิกและแต้มสะสม (Membership & Loyalty)
+// ระบบสมาชิกและแต้มสะสม (Membership & Loyalty)
 
 import type { BadgeTone } from '../admin/components/StatusBadge'
 
