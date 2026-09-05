@@ -24,33 +24,38 @@ export default function StockAdjustmentHistoryPage() {
   const { user } = useAuth()
   const { books } = useBooks()
   const navigate = useNavigate()
+  const permitted = !!user && can.viewAdjustmentHistory(user.role)
   const [transactions, setTransactions] = useState<StockTransaction[]>([])
-  const [loading, setLoading] = useState(true)
+  // เริ่มจากค่า permitted ตรง ๆ — ถ้าไม่มีสิทธิ์ตั้งแต่ต้นก็ไม่ต้องรอ (กัน
+  // react-hooks/set-state-in-effect ที่ห้าม setState เปล่า ๆ ใน effect โดยไม่มีงานอื่นตามมา)
+  const [loading, setLoading] = useState(permitted)
   const [error, setError] = useState<string | null>(null)
   const [term, setTerm] = useState('')
   const [direction, setDirection] = useState<'ALL' | 'IN' | 'OUT'>('ALL')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const permitted = !!user && can.viewAdjustmentHistory(user.role)
 
   useEffect(() => {
-    if (!permitted) {
-      setLoading(false)
-      return
-    }
+    if (!permitted) return
     let active = true
-    setLoading(true)
-    setError(null)
-    void apiGet<StockTransaction[]>('/api/inventory/adjustments')
-      .then((rows) => {
-        if (active) setTransactions(rows)
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : 'โหลดประวัติการปรับยอดไม่สำเร็จ')
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
+
+    // setState เกิดหลัง await เสมอ ไม่ใช่ตอน effect เริ่มทำงาน — แพตเทิร์นเดียวกับ
+    // useResource.run() กัน react-hooks/set-state-in-effect
+    const run = async () => {
+      try {
+        const rows = await apiGet<StockTransaction[]>('/api/inventory/adjustments')
+        if (!active) return
+        setTransactions(rows)
+        setError(null)
+        setLoading(false)
+      } catch (reason: unknown) {
+        if (!active) return
+        setError(reason instanceof Error ? reason.message : 'โหลดประวัติการปรับยอดไม่สำเร็จ')
+        setLoading(false)
+      }
+    }
+    void run()
+
     return () => {
       active = false
     }
