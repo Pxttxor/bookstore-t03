@@ -49,13 +49,6 @@ const MENU: MenuGroup[] = [
     heading: 'การชำระเงิน',
     items: [
       {
-        label: 'ตรวจสอบการชำระเงิน',
-        to: '/admin/payments',
-        icon: 'credit-card',
-        allowed: can.viewPayments,
-        end: true,
-      },
-      {
         label: 'รายงานสรุปรับชำระเงิน',
         to: '/admin/payments/report',
         icon: 'bar-chart',

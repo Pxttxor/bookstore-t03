@@ -476,7 +476,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               </div>
               {order.discountAmount > 0 && (
                 <div className="track__row track__row--discount">
-                  <span>ส่วนลด</span>
+                  <span>ส่วนลด {order.promotionName ? `(${order.promotionName})` : ''}</span>
                   <span>-{formatPrice(order.discountAmount)}</span>
                 </div>
               )}

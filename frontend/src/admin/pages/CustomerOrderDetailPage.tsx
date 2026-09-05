@@ -55,11 +55,24 @@ interface CarrierOption {
 
 const loadCarriers = () => apiGet<CarrierOption[]>('/api/carriers')
 
+function getSlipSource(orderId: number, slipFileName?: string): string {
+  if (!slipFileName) return ''
+  try {
+    const fromOrder = localStorage.getItem(`slip_order_${orderId}`)
+    if (fromOrder) return fromOrder
+    const fromFile = localStorage.getItem(`slip_file_${slipFileName}`)
+    if (fromFile) return fromFile
+  } catch {
+    // ignore
+  }
+  return `/slips/${slipFileName}`
+}
+
 export default function CustomerOrderDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { findOrder, updateStatus, loading, error, reload } = useOrders()
-  const { reload: reloadPayments } = usePayments()
+  const { reload: reloadPayments, payments, banks } = usePayments()
   const { reload: reloadInventory } = useInventory()
   // บริษัทขนส่งอยู่ในตาราง shipping_company · พัสดุเป็นคนละ endpoint กับใบสั่งซื้อ
   const { data: carrierRows } = useResource(loadCarriers)
@@ -74,9 +87,13 @@ export default function CustomerOrderDetailPage() {
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [slipModalOpen, setSlipModalOpen] = useState(false)
 
   const role = user!.role
   const order = findOrder(Number(id))
+  const payment = payments.find((p) => p.orderId === order?.orderId)
+  const bank = banks.find((b) => b.bankId === payment?.bankId)
+  const slipSrc = order ? getSlipSource(order.orderId, order.slipFileName) : ''
 
   if (loading) {
     return (
@@ -323,9 +340,121 @@ export default function CustomerOrderDetailPage() {
               <dt>ที่อยู่จัดส่ง</dt>
               <dd>{order.shippingAddress}</dd>
               <dt>สลิปการชำระเงิน</dt>
-              <dd>{order.slipFileName ?? '—'}</dd>
+              <dd>
+                {order.slipFileName ? (
+                  <button
+                    type="button"
+                    className="order-detail__slip-link"
+                    onClick={() => setSlipModalOpen(true)}
+                    title="คลิกเพื่อดูภาพสลิป"
+                  >
+                    <Icon name="file-text" size={14} />
+                    {order.slipFileName}
+                  </button>
+                ) : (
+                  '—'
+                )}
+              </dd>
             </dl>
           </section>
+
+          {order.slipFileName ? (
+            <section
+              className={`admin-card order-detail__panel order-detail__slip-panel ${
+                order.status === 'VERIFYING_PAYMENT' ? 'is-verifying' : ''
+              }`}
+            >
+              <div className="order-detail__panel-header-row">
+                <h2 className="order-detail__panel-title">
+                  <Icon name="upload" size={18} /> หลักฐานการชำระเงิน
+                </h2>
+                {order.status === 'VERIFYING_PAYMENT' && (
+                  <span className="order-detail__slip-tag">รอตรวจสอบ</span>
+                )}
+              </div>
+
+              <div className="order-detail__slip-wrapper">
+                <div
+                  className="order-detail__slip-thumb-container"
+                  onClick={() => setSlipModalOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setSlipModalOpen(true)
+                  }}
+                  title="คลิกเพื่อดูภาพสลิปขนาดเต็ม"
+                >
+                  <img
+                    src={slipSrc}
+                    alt={`สลิปโอนเงิน ${order.slipFileName}`}
+                    className="order-detail__slip-img"
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      if (!target.src.endsWith('/slips/default-slip.png')) {
+                        target.src = '/slips/default-slip.png'
+                      }
+                    }}
+                  />
+                  <div className="order-detail__slip-overlay">
+                    <Icon name="search" size={20} />
+                    <span>คลิกเพื่อดูภาพขนาดเต็ม</span>
+                  </div>
+                </div>
+
+                <div className="order-detail__slip-meta">
+                  <div className="order-detail__slip-row">
+                    <span className="order-detail__slip-label">ชื่อไฟล์:</span>
+                    <span className="order-detail__slip-val order-detail__mono">{order.slipFileName}</span>
+                  </div>
+                  <div className="order-detail__slip-row">
+                    <span className="order-detail__slip-label">ยอดที่ต้องชำระ:</span>
+                    <strong className="order-detail__slip-val order-detail__slip-amount">
+                      {formatPrice(order.netAmount)}
+                    </strong>
+                  </div>
+                  {bank && (
+                    <div className="order-detail__slip-row">
+                      <span className="order-detail__slip-label">โอนเข้าธนาคาร:</span>
+                      <span className="order-detail__slip-val">
+                        {bank.name} ({bank.accountNo})
+                      </span>
+                    </div>
+                  )}
+                  {payment?.transferDate && (
+                    <div className="order-detail__slip-row">
+                      <span className="order-detail__slip-label">วันเวลาที่แจ้งโอน:</span>
+                      <span className="order-detail__slip-val">
+                        {fmtDateTime(payment.transferDate)}
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm order-detail__slip-btn"
+                    onClick={() => setSlipModalOpen(true)}
+                  >
+                    <Icon name="eye" size={16} /> ขยายดูภาพสลิป
+                  </button>
+                </div>
+              </div>
+
+              {order.status === 'VERIFYING_PAYMENT' && (
+                <div className="order-detail__slip-notice">
+                  <Icon name="alert-triangle" size={16} />
+                  <span>กรุณาตรวจสอบยอดเงินและรายละเอียดในสลิปให้ตรงกับคำสั่งซื้อก่อนกดยืนยัน</span>
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="admin-card order-detail__panel">
+              <h2 className="order-detail__panel-title">
+                <Icon name="upload" size={18} /> หลักฐานการชำระเงิน
+              </h2>
+              <p className="order-detail__waiting">
+                <Icon name="clock" size={16} /> ลูกค้ายังไม่ได้แนบสลิปการชำระเงิน
+              </p>
+            </section>
+          )}
 
           {order.shipment && (
             <section className="admin-card order-detail__panel">
@@ -406,7 +535,7 @@ export default function CustomerOrderDetailPage() {
               </div>
               {order.discountAmount > 0 && (
                 <div>
-                  <dt>ส่วนลด</dt>
+                  <dt>ส่วนลด {order.promotionName ? `(${order.promotionName})` : ''}</dt>
                   <dd>-{formatPrice(order.discountAmount)}</dd>
                 </div>
               )}
@@ -513,6 +642,51 @@ export default function CustomerOrderDetailPage() {
             />
             {trackingError && <span className="admin-field__error">{trackingError}</span>}
           </label>
+        </Modal>
+      )}
+
+      {slipModalOpen && order.slipFileName && (
+        <Modal
+          title={`หลักฐานการชำระเงิน ${formatOrderCode(order.orderId)} (${order.slipFileName})`}
+          onClose={() => setSlipModalOpen(false)}
+          footer={
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                width: '100%',
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                ยอดชำระ:{' '}
+                <strong style={{ color: 'var(--text-heading)' }}>
+                  {formatPrice(order.netAmount)}
+                </strong>
+              </span>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setSlipModalOpen(false)}
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          }
+        >
+          <div className="order-detail__modal-slip-container">
+            <img
+              src={slipSrc}
+              alt={`สลิปโอนเงิน ${order.slipFileName}`}
+              className="order-detail__modal-slip-img"
+              onError={(e) => {
+                const target = e.currentTarget
+                if (!target.src.endsWith('/slips/default-slip.png')) {
+                  target.src = '/slips/default-slip.png'
+                }
+              }}
+            />
+          </div>
         </Modal>
       )}
     </div>
