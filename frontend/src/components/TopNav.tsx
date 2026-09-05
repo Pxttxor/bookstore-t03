@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from './Icon'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
@@ -12,7 +12,7 @@ const LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Bestsellers', to: '/?filter=bestsellers' },
   { label: 'Categories', to: '/?filter=categories' },
-  { label: 'Deals', to: '/?filter=deals' },
+  { label: 'Deals', to: '/promotions' },
 ]
 
 function initialsOf(name: string): string {
@@ -26,8 +26,10 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
   const { user } = useAuth()
   const { count } = useCart()
   const [params] = useSearchParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const query = params.get('q') ?? ''
+  const currentFilter = params.get('filter')
 
   // ค้นหาที่ TopNav พาไปโชว์ผลบน grid หน้าหลัก — sync กับ ?q= เส้นเดียว
   const onSearch = (value: string) => {
@@ -42,18 +44,26 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
             BookHaven
           </Link>
           <nav className="topnav__links">
-            {LINKS.map((l) => (
-              <NavLink
-                key={l.label}
-                to={l.to}
-                end={l.to === '/'}
-                className={({ isActive }) =>
-                  'topnav__link' + (isActive ? ' is-active' : '')
-                }
-              >
-                {l.label}
-              </NavLink>
-            ))}
+            {LINKS.map((l) => {
+              const isActive =
+                l.to === '/'
+                  ? location.pathname === '/' && !currentFilter && !query
+                  : l.to.startsWith('/?filter=')
+                    ? location.pathname === '/' && currentFilter === l.to.split('=')[1]
+                    : l.to === '/promotions'
+                      ? location.pathname === '/promotions' || location.pathname === '/deals'
+                      : location.pathname === l.to
+
+              return (
+                <Link
+                  key={l.label}
+                  to={l.to}
+                  className={'topnav__link' + (isActive ? ' is-active' : '')}
+                >
+                  {l.label}
+                </Link>
+              )
+            })}
           </nav>
         </div>
 

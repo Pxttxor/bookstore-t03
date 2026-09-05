@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Icon from './Icon'
 import BookCover from './BookCover'
 import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
+import type { Promotion } from '../admin/promotions/promotions'
+import { fetchActivePromotions, findBestPromotion } from '../services/promotionService'
 import './OrderSummary.css'
 
 interface OrderSummaryProps {
@@ -17,7 +19,24 @@ export default function OrderSummary({
   shipping = 0,
 }: OrderSummaryProps) {
   const { lines, subtotal, setQty, removeItem } = useCart()
-  const total = subtotal + shipping
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+
+  useEffect(() => {
+    let unmounted = false
+    fetchActivePromotions().then((list) => {
+      if (!unmounted) setPromotions(list)
+    })
+    return () => {
+      unmounted = true
+    }
+  }, [])
+
+  const totalQty = useMemo(() => lines.reduce((sum, line) => sum + line.qty, 0), [lines])
+  const { promotion: bestPromo, discount } = useMemo(
+    () => findBestPromotion(promotions, subtotal, totalQty),
+    [promotions, subtotal, totalQty],
+  )
+  const total = Math.max(0, subtotal - discount) + shipping
 
   return (
     <aside className="summary">
@@ -84,11 +103,24 @@ export default function OrderSummary({
         </ul>
       )}
 
+      {bestPromo && discount > 0 && (
+        <div className="summary__promo-badge">
+          <Icon name="tag" size={14} />
+          <span>ใช้โปรโมชั่นอัตโนมัติ: <strong>{bestPromo.name}</strong></span>
+        </div>
+      )}
+
       <div className="summary__totals">
         <div className="summary__row">
           <span>รวมค่าสินค้า</span>
           <span>{formatPrice(subtotal)}</span>
         </div>
+        {bestPromo && discount > 0 && (
+          <div className="summary__row summary__row--discount">
+            <span>ส่วนลด ({bestPromo.name})</span>
+            <span>-{formatPrice(discount)}</span>
+          </div>
+        )}
         <div className="summary__row">
           <span>ค่าจัดส่ง</span>
           <span className={shipping === 0 ? 'summary__free' : undefined}>

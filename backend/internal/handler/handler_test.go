@@ -58,6 +58,7 @@ func TestCatalogueIsPublic(t *testing.T) {
 		"/api/catalogue",
 		"/api/catalogue/categories",
 		"/api/catalogue/101",
+		"/api/promotions/active",
 	}
 
 	for _, path := range paths {

@@ -209,6 +209,21 @@ func currentAndID(r *http.Request) (*service.Identity, int, error) {
 
 // ── โปรโมชั่น ───────────────────────────────────────────────────────────
 
+func (h *Handler) listActivePromotions(w http.ResponseWriter, _ *http.Request) {
+	views, err := h.promotions.List()
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var active []service.PromotionView
+	for _, v := range views {
+		if v.DisplayStatus == model.PromotionStatusActive {
+			active = append(active, v)
+		}
+	}
+	httpx.OK(w, toPromotionDTOs(active))
+}
+
 func (h *Handler) listPromotions(w http.ResponseWriter, _ *http.Request) {
 	views, err := h.promotions.List()
 	if err != nil {

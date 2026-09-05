@@ -253,23 +253,53 @@ func (s *OrderService) openPayment(tx *gorm.DB, order *model.Order, bankID *int)
 	return s.payments.Create(tx, &payment)
 }
 
-// applyPromotion — ผูกโปรโมชั่นที่ลูกค้าเลือกแล้วคำนวณส่วนลดใหม่
+// applyPromotion — ผูกโปรโมชั่นที่ลูกค้าเลือก หรือค้นหาโปรโมชั่นที่เข้าเงื่อนไขให้อัตโนมัติ แล้วคำนวณส่วนลดใหม่
 func (s *OrderService) applyPromotion(order *model.Order, promotionID *int) error {
-	if promotionID == nil || *promotionID == 0 {
+	today := model.Today()
+
+	// 1. กรณีลูกค้าระบุโปรโมชั่นมาเจาะจง
+	if promotionID != nil && *promotionID > 0 {
+		promotion, err := s.promotions.Find(s.db, *promotionID)
+		if err != nil {
+			return err
+		}
+		if !promotion.IsApplicable(*order, today) {
+			return model.ErrPromotionNotApplicable
+		}
+
+		order.PromotionID = promotionID
+		order.DiscountAmount = promotion.CalcDiscount(*order)
+		order.CalcTotal()
 		return nil
 	}
 
-	promotion, err := s.promotions.Find(s.db, *promotionID)
+	// 2. กรณีไม่ได้ระบุโปรโมชั่นมา (auto-apply): หาโปรโมชั่น ACTIVE ที่เข้าเงื่อนไขทั้งหมด
+	// แล้วเลือกตัวที่ให้ส่วนลดสูงสุดแก่ลูกค้าโดยอัตโนมัติ
+	activePromos, err := s.promotions.Active()
 	if err != nil {
 		return err
 	}
-	if !promotion.IsApplicable(*order, model.Today()) {
-		return model.ErrPromotionNotApplicable
+
+	var bestPromo *model.Promotion
+	var maxDiscount float64
+	for i := range activePromos {
+		promo := &activePromos[i]
+		if promo.IsApplicable(*order, today) {
+			discount := promo.CalcDiscount(*order)
+			if discount > maxDiscount {
+				maxDiscount = discount
+				bestPromo = promo
+			}
+		}
 	}
 
-	order.PromotionID = promotionID
-	order.DiscountAmount = promotion.CalcDiscount(*order)
-	order.CalcTotal()
+	if bestPromo != nil && maxDiscount > 0 {
+		promoID := bestPromo.PromotionID
+		order.PromotionID = &promoID
+		order.DiscountAmount = maxDiscount
+		order.CalcTotal()
+	}
+
 	return nil
 }
 

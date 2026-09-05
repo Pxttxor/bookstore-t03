@@ -19,6 +19,7 @@ export interface OrderDraft {
   items: { bookId: number; quantity: number }[]
   slipFileName?: string
   bankId?: number
+  promotionId?: number
 }
 
 export interface StatusChangeOpts {
@@ -93,6 +94,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         slipFileName: draft.slipFileName ?? '',
         bankId: draft.bankId,
         items: draft.items,
+        promotionId: draft.promotionId,
       })
       apply((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)])
       await refresh()

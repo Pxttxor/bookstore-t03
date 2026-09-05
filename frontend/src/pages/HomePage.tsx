@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import BookCard from '../components/BookCard'
 import LoadingState from '../admin/components/LoadingState'
@@ -17,31 +17,43 @@ export default function HomePage() {
   // ช่องค้นหาอยู่บน TopNav ส่งค่ามาทาง ?q= · ค้นแบบเดียวกับ Book.search()
   // (ชื่อเรื่อง / ผู้แต่ง / ISBN แบบไม่สนตัวพิมพ์)
   const query = params.get('q') ?? ''
+  const filter = params.get('filter') ?? ''
+  const isBestsellers = filter === 'bestsellers'
   const term = query.trim().toLowerCase()
 
   const { books, categories, loading, error, reload } = useCatalogue()
   const [categoryId, setCategoryId] = useState<number>(ALL_CATEGORIES)
 
+  useEffect(() => {
+    if (filter === 'categories') {
+      const el = document.getElementById('categories-section')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }, [filter])
+
   // "Load More" remembers which filter it was counting for, so changing the category or
-  // the search term resets the page back to PAGE_SIZE by derivation — the คำค้นมาจาก URL
-  // จึงเปลี่ยนได้โดยหน้านี้ไม่ได้เป็นคนสั่ง case that React's "You Might Not Need an
-  // Effect" covers. Deriving beats both an effect and a render-phase setState here.
-  const filterKey = `${categoryId}|${term}`
+  // the search term resets the page back to PAGE_SIZE by derivation
+  const filterKey = `${categoryId}|${term}|${filter}`
   const [page, setPage] = useState({ key: filterKey, size: PAGE_SIZE })
   const visible = page.key === filterKey ? page.size : PAGE_SIZE
 
-  // The needle is normalised again inside the memo rather than reusing `term` as a
-  // dependency: `term` descends from the URLSearchParams object, which the React Compiler
-  // lint cannot prove stable, and depending on it makes it skip this component entirely
-  // (react-hooks/preserve-manual-memoization). Depending on the raw `query` string is
-  // equivalent and keeps the memo.
   const filtered = useMemo(() => {
-    return books.filter(
+    let list = books.filter(
       (b) =>
         (categoryId === ALL_CATEGORIES || b.categoryId === categoryId) &&
         matchesSearch(b, query),
     )
-  }, [books, categoryId, query])
+    if (filter === 'bestsellers') {
+      list = [...list].sort(
+        (a, b) =>
+          (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0) ||
+          (b.ratingCount ?? 0) - (a.ratingCount ?? 0),
+      )
+    }
+    return list
+  }, [books, categoryId, query, filter])
 
   const shown = filtered.slice(0, visible)
   const hasMore = visible < filtered.length
@@ -52,7 +64,15 @@ export default function HomePage() {
 
   return (
     <div className="home page-shell">
-      <section className="home__chips">
+      {isBestsellers && (
+        <div className="home__banner home__banner--bestsellers">
+          <span className="home__banner-badge">⭐ Bestsellers</span>
+          <h2>หนังสือขายดีและยอดนิยม</h2>
+          <p>คัดสรรหนังสือที่ได้รับคะแนนรีวิวและความนิยมสูงสุดจากผู้อ่าน</p>
+        </div>
+      )}
+
+      <section id="categories-section" className="home__chips">
         <h2 className="home__chips-title">เลือกตามหมวดหมู่</h2>
         <div className="home__chip-row">
           <button

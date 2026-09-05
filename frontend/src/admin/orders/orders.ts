@@ -64,6 +64,8 @@ export interface CustomerOrder {
   subtotal: number
   discountAmount: number
   netAmount: number
+  promotionId?: number
+  promotionName?: string
   /** Name of the payment slip the customer uploaded at checkout (simulated). */
   slipFileName?: string
   items: OrderItem[]

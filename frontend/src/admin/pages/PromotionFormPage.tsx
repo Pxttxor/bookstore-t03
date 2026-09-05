@@ -79,8 +79,13 @@ function PromotionForm({ id }: { id?: string }) {
   )
   const [minQty, setMinQty] = useState(existing ? String(existing.minQty) : '0')
   const [minAmount, setMinAmount] = useState(existing ? String(existing.minAmount) : '0')
+  const defaultEnd = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 30)
+    return isoDate(d)
+  }, [])
   const [startDate, setStartDate] = useState(existing?.startDate ?? today)
-  const [endDate, setEndDate] = useState(existing?.endDate ?? today)
+  const [endDate, setEndDate] = useState(existing?.endDate ?? defaultEnd)
   const [errors, setErrors] = useState<Errors>({})
   const [saving, setSaving] = useState(false)
 
