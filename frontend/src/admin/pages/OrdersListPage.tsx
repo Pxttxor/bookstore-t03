@@ -13,6 +13,7 @@ import { useOrders } from '../orders/OrderContext'
 import {
   CHANNEL_LABELS,
   formatOrderCode,
+  formatOrderDate,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_TONES,
   orderItemCount,
@@ -161,7 +162,7 @@ export default function OrdersListPage() {
                         <span className="orders-list__meta">{orderItemCount(order)} เล่ม</span>
                       </td>
                       <td>{CHANNEL_LABELS[order.channel]}</td>
-                      <td>{order.orderDate}</td>
+                      <td>{formatOrderDate(order.orderDate)}</td>
                       <td className="orders-list__num">{formatPrice(order.netAmount)}</td>
                       <td>
                         <StatusBadge tone={ORDER_STATUS_TONES[order.status]}>

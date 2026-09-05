@@ -20,6 +20,7 @@ import { useInventory } from '../inventory/InventoryContext'
 import {
   CHANNEL_LABELS,
   formatOrderCode,
+  formatOrderDate,
   isClosedOrder,
   milestoneOf,
   ORDER_MILESTONES,
@@ -276,7 +277,7 @@ export default function CustomerOrderDetailPage() {
           </h1>
           <p className="admin-page__subtitle">
             ลูกค้า {order.customerName} · ช่องทาง {CHANNEL_LABELS[order.channel]} · วันที่{' '}
-            {order.orderDate}
+            {formatOrderDate(order.orderDate)}
           </p>
         </div>
       </div>

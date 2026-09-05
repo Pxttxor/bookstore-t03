@@ -145,6 +145,13 @@ export const isClosedOrder = (status: OrderStatus) =>
 
 export const formatOrderCode = (orderId: number) => `SO-${orderId}`
 
+export const formatOrderDate = (iso?: string | null): string => {
+  if (!iso) return '—'
+  const date = iso.slice(0, 10)
+  const time = iso.includes('T') ? iso.slice(11, 16) : ''
+  return time ? `${date} ${time}` : date
+}
+
 export const orderItemTotal = (item: OrderItem) => item.unitPrice * item.quantity
 
 export const orderItemCount = (order: CustomerOrder) =>
