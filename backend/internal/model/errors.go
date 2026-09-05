@@ -265,6 +265,7 @@ var (
 
 	ErrInvalidRating         = Validation("INVALID_RATING", "กรุณาให้คะแนนระหว่าง 1 ถึง 5 ดาว")
 	ErrEmptyReviewComment    = Validation("EMPTY_REVIEW_COMMENT", "กรุณากรอกข้อความรีวิว")
+	ErrReviewCommentTooLong  = Validation("REVIEW_COMMENT_TOO_LONG", "ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร")
 	ErrEmptyReplyText        = Validation("EMPTY_REPLY_TEXT", "กรุณากรอกข้อความตอบกลับ")
 	ErrEmptyReportReason     = Validation("EMPTY_REPORT_REASON", "กรุณาระบุเหตุผลที่รายงาน")
 	ErrInvalidModerateAction = Validation("INVALID_MODERATE_ACTION", "คำสั่งตรวจสอบรีวิวไม่ถูกต้อง")

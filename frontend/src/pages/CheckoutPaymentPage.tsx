@@ -109,9 +109,9 @@ export default function CheckoutPaymentPage() {
     setPlacing(true)
     setError('')
     try {
-      // ชื่อลูกค้าและยอดเงินเซิร์ฟเวอร์คิดเอง (จากบัญชีที่ล็อกอินและราคาในตาราง book)
-      // หน้าจอส่งแค่ที่อยู่จัดส่ง รายการหนังสือ และชื่อไฟล์สลิป
+      // ส่งชื่อผู้รับ ที่อยู่จัดส่ง บัญชีธนาคาร รายการหนังสือ และชื่อไฟล์สลิป
       const order = await placeOrder({
+        customerName: recipient,
         bankId: selectedBankId,
         shippingAddress,
         items: lines.map((line) => ({ bookId: line.book.bookId, quantity: line.qty })),

@@ -50,6 +50,7 @@ export interface Shipment {
 
 export interface CustomerOrder {
   orderId: number
+  customerId?: number
   channel: OrderChannel
   orderDate: string
   customerName: string

@@ -1,8 +1,34 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { CatalogueBook } from '../data/catalogue'
 
-// ตะกร้าสินค้าของหน้าร้าน — อยู่ในหน่วยความจำอย่างเดียว รีเฟรชแล้วหาย
+// ตะกร้าสินค้าของหน้าร้าน — บันทึกใน localStorage เพื่อให้คงอยู่เมื่อรีเฟรชหน้าจอ
 // (คำสั่งซื้อจริงเกิดตอนกดยืนยันที่ `/checkout/payment` ซึ่งเขียนลงฐานข้อมูล)
+
+const CART_STORAGE_KEY = 'bookhaven.cart'
+
+function loadSavedCart(): CartLine[] {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (line): line is CartLine =>
+          Boolean(
+            line &&
+              line.book &&
+              typeof line.book.bookId === 'number' &&
+              typeof line.book.price === 'number' &&
+              typeof line.qty === 'number' &&
+              line.qty > 0,
+          ),
+      )
+    }
+  } catch {
+    // หากข้อมูลใน localStorage เสียหาย ให้เริ่มจากตะกร้าว่าง
+  }
+  return []
+}
 
 /**
  * สแนปช็อตของหนังสือหนึ่งเล่มในตะกร้า
@@ -51,7 +77,19 @@ const snapshot = (book: CatalogueBook): CartBook => ({
 })
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>([])
+  const [lines, setLines] = useState<CartLine[]>(loadSavedCart)
+
+  useEffect(() => {
+    try {
+      if (lines.length === 0) {
+        localStorage.removeItem(CART_STORAGE_KEY)
+      } else {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lines))
+      }
+    } catch {
+      // ignore storage error
+    }
+  }, [lines])
 
   const value = useMemo<CartValue>(() => {
     const qtyInCart = (bookId: number) =>
@@ -90,7 +128,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const removeItem = (bookId: number) =>
       setLines((prev) => prev.filter((l) => l.book.bookId !== bookId))
 
-    const clear = () => setLines([])
+    const clear = () => {
+      setLines([])
+      try {
+        localStorage.removeItem(CART_STORAGE_KEY)
+      } catch {
+        // ignore
+      }
+    }
 
     const count = lines.reduce((n, l) => n + l.qty, 0)
     const subtotal = lines.reduce((s, l) => s + l.book.price * l.qty, 0)
