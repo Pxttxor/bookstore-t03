@@ -49,7 +49,7 @@ type ShipmentTracking struct {
 	ShipmentID int            `gorm:"column:shipment_id;not null;index" json:"-"`
 	Status     ShipmentStatus `gorm:"column:status;type:varchar(20);not null" json:"status"`
 	Location   string         `gorm:"column:location;type:varchar(200)" json:"location,omitempty"`
-	UpdateDate time.Time      `gorm:"column:update_date;type:timestamptz;not null" json:"updateDate"`
+	UpdateDate time.Time      `gorm:"column:update_date;type:timestamptz(0);not null" json:"updateDate"`
 	Note       string         `gorm:"column:note;type:text" json:"note,omitempty"`
 }
 
@@ -84,7 +84,8 @@ func (s *Shipment) Record(at time.Time) {
 	s.Status = ShipmentStatusPreparing
 	s.Tracking = append(s.Tracking, ShipmentTracking{
 		Status:     ShipmentStatusPreparing,
-		UpdateDate: at.UTC(),
+		Location:   "คลังสินค้า BookHaven",
+		UpdateDate: at.UTC().Truncate(time.Second),
 		Note:       "เปิดรายการจัดส่ง",
 	})
 }
@@ -104,7 +105,7 @@ func (s *Shipment) UpdateStatus(next ShipmentStatus, location, note string, at t
 		ShipmentID: s.ShipmentID,
 		Status:     next,
 		Location:   strings.TrimSpace(location),
-		UpdateDate: at.UTC(),
+		UpdateDate: at.UTC().Truncate(time.Second),
 		Note:       strings.TrimSpace(note),
 	})
 	return nil

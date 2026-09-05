@@ -46,3 +46,26 @@ func TestOrderDTOCustomerName(t *testing.T) {
 		t.Fatalf("expected customerName to be riw2222, got %q", dto.CustomerName)
 	}
 }
+
+func TestOrderDTOShipment(t *testing.T) {
+	view := service.OrderView{
+		Order: model.Order{OrderID: 1039, CustomerID: 6},
+		Shipment: &service.OrderShipmentInfo{
+			ShipmentID:     13,
+			TrackingNumber: "TH1234",
+			Carrier:        "ไปรษณีย์ไทย",
+			RecipientName:  "duang fff",
+			Status:         model.ShipmentStatusDelivered,
+		},
+	}
+	dto := toOrderDTO(view)
+	if dto.Shipment == nil {
+		t.Fatalf("expected dto.Shipment not to be nil")
+	}
+	if dto.Shipment.TrackingNumber != "TH1234" {
+		t.Errorf("expected trackingNumber TH1234, got %q", dto.Shipment.TrackingNumber)
+	}
+	if dto.Shipment.Carrier != "ไปรษณีย์ไทย" {
+		t.Errorf("expected carrier ไปรษณีย์ไทย, got %q", dto.Shipment.Carrier)
+	}
+}

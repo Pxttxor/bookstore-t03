@@ -97,6 +97,7 @@ export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
 export const BANNED_WORDS = [
   'ห่วย',
   'กาก',
+  'เหี้ย',
   'โง่',
   'ควาย',
   'ขยะ',
@@ -104,7 +105,59 @@ export const BANNED_WORDS = [
   'stupid',
   'garbage',
   'scam',
+  'สัสหมา',
 ]
+
+/**
+ * คำหยาบคาย/คำไม่เหมาะสมทั่วไปเพิ่มเติม สำหรับตรวจจับก่อนลูกค้าส่งรีวิว
+ */
+export const EXTRA_PROFANITY_WORDS = [
+  'เหี้ย',
+  'สัส',
+  'เย็ด',
+  'ควย',
+  'แม่ง',
+  'ระยำ',
+  'สารเลว',
+  'ดอกทอง',
+  'สันดาน',
+  'ชาติหมา',
+  'หน้าตัวเมีย',
+  'ไอ้สัตว์',
+  'อีสัตว์',
+  'อีดอก',
+  'ไอ้เวร',
+  'อีเวร',
+  'fuck',
+  'shit',
+  'bitch',
+  'bastard',
+  'asshole',
+]
+
+export const ALL_PROFANITY_WORDS = [...BANNED_WORDS, ...EXTRA_PROFANITY_WORDS]
+
+/**
+ * ตรวจสอบข้อความว่ามีคำหยาบคายหรือไม่
+ * คืนค่าคำหยาบที่พบคำแรก หรือ null หากไม่พบ
+ */
+export function detectProfanity(text: string): string | null {
+  if (!text) return null
+  const lower = text.toLowerCase()
+  for (const word of ALL_PROFANITY_WORDS) {
+    if (word && lower.includes(word.toLowerCase())) {
+      return word
+    }
+  }
+  // ตรวจสอบแบบตัดเว้นวรรค (ป้องกันการพิมพ์เลี่ยง เช่น "ห่ ว ย", "ก า ก")
+  const compact = lower.replace(/\s+/g, '')
+  for (const word of ALL_PROFANITY_WORDS) {
+    if (word && compact.includes(word.toLowerCase())) {
+      return word
+    }
+  }
+  return null
+}
 
 export function formatReviewCode(reviewId: number) {
   return `RV${String(reviewId).padStart(3, '0')}`

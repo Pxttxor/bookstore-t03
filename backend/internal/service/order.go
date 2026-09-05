@@ -84,6 +84,16 @@ type OrderNoteInput struct {
 	Note string `json:"note"`
 }
 
+// OrderShipmentInfo — พัสดุของคำสั่งซื้อที่จัดส่งแล้ว
+type OrderShipmentInfo struct {
+	ShipmentID     int                  `json:"shipmentId"`
+	TrackingNumber string               `json:"trackingNumber"`
+	Carrier        string               `json:"carrier"`
+	RecipientName  string               `json:"recipientName"`
+	ShippedDate    model.Date           `json:"shippedDate"`
+	Status         model.ShipmentStatus `json:"status"`
+}
+
 // OrderView — คำสั่งซื้อพร้อมชื่อลูกค้า ชื่อหนังสือ และโปรโมชั่นที่ใช้
 type OrderView struct {
 	Order         model.Order
@@ -91,6 +101,7 @@ type OrderView struct {
 	CustomerEmail string
 	Books         map[int]model.Book
 	Promotion     *model.Promotion
+	Shipment      *OrderShipmentInfo
 }
 
 // ── อ่าน ────────────────────────────────────────────────────────────────
@@ -468,7 +479,7 @@ func (s *OrderService) Ship(orderID int, input ShipmentInput, by string) (*Order
 func (s *OrderService) Deliver(orderID int, by string) (*OrderView, error) {
 	return s.advance(orderID, model.OrderStatusDelivered, by, "ลูกค้าได้รับสินค้าแล้ว",
 		func(tx *gorm.DB, order *model.Order) error {
-			if err := s.closeShipment(tx, order.OrderID); err != nil {
+			if err := s.closeShipment(tx, order); err != nil {
 				return err
 			}
 			return s.earnPoints(tx, order)
@@ -561,7 +572,7 @@ func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input Shi
 	}
 	shipment.Record(now)
 	if err := shipment.UpdateStatus(
-		model.ShipmentStatusShipped, "", "ส่งมอบให้ขนส่งแล้ว", now); err != nil {
+		model.ShipmentStatusShipped, "ศูนย์คัดแยกพัสดุ", "ส่งมอบให้ขนส่งแล้ว", now); err != nil {
 		return err
 	}
 	return s.deliveries.Create(tx, &shipment)
@@ -570,8 +581,8 @@ func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input Shi
 // closeShipment — ปิดพัสดุตอนลูกค้ายืนยันรับของ
 //
 // ใบเก่าที่ยังไม่มีแถวพัสดุ (ข้อมูลตั้งต้นก่อนทำระบบย่อยนี้) ให้ผ่านไปได้ ไม่ต้องล้มทั้งรายการ
-func (s *OrderService) closeShipment(tx *gorm.DB, orderID int) error {
-	shipment, err := s.deliveries.FindByOrderForUpdate(tx, orderID)
+func (s *OrderService) closeShipment(tx *gorm.DB, order *model.Order) error {
+	shipment, err := s.deliveries.FindByOrderForUpdate(tx, order.OrderID)
 	if errors.Is(err, model.ErrShipmentNotFound) {
 		return nil
 	}
@@ -582,9 +593,18 @@ func (s *OrderService) closeShipment(tx *gorm.DB, orderID int) error {
 		return nil
 	}
 
+	loc := strings.TrimSpace(order.ShippingAddress)
+	runes := []rune(loc)
+	if len(runes) > 200 {
+		loc = string(runes[:200])
+	}
+	if loc == "" {
+		loc = "ปลายทางผู้รับ"
+	}
+
 	before := len(shipment.Tracking)
 	if err := shipment.UpdateStatus(
-		model.ShipmentStatusDelivered, "", "ผู้รับเซ็นรับพัสดุแล้ว", time.Now()); err != nil {
+		model.ShipmentStatusDelivered, loc, "ผู้รับเซ็นรับพัสดุแล้ว", time.Now()); err != nil {
 		return err
 	}
 	if err := s.deliveries.Save(tx, shipment); err != nil {
@@ -703,6 +723,36 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 		byPromotion[promotion.PromotionID] = promotion
 	}
 
+	orderIDs := make([]int, len(orders))
+	for i, order := range orders {
+		orderIDs[i] = order.OrderID
+	}
+	var shipments []model.Shipment
+	if len(orderIDs) > 0 {
+		if err := s.db.Where("order_id IN ?", orderIDs).Find(&shipments).Error; err != nil {
+			return nil, err
+		}
+	}
+	carrierNames, err := s.deliveries.CarrierNames()
+	if err != nil {
+		carrierNames = make(map[int]string)
+	}
+	shipmentByOrder := make(map[int]OrderShipmentInfo, len(shipments))
+	for _, shp := range shipments {
+		carrierName := carrierNames[shp.CarrierID]
+		if carrierName == "" {
+			carrierName = "ไปรษณีย์ไทย"
+		}
+		shipmentByOrder[shp.OrderID] = OrderShipmentInfo{
+			ShipmentID:     shp.ShipmentID,
+			TrackingNumber: shp.TrackingNumber,
+			Carrier:        carrierName,
+			RecipientName:  shp.RecipientName,
+			ShippedDate:    shp.ShippedDate,
+			Status:         shp.Status,
+		}
+	}
+
 	for i, order := range orders {
 		custName := order.CustomerName
 		if custName == "" {
@@ -718,6 +768,9 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 			if promotion, ok := byPromotion[*order.PromotionID]; ok {
 				views[i].Promotion = &promotion
 			}
+		}
+		if shp, ok := shipmentByOrder[order.OrderID]; ok {
+			views[i].Shipment = &shp
 		}
 	}
 	return views, nil

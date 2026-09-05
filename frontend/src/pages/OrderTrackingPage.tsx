@@ -12,10 +12,12 @@ import { useAuth } from '../auth/AuthContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import {
   formatOrderCode,
+  formatOrderDate,
   milestoneOf,
   ORDER_STATUS_LABELS,
   type CustomerOrder,
 } from '../admin/orders/orders'
+import { detectProfanity } from '../admin/reviews/reviews'
 import './OrderTrackingPage.css'
 
 type StepStatus = 'done' | 'current' | 'todo'
@@ -52,6 +54,9 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [profanityDetected, setProfanityDetected] = useState<string | null>(null)
+
+  const badComment = detectProfanity(comment)
 
   const startEdit = () => {
     if (!existingReview) return
@@ -59,6 +64,7 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     setComment(existingReview.comment)
     setError('')
     setSuccessMsg('')
+    setProfanityDetected(null)
     setIsEditing(true)
   }
 
@@ -66,25 +72,36 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     setIsEditing(false)
     setError('')
     setSuccessMsg('')
+    setProfanityDetected(null)
   }
 
   const submitNew = async () => {
     if (submitting) return
     if (rating === 0) {
       setError('กรุณาให้คะแนนก่อนส่งรีวิว')
+      setProfanityDetected(null)
       return
     }
     if (comment.trim() === '') {
       setError('กรุณาเขียนความเห็นก่อนส่งรีวิว')
+      setProfanityDetected(null)
       return
     }
     if (comment.trim().length > 75) {
       setError('ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร')
+      setProfanityDetected(null)
+      return
+    }
+    // ตรวจสอบคำหยาบคายก่อนส่ง ถ้ามีให้เตือนลูกค้าพิมพ์ใหม่
+    if (badComment) {
+      setProfanityDetected(badComment)
+      setError('ตรวจพบคำไม่สุภาพหรือไม่เหมาะสมในข้อความรีวิว กรุณาตรวจสอบและพิมพ์ใหม่')
       return
     }
     setSubmitting(true)
     setError('')
     setSuccessMsg('')
+    setProfanityDetected(null)
     try {
       await apiPost('/api/reviews', { bookId, rating, comment: comment.trim() })
       setRating(0)
@@ -102,19 +119,28 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     if (submitting || !existingReview) return
     if (rating === 0) {
       setError('กรุณาให้คะแนนก่อนบันทึก')
+      setProfanityDetected(null)
       return
     }
     if (comment.trim() === '') {
       setError('กรุณาเขียนความเห็นก่อนบันทึก')
+      setProfanityDetected(null)
       return
     }
     if (comment.trim().length > 75) {
       setError('ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร')
+      setProfanityDetected(null)
+      return
+    }
+    if (badComment) {
+      setProfanityDetected(badComment)
+      setError('ตรวจพบคำไม่สุภาพหรือไม่เหมาะสมในข้อความรีวิว กรุณาตรวจสอบและพิมพ์ใหม่')
       return
     }
     setSubmitting(true)
     setError('')
     setSuccessMsg('')
+    setProfanityDetected(null)
     try {
       // ต้องส่ง headline กลับไปด้วยแม้ฟอร์มนี้ไม่มีช่องแก้ไข — service.UpdateReviewInput
       // เขียนทับ Headline แบบไม่มีเงื่อนไข ไม่ส่ง = ค่าเดิมหายเงียบ ๆ
@@ -251,10 +277,24 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
             maxLength={75}
             placeholder="หนังสือเล่มนี้เป็นอย่างไรบ้าง (ไม่เกิน 75 ตัวอักษร)"
             value={comment}
-            onChange={(e) => setComment(e.target.value)}
+            className={profanityDetected && badComment ? 'track-review__input--warning' : ''}
+            onChange={(e) => {
+              setComment(e.target.value)
+              if (error) setError('')
+              if (profanityDetected) setProfanityDetected(null)
+            }}
           />
         </div>
-        {error && <p className="track-review__error">{error}</p>}
+        {error && (
+          <div
+            className={`track-review__notice ${
+              profanityDetected ? 'track-review__notice--warning' : 'track-review__notice--error'
+            }`}
+          >
+            <Icon name="alert-triangle" size={18} />
+            <span>{error}</span>
+          </div>
+        )}
         <div className="track-review__actions">
           <button
             type="button"
@@ -301,10 +341,24 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
           maxLength={75}
           placeholder="หนังสือเล่มนี้เป็นอย่างไรบ้าง (ไม่เกิน 75 ตัวอักษร)"
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          className={profanityDetected && badComment ? 'track-review__input--warning' : ''}
+          onChange={(e) => {
+            setComment(e.target.value)
+            if (error) setError('')
+            if (profanityDetected) setProfanityDetected(null)
+          }}
         />
       </div>
-      {error && <p className="track-review__error">{error}</p>}
+      {error && (
+        <div
+          className={`track-review__notice ${
+            profanityDetected ? 'track-review__notice--warning' : 'track-review__notice--error'
+          }`}
+        >
+          <Icon name="alert-triangle" size={18} />
+          <span>{error}</span>
+        </div>
+      )}
       {successMsg && (
         <p className="track-review__success">
           <Icon name="check-circle" size={15} /> {successMsg}
@@ -375,6 +429,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
   const { user } = useAuth()
   const [reviews, setReviews] = useState<CustomerReview[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const loadReviews = useCallback(async () => {
     if (!user) return
@@ -401,12 +456,38 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
     order.status === 'DELIVERED' ? 100 : (activeIndex / (steps.length - 1)) * 100
   const cancelled = order.status === 'CANCELLED' || order.status === 'REJECTED'
 
+  const trackingNumber = order.shipment?.trackingNumber?.trim() || ''
+  const carrier = order.shipment?.carrier || 'รอจัดส่ง'
+
+  const copyTracking = async (tracking: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(tracking)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = tracking
+        textarea.style.position = 'fixed'
+        textarea.style.left = '-9999px'
+        textarea.style.top = '-9999px'
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
   return (
     <div className="track page-shell">
       <header className="track__head">
         <div>
           <h1>คำสั่งซื้อ {formatOrderCode(order.orderId)}</h1>
-          <p>สั่งซื้อเมื่อ {order.orderDate}</p>
+          <p>สั่งซื้อเมื่อ {formatOrderDate(order.orderDate)}</p>
         </div>
       </header>
 
@@ -453,11 +534,23 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 {order.shippingAddress}
               </dd>
               <dt>ผู้ให้บริการขนส่ง</dt>
-              <dd>{order.shipment?.carrier ?? 'รอจัดส่ง'}</dd>
+              <dd>{carrier}</dd>
               <dt>หมายเลขพัสดุ</dt>
               <dd className="track__tracking">
-                {order.shipment ? (
-                  <span className="track__mono">{order.shipment.trackingNumber}</span>
+                {trackingNumber ? (
+                  <div className="track__tracking-group">
+                    <span className="track__mono">{trackingNumber}</span>
+                    <button
+                      type="button"
+                      className={`track__copy-btn ${copied ? 'is-copied' : ''}`}
+                      title={copied ? 'คัดลอกแล้ว' : 'คัดลอกหมายเลขพัสดุ'}
+                      aria-label={`คัดลอกหมายเลขพัสดุ ${trackingNumber}`}
+                      onClick={() => void copyTracking(trackingNumber)}
+                    >
+                      <Icon name={copied ? 'check' : 'clipboard'} size={13} />
+                      <span>{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}</span>
+                    </button>
+                  </div>
                 ) : (
                   <span className="track__mono">—</span>
                 )}

@@ -24,6 +24,15 @@ type orderHistoryDTO struct {
 	Note        string            `json:"note,omitempty"`
 }
 
+type orderShipmentDTO struct {
+	ShipmentID     int                  `json:"shipmentId"`
+	TrackingNumber string               `json:"trackingNumber"`
+	Carrier        string               `json:"carrier"`
+	RecipientName  string               `json:"recipientName"`
+	ShippedDate    model.Date           `json:"shippedDate"`
+	Status         model.ShipmentStatus `json:"status"`
+}
+
 type orderDTO struct {
 	OrderID         int                `json:"orderId"`
 	Code            string             `json:"code"`
@@ -47,6 +56,7 @@ type orderDTO struct {
 	CanCancel       bool               `json:"canCancel"`
 	Items           []orderItemDTO     `json:"items"`
 	Timeline        []orderHistoryDTO  `json:"timeline"`
+	Shipment        *orderShipmentDTO  `json:"shipment,omitempty"`
 }
 
 type promotionDTO struct {
@@ -120,6 +130,16 @@ func toOrderDTO(view service.OrderView) orderDTO {
 	}
 	if view.Promotion != nil {
 		dto.PromotionName = view.Promotion.Name
+	}
+	if view.Shipment != nil {
+		dto.Shipment = &orderShipmentDTO{
+			ShipmentID:     view.Shipment.ShipmentID,
+			TrackingNumber: view.Shipment.TrackingNumber,
+			Carrier:        view.Shipment.Carrier,
+			RecipientName:  view.Shipment.RecipientName,
+			ShippedDate:    view.Shipment.ShippedDate,
+			Status:         view.Shipment.Status,
+		}
 	}
 	return dto
 }

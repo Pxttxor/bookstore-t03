@@ -93,6 +93,19 @@ func Migrate(db *gorm.DB) error {
 	if err := applyForeignKeys(db); err != nil {
 		return err
 	}
+	if err := db.Exec(`ALTER TABLE shipment_tracking ALTER COLUMN update_date TYPE timestamptz(0)`).Error; err != nil {
+		return fmt.Errorf("ปรับความละเอียด update_date ไม่สำเร็จ: %w", err)
+	}
+	backfillTrackingLocations := `
+		UPDATE shipment_tracking SET location = 'คลังสินค้า BookHaven' WHERE status = 'PREPARING' AND (location IS NULL OR trim(location) = '');
+		UPDATE shipment_tracking SET location = 'ศูนย์คัดแยกพัสดุ' WHERE status = 'SHIPPED' AND (location IS NULL OR trim(location) = '');
+		UPDATE shipment_tracking st SET location = CASE WHEN trim(co.shipping_address) <> '' THEN substring(trim(co.shipping_address) from 1 for 200) ELSE 'ปลายทางผู้รับ' END
+		FROM shipment s JOIN customer_order co ON co.order_id = s.order_id
+		WHERE st.shipment_id = s.shipment_id AND st.status = 'DELIVERED' AND (st.location IS NULL OR trim(st.location) = '');
+	`
+	if err := db.Exec(backfillTrackingLocations).Error; err != nil {
+		return fmt.Errorf("เติมค่า location พัสดุไม่สำเร็จ: %w", err)
+	}
 	return applyViews(db)
 }
 
