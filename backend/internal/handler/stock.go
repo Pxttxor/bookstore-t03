@@ -15,6 +15,7 @@ import (
 func (h *Handler) registerStockRoutes(register registrar) {
 	register("GET /api/inventory/low-stock", roleOffice, h.lowStock)
 	register("POST /api/inventory/adjust", roleWarehouse, h.adjustStock)
+	register("GET /api/inventory/adjustments", roleManager, h.adjustmentTransactions)
 
 	// ประวัติการเคลื่อนไหวรายเล่ม — แท็บการเคลื่อนไหวในหน้ารายละเอียดหนังสือหลังร้าน
 	// roleOffice ให้ตรงกับ can.viewStock เหมือน GET /api/inventory
@@ -45,6 +46,15 @@ func (h *Handler) bookStockTransactions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	txns, err := h.stock.TransactionsForBook(id)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, txns)
+}
+
+func (h *Handler) adjustmentTransactions(w http.ResponseWriter, _ *http.Request) {
+	txns, err := h.stock.AdjustmentTransactions()
 	if err != nil {
 		httpx.Error(w, err)
 		return

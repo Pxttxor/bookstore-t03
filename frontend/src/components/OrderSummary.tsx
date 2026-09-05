@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Icon from './Icon'
 import BookCover from './BookCover'
 import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
@@ -15,7 +16,7 @@ export default function OrderSummary({
   footer,
   shipping = 0,
 }: OrderSummaryProps) {
-  const { lines, subtotal } = useCart()
+  const { lines, subtotal, setQty, removeItem } = useCart()
   const total = subtotal + shipping
 
   return (
@@ -40,6 +41,40 @@ export default function OrderSummary({
               <div className="summary__info">
                 <span className="summary__name">{book.title}</span>
                 <span className="summary__author">{book.author}</span>
+                <div className="summary__controls">
+                  <div className="summary__stepper">
+                    <button
+                      type="button"
+                      className="summary__step-btn"
+                      aria-label="ลดจำนวน"
+                      disabled={qty <= 1}
+                      onClick={() => setQty(book.bookId, qty - 1)}
+                    >
+                      <Icon name="minus" size={12} />
+                    </button>
+                    <span className="summary__step-qty">{qty}</span>
+                    <button
+                      type="button"
+                      className="summary__step-btn"
+                      aria-label="เพิ่มจำนวน"
+                      disabled={qty >= book.quantityOnHand}
+                      title={qty >= book.quantityOnHand ? 'สินค้าในสต็อกมีเท่านี้แล้ว' : undefined}
+                      onClick={() => setQty(book.bookId, qty + 1)}
+                    >
+                      <Icon name="plus" size={12} />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="summary__remove-btn"
+                    aria-label={`ลบ ${book.title} ออกจากตะกร้า`}
+                    title="ลบออกจากตะกร้า"
+                    onClick={() => removeItem(book.bookId)}
+                  >
+                    <Icon name="trash" size={14} />
+                    <span>ลบ</span>
+                  </button>
+                </div>
               </div>
               <span className="summary__price">
                 {formatPrice(book.price * qty)}

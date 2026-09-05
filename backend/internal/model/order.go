@@ -20,6 +20,7 @@ import (
 type Order struct {
 	OrderID         int                  `gorm:"column:order_id;primaryKey;autoIncrement" json:"orderId"`
 	CustomerID      int                  `gorm:"column:customer_id;not null;index" json:"customerId"`
+	CustomerName    string               `gorm:"column:customer_name;type:varchar(200)" json:"customerName,omitempty"`
 	Channel         OrderChannel         `gorm:"column:channel;type:varchar(20);not null" json:"channel"`
 	OrderDate       time.Time            `gorm:"column:order_date;type:timestamptz;not null" json:"orderDate"`
 	ShippingAddress string               `gorm:"column:shipping_address;type:text;not null" json:"shippingAddress"`

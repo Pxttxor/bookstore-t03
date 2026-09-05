@@ -64,6 +64,7 @@ type OrderLineInput struct {
 // ฝ่ายขายที่รับออร์เดอร์ทางโทรศัพท์หรือข้อความต้องระบุทั้งสองอย่าง
 type PlaceOrderInput struct {
 	CustomerID      int                `json:"customerId"`
+	CustomerName    string             `json:"customerName,omitempty"`
 	Channel         model.OrderChannel `json:"channel"`
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
@@ -85,10 +86,11 @@ type OrderNoteInput struct {
 
 // OrderView — คำสั่งซื้อพร้อมชื่อลูกค้า ชื่อหนังสือ และโปรโมชั่นที่ใช้
 type OrderView struct {
-	Order        model.Order
-	CustomerName string
-	Books        map[int]model.Book
-	Promotion    *model.Promotion
+	Order         model.Order
+	CustomerName  string
+	CustomerEmail string
+	Books         map[int]model.Book
+	Promotion     *model.Promotion
 }
 
 // ── อ่าน ────────────────────────────────────────────────────────────────
@@ -194,8 +196,14 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	}
 
 	now := time.Now().UTC()
+	customerName := strings.TrimSpace(input.CustomerName)
+	if customerName == "" {
+		customerName = customer.Person.Name()
+	}
+
 	order := &model.Order{
 		CustomerID:      customerID,
+		CustomerName:    customerName,
 		Channel:         channel,
 		OrderDate:       now,
 		ShippingAddress: address,
@@ -502,11 +510,15 @@ func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input Shi
 
 	recipient := strings.TrimSpace(input.RecipientName)
 	if recipient == "" {
-		row, err := s.people.FindCustomer(order.CustomerID)
-		if err != nil {
-			return err
+		if order.CustomerName != "" {
+			recipient = order.CustomerName
+		} else {
+			row, err := s.people.FindCustomer(order.CustomerID)
+			if err != nil {
+				return err
+			}
+			recipient = row.Person.Name()
 		}
-		recipient = row.Person.Name()
 	}
 
 	now := time.Now()
@@ -647,8 +659,10 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 		return nil, err
 	}
 	names := make(map[int]string, len(customers))
+	emails := make(map[int]string, len(customers))
 	for _, row := range customers {
 		names[row.Customer.CustomerID] = row.Person.Name()
+		emails[row.Customer.CustomerID] = row.Person.Email
 	}
 	promotions, err := s.promotions.List()
 	if err != nil {
@@ -660,7 +674,16 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 	}
 
 	for i, order := range orders {
-		views[i] = OrderView{Order: order, CustomerName: names[order.CustomerID], Books: books}
+		custName := order.CustomerName
+		if custName == "" {
+			custName = names[order.CustomerID]
+		}
+		views[i] = OrderView{
+			Order:         order,
+			CustomerName:  custName,
+			CustomerEmail: emails[order.CustomerID],
+			Books:         books,
+		}
 		if order.PromotionID != nil {
 			if promotion, ok := byPromotion[*order.PromotionID]; ok {
 				views[i].Promotion = &promotion

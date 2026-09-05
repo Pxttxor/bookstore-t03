@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -64,6 +65,39 @@ func TestReviewSubmitRejectsEmptyComment(t *testing.T) {
 
 	if err := review.Submit(DefaultProfanityFilter(), reviewAt); err != ErrEmptyReviewComment {
 		t.Errorf("รีวิวที่ไม่มีข้อความต้องได้ ErrEmptyReviewComment ได้ %v", err)
+	}
+}
+
+func TestReviewSubmitRejectsLongComment(t *testing.T) {
+	longText := strings.Repeat("ก", 76)
+	review := sampleReview(longText)
+	if err := review.Submit(DefaultProfanityFilter(), reviewAt); err != ErrReviewCommentTooLong {
+		t.Errorf("รีวิวเกิน 75 ตัวอักษรต้องได้ ErrReviewCommentTooLong ได้ %v", err)
+	}
+}
+
+func TestReviewUpdate(t *testing.T) {
+	review := sampleReview("ข้อความเดิม")
+	review.Status = ReviewStatusPublished
+	if err := review.Update(4, "หัวข้อใหม่", "ข้อความใหม่ที่แก้ไขแล้ว", DefaultProfanityFilter()); err != nil {
+		t.Fatalf("แก้ไขไม่ผ่าน: %v", err)
+	}
+	if review.Rating != 4 || review.Headline != "หัวข้อใหม่" || review.Comment != "ข้อความใหม่ที่แก้ไขแล้ว" {
+		t.Errorf("ข้อมูลที่แก้ไขไม่ตรง: %+v", review)
+	}
+	if review.Status != ReviewStatusPending {
+		t.Errorf("สถานะหลังแก้ไขต้องกลับเป็น PENDING, ได้ %s", review.Status)
+	}
+
+	if err := review.Update(0, "หัวข้อ", "ข้อความ", DefaultProfanityFilter()); err != ErrInvalidRating {
+		t.Errorf("คะแนน 0 ต้องได้ ErrInvalidRating, ได้ %v", err)
+	}
+	if err := review.Update(5, "หัวข้อ", "   ", DefaultProfanityFilter()); err != ErrEmptyReviewComment {
+		t.Errorf("ข้อความว่างต้องได้ ErrEmptyReviewComment, ได้ %v", err)
+	}
+	longText := strings.Repeat("ก", 76)
+	if err := review.Update(5, "หัวข้อ", longText, DefaultProfanityFilter()); err != ErrReviewCommentTooLong {
+		t.Errorf("ข้อความเกิน 75 ตัวอักษรต้องได้ ErrReviewCommentTooLong, ได้ %v", err)
 	}
 }
 

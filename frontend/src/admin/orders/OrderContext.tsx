@@ -13,6 +13,7 @@ import { type CustomerOrder, type OrderStatus } from './orders'
 const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
+  customerName?: string
   shippingAddress: string
   /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
   items: { bookId: number; quantity: number }[]
@@ -73,7 +74,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   // Provider นี้อยู่ที่ main.tsx จึงครอบหน้าร้านด้วย · ผู้ที่ยังไม่ล็อกอินไม่มี token
   // จะได้ 401 ทุกครั้งที่เปิดหน้าแรก จึงยิงเฉพาะตอนล็อกอินแล้ว
-  const { data, loading, error, reload } = useResource(loadOrders, user !== null)
+  const { data, loading, error, reload, apply } = useResource(loadOrders, user !== null)
 
   const value = useMemo<OrderValue>(() => {
     const orders = data ?? []
@@ -87,11 +88,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       // customerId / channel เซิร์ฟเวอร์เติมให้เองเมื่อผู้เรียกเป็นลูกค้าที่ล็อกอินอยู่
       // ยอดเงินก็คิดจากราคาในตาราง book ไม่ใช่ค่าที่หน้าจอส่งไป
       const order = await apiPost<CustomerOrder>('/api/orders', {
+        customerName: draft.customerName?.trim() || undefined,
         shippingAddress: draft.shippingAddress,
         slipFileName: draft.slipFileName ?? '',
         bankId: draft.bankId,
         items: draft.items,
       })
+      apply((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)])
       await refresh()
       return order
     }
@@ -136,7 +139,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       placeOrder,
       updateStatus,
     }
-  }, [data, loading, error, reload, reloadNotifications])
+  }, [data, loading, error, reload, reloadNotifications, apply])
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
 }

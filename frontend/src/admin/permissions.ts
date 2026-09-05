@@ -58,6 +58,7 @@ export const can = {
   // report, separate from `viewAlerts` which drives the reorder flow of U5.
   viewStock: (role: Role) => role === 'warehouse' || role === 'manager' || role === 'sales',
   adjustStock: (role: Role) => role === 'warehouse',
+  viewAdjustmentHistory: (role: Role) => role === 'manager',
   viewStockCounts: (role: Role) => role === 'warehouse' || role === 'manager',
   countStock: (role: Role) => role === 'warehouse',
   viewDiscrepancies: (role: Role) => role === 'warehouse' || role === 'manager',

@@ -29,6 +29,7 @@ type orderDTO struct {
 	Code            string             `json:"code"`
 	CustomerID      int                `json:"customerId"`
 	CustomerName    string             `json:"customerName"`
+	CustomerEmail   string             `json:"customerEmail,omitempty"`
 	Channel         model.OrderChannel `json:"channel"`
 	ChannelLabel    string             `json:"channelLabel"`
 	OrderDate       time.Time          `json:"orderDate"`
@@ -100,6 +101,7 @@ func toOrderDTO(view service.OrderView) orderDTO {
 		Code:            model.FormatOrderCode(order.OrderID),
 		CustomerID:      order.CustomerID,
 		CustomerName:    view.CustomerName,
+		CustomerEmail:   view.CustomerEmail,
 		Channel:         order.Channel,
 		ChannelLabel:    order.Channel.Label(),
 		OrderDate:       order.OrderDate,

@@ -14,10 +14,12 @@ export interface AuthUser {
   name: string
   email: string
   role: Role
+  customerId?: number
+  personId?: number
+  employeeId?: string
 }
 
-// Identity ที่ backend ส่งกลับ (service.Identity) — มีมากกว่าที่หน้าจอใช้
-// personId / customerId / employeeId ยังไม่มีหน้าจอไหนต้องใช้ จึงไม่ประกาศไว้ที่นี่
+// Identity ที่ backend ส่งกลับ (service.Identity)
 interface LoginResult {
   token: string
   user: AuthUser
@@ -40,6 +42,7 @@ interface AuthValue {
   login: (email: string, password: string) => Promise<AuthUser>
   register: (input: RegisterInput) => Promise<void>
   verifyOtp: (email: string, otp: string) => Promise<void>
+  refreshUser: () => Promise<void>
   logout: () => void
 }
 
@@ -113,6 +116,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiPost('/api/auth/verify-otp', { email: email.trim(), otp: otp.trim() })
     }
 
+    const refreshUser = async () => {
+      try {
+        const current = await apiGet<AuthUser>('/api/auth/me')
+        setUser(current)
+      } catch {
+        // ignore
+      }
+    }
+
     return {
       user,
       isAuthenticated: user !== null,
@@ -120,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       verifyOtp,
+      refreshUser,
       logout: signOut,
     }
   }, [user, initialising, signOut])

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // Review — รีวิวหนังสือหนึ่งชิ้นของลูกค้าหนึ่งคน
@@ -118,17 +119,41 @@ func (r *Review) Submit(filter *ProfanityFilter, at time.Time) error {
 	if r.Rating < 1 || r.Rating > 5 {
 		return ErrInvalidRating
 	}
-	if strings.TrimSpace(r.Comment) == "" {
-		return ErrEmptyReviewComment
-	}
-
 	r.Headline = strings.TrimSpace(r.Headline)
 	r.Comment = strings.TrimSpace(r.Comment)
+	if r.Comment == "" {
+		return ErrEmptyReviewComment
+	}
+	if utf8.RuneCountInString(r.Comment) > 75 {
+		return ErrReviewCommentTooLong
+	}
+
 	r.Flagged = filter.CheckText(r.Headline + " " + r.Comment)
 	r.Status = ReviewStatusPending
 	if r.CreatedDate.IsZero() {
 		r.CreatedDate = at.UTC()
 	}
+	return nil
+}
+
+// Update — ลูกค้าแก้ไขรีวิว
+func (r *Review) Update(rating int, headline, comment string, filter *ProfanityFilter) error {
+	if rating < 1 || rating > 5 {
+		return ErrInvalidRating
+	}
+	comment = strings.TrimSpace(comment)
+	if comment == "" {
+		return ErrEmptyReviewComment
+	}
+	if utf8.RuneCountInString(comment) > 75 {
+		return ErrReviewCommentTooLong
+	}
+
+	r.Rating = rating
+	r.Headline = strings.TrimSpace(headline)
+	r.Comment = comment
+	r.Flagged = filter.CheckText(r.Headline + " " + r.Comment)
+	r.Status = ReviewStatusPending
 	return nil
 }
 

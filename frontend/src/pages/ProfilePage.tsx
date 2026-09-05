@@ -1,7 +1,22 @@
+import { useState, useEffect, useCallback, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
+import Modal from '../admin/components/Modal'
+import { apiGet, apiPut, ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import './ProfilePage.css'
+
+interface CustomerProfile {
+  customerId: number
+  personId: number
+  firstName: string
+  lastName: string
+  name: string
+  email: string
+  phone: string
+  address: string
+  registeredDate: string
+}
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -11,8 +26,33 @@ function initialsOf(name: string): string {
 }
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const navigate = useNavigate()
+
+  const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
+
+  const loadProfile = useCallback(async () => {
+    if (!user) return
+    try {
+      const data = await apiGet<CustomerProfile>('/api/customers/me')
+      setProfile(data)
+    } catch {
+      // ignore
+    }
+  }, [user])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadProfile()
+  }, [loadProfile])
 
   // only signed-in members can open their profile
   if (!user) return <Navigate to="/login" replace state={{ from: '/profile' }} />
@@ -22,15 +62,59 @@ export default function ProfilePage() {
     navigate('/', { replace: true })
   }
 
+  const openEditModal = () => {
+    setFirstName(profile?.firstName ?? '')
+    setLastName(profile?.lastName ?? '')
+    setPhone(profile?.phone ?? '')
+    setAddress(profile?.address ?? '')
+    setError('')
+    setIsEditing(true)
+  }
+
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault()
+    if (saving) return
+    if (!firstName.trim()) {
+      setError('กรุณากรอกชื่อ')
+      return
+    }
+    if (!lastName.trim()) {
+      setError('กรุณากรอกนามสกุล')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const updated = await apiPut<CustomerProfile>('/api/customers/me', {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+      })
+      setProfile(updated)
+      await refreshUser()
+      setIsEditing(false)
+      setSuccessMsg('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว')
+      setTimeout(() => setSuccessMsg(''), 4000)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const displayName = profile?.name || user.name
+  const displayEmail = profile?.email || user.email
+
   return (
     <div className="profile page-shell">
       <section className="profile__hero">
         <span className="profile__avatar" aria-hidden="true">
-          {initialsOf(user.name)}
+          {initialsOf(displayName)}
         </span>
         <div className="profile__id">
-          <h1 className="profile__name">{user.name}</h1>
-          <p className="profile__email">{user.email}</p>
+          <h1 className="profile__name">{displayName}</h1>
+          <p className="profile__email">{displayEmail}</p>
           <span className="profile__badge">
             <Icon name="check-circle" size={16} />
             BookHaven Member
@@ -47,22 +131,36 @@ export default function ProfilePage() {
           <dl className="profile__details">
             <div className="profile__row">
               <dt>ชื่อ-นามสกุล</dt>
-              <dd>{user.name}</dd>
+              <dd>{displayName}</dd>
             </div>
             <div className="profile__row">
               <dt>อีเมล</dt>
-              <dd>{user.email}</dd>
+              <dd>{displayEmail}</dd>
+            </div>
+            <div className="profile__row">
+              <dt>เบอร์โทรศัพท์</dt>
+              <dd>{profile?.phone || '—'}</dd>
+            </div>
+            <div className="profile__row">
+              <dt>ที่อยู่จัดส่ง</dt>
+              <dd>{profile?.address || '—'}</dd>
             </div>
             <div className="profile__row">
               <dt>รหัสผ่าน</dt>
               <dd>••••••••</dd>
             </div>
           </dl>
+
+          {successMsg && (
+            <p className="profile__success-msg">
+              <Icon name="check-circle" size={16} /> {successMsg}
+            </p>
+          )}
+
           <button
             type="button"
-            className="btn btn-ghost profile__edit"
-            disabled
-            title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
+            className="btn btn-outline profile__edit"
+            onClick={openEditModal}
           >
             <Icon name="edit" size={16} />
             แก้ไขข้อมูลส่วนตัว
@@ -115,6 +213,86 @@ export default function ProfilePage() {
           </button>
         </section>
       </div>
+
+      {isEditing && (
+        <Modal
+          title="แก้ไขข้อมูลส่วนตัว"
+          onClose={() => setIsEditing(false)}
+          footer={
+            <div className="profile-modal__footer">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setIsEditing(false)}
+                disabled={saving}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                form="profile-edit-form"
+                className="btn btn-primary"
+                disabled={saving}
+              >
+                {saving ? 'กำลังบันทึก…' : 'บันทึกข้อมูล'}
+              </button>
+            </div>
+          }
+        >
+          <form id="profile-edit-form" onSubmit={handleSave} className="profile-edit-form">
+            {error && (
+              <div className="profile-edit-form__error">
+                <Icon name="alert-triangle" size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+            <div className="profile-edit-form__grid">
+              <label className="profile-edit-form__field">
+                <span>
+                  ชื่อ <span className="text-danger">*</span>
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="กรอกชื่อ"
+                />
+              </label>
+              <label className="profile-edit-form__field">
+                <span>
+                  นามสกุล <span className="text-danger">*</span>
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="กรอกนามสกุล"
+                />
+              </label>
+            </div>
+            <label className="profile-edit-form__field">
+              <span>เบอร์โทรศัพท์</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="เช่น 0812345678"
+              />
+            </label>
+            <label className="profile-edit-form__field">
+              <span>ที่อยู่จัดส่ง</span>
+              <textarea
+                rows={3}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
+              />
+            </label>
+          </form>
+        </Modal>
+      )}
     </div>
   )
 }
