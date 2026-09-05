@@ -6,7 +6,6 @@ import { can } from '../permissions'
 import type { Deactivation, Supplier } from './suppliers'
 
 // ข้อมูลอยู่ในตาราง supplier / supplier_book / supplier_edit_log / supplier_deactivation
-// ของ PostgreSQL แล้ว · เดิมเก็บใน localStorage คีย์ bookhaven.suppliers.v2
 //
 // ประกาศไว้ระดับโมดูลเพื่อให้ useResource ได้ฟังก์ชันที่อ้างอิงคงที่
 const loadSuppliers = () => apiGet<Supplier[]>('/api/suppliers')

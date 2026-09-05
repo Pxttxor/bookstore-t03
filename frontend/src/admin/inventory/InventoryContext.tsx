@@ -12,8 +12,7 @@ import {
 } from './inventory'
 
 // ข้อมูลอยู่ในตาราง inventory_item / stock_transaction / stock_count / stock_count_item
-// / stock_discrepancy_report ของ PostgreSQL แล้ว · เดิมเป็น blob ก้อนเดียวใน localStorage
-// คีย์ bookhaven.inventory.v3
+// / stock_discrepancy_report ของ PostgreSQL
 //
 // สามชุดนี้เป็นคนละ endpoint จึงยิงขนานกันแล้วรวมเป็นก้อนเดียวให้หน้าจอเหมือนเดิม
 const loadInventory = async () => {

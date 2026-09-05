@@ -1,5 +1,4 @@
-// ระบบย่อยที่ 2 — ระบบสมาชิกและแต้มสะสม (Membership & Loyalty)
-// เจ้าของ: บัญชาการ อภัยสอน (B6730741)
+// ระบบสมาชิกและแต้มสะสม (Membership & Loyalty)
 
 import type { BadgeTone } from '../admin/components/StatusBadge'
 

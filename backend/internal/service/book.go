@@ -1,4 +1,4 @@
-// book.go — ระบบย่อยข้อมูลหนังสือ (คลาสของวุฒิภัทร โกฎแสง)
+// book.go — ระบบย่อยข้อมูลหนังสือ
 //
 // class diagram: Category "1" o-- "*" Book · Book "1" *-- "*" BookChangeLog · Book "1" *-- "1" InventoryItem
 //

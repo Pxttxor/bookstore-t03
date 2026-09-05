@@ -38,10 +38,8 @@ const LABELS: Record<FieldName, string> = {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // แถวหนึ่งของ supplier_book — ตารางนี้เป็นเจ้าของแค่สามฟิลด์นี้
-//
-// ชื่อ / ผู้แต่ง / สำนักพิมพ์ / ISBN เป็นของตาราง book และเลือกได้จากแคตตาล็อกเท่านั้น
-// (`SupplierBook "*" --> "1" Book` ใน class diagram) · เดิมฟอร์มนี้ให้พิมพ์เองพร้อมสร้าง
-// bookId จาก Date.now() ซึ่งเขียนลงฐานจริงไม่ได้เพราะติด FK supplier_book.book_id -> book
+// ชื่อ / ผู้แต่ง / สำนักพิมพ์ / ISBN เป็นของตาราง book เลือกจากแคตตาล็อกเท่านั้น
+// (`SupplierBook "*" --> "1" Book` ใน class diagram · FK supplier_book.book_id -> book)
 type BookRow = {
   bookId: number
   supplyPrice: number
@@ -54,16 +52,43 @@ const emptyBook = (bookId: number): BookRow => ({
   leadTimeDays: 0,
 })
 
-// The form seeds its state from the supplier being edited, so it has to be
-// remounted when the route switches to a different id.
+// ด่าน loading/error ต้องอยู่ที่ตัวห่อ ไม่ใช่ในฟอร์ม เพราะฟอร์มตั้งค่าเริ่มต้นด้วย useState
+// ครั้งเดียวตอน mount และตัวกรองรายการหนังสือตอน submit อ้าง catalogue จาก useBooks()
+// ถ้าปล่อยให้ฟอร์ม mount ตั้งแต่ catalogue ยังไม่พร้อม การกดบันทึกจะส่ง books ว่าง
+// แล้วรายการหนังสือของผู้จัดจำหน่ายรายนั้นถูกลบทั้งชุด
 export default function SupplierFormPage() {
   const { id } = useParams()
+  const suppliers = useSuppliers()
+  const books = useBooks()
+
+  if (suppliers.loading || books.loading) {
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <LoadingState label="กำลังโหลดข้อมูลผู้จัดจำหน่าย…" />
+        </section>
+      </div>
+    )
+  }
+
+  if (suppliers.error || books.error) {
+    const message = suppliers.error ?? books.error ?? ''
+    const retry = suppliers.error ? suppliers.reload : books.reload
+    return (
+      <div className="admin-page">
+        <section className="admin-card">
+          <ErrorState message={message} onRetry={() => void retry()} />
+        </section>
+      </div>
+    )
+  }
+
   return <SupplierForm key={id ?? 'new'} id={id} />
 }
 
 function SupplierForm({ id }: { id?: string }) {
   const { user } = useAuth()
-  const { findById, findByCompanyName, add, update, loading, error, reload } = useSuppliers()
+  const { findById, findByCompanyName, add, update } = useSuppliers()
   const { books: catalogue } = useBooks()
   const { notify } = useToast()
   const navigate = useNavigate()
@@ -101,26 +126,6 @@ function SupplierForm({ id }: { id?: string }) {
             description="การเพิ่มและแก้ไขข้อมูลเป็นสิทธิ์ของพนักงานคลังสินค้าเท่านั้น"
             action={{ label: 'กลับไปหน้ารายการ', onClick: () => navigate('/admin/suppliers') }}
           />
-        </section>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="admin-page">
-        <section className="admin-card">
-          <LoadingState label="กำลังโหลดข้อมูลผู้จัดจำหน่าย…" />
-        </section>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="admin-page">
-        <section className="admin-card">
-          <ErrorState message={error} onRetry={() => void reload()} />
         </section>
       </div>
     )

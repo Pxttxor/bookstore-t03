@@ -11,8 +11,7 @@ import {
   type Category,
 } from './books'
 
-// ข้อมูลอยู่ในตาราง book / category / book_change_log ของ PostgreSQL แล้ว
-// เดิมเก็บใน localStorage คีย์ bookhaven.books.v1
+// ข้อมูลอยู่ในตาราง book / category / book_change_log ของ PostgreSQL
 //
 // หมวดหมู่โหลดคู่กันเพราะทุกหน้าที่แสดงหนังสือต้องใช้ชื่อหมวดหมู่ และเปลี่ยนแปลงน้อยมาก
 // (`GET /api/categories` เป็น read-only — ตารางนี้ backfill จาก migrate.go)
