@@ -87,6 +87,16 @@ export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
 }
 
 /**
+ * ผลการตัดสินรายงานรีวิวที่เซิร์ฟเวอร์ปิดให้พร้อมกับสถานะรีวิว
+ *
+ * อนุมัติ/ตอบกลับ = รายงานไม่เป็นผล (REJECTED) · ซ่อน/ลบ = รายงานเป็นผล (APPROVED)
+ */
+export const REPORT_DECISION_LABELS: Record<'APPROVED' | 'REJECTED', string> = {
+  APPROVED: 'รายงานเป็นผล',
+  REJECTED: 'รายงานไม่เป็นผล',
+}
+
+/**
  * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram
  *
  * **การติดธงเกิดฝั่งเซิร์ฟเวอร์แล้ว** (`Review.Submit` → `model.ProfanityFilter.CheckText`)

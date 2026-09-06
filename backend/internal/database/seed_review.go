@@ -37,7 +37,6 @@ type seedReviewRow struct {
 	BookID        int
 	OrderID       *int // nil = รีวิวเก่าที่ไม่มีใบสั่งซื้ออ้างอิง
 	Rating        int
-	Headline      string
 	Comment       string
 	Status        model.ReviewStatus
 	Flagged       bool
@@ -55,7 +54,6 @@ var seedReviews = []seedReviewRow{
 		// ใบเดียวในข้อมูลตั้งต้นที่ส่งถึงลูกค้าแล้ว จึงเป็นรีวิว "ซื้อสินค้าจริง" แถวเดียว
 		CustomerEmail: "somsak@example.com", BookID: 110, OrderID: intPtr(1003),
 		Rating:      5,
-		Headline:    "เนื้อเรื่องชวนคิดและสร้างแรงบันดาลใจ",
 		Comment:     "เรื่องราวสนุกและให้ข้อคิดดีมาก หนังสืออ่านเพลิน การจัดส่งรวดเร็วและการแพ็คแน่นหนาดีครับ",
 		Status:      model.ReviewStatusPublished,
 		CreatedDate: "2026-08-02T03:00:00.000Z",
@@ -68,7 +66,6 @@ var seedReviews = []seedReviewRow{
 	{
 		CustomerEmail: "napat@example.com", BookID: 101,
 		Rating:      5,
-		Headline:    "มีประโยชน์มาก นำไปปรับใช้ได้จริง",
 		Comment:     "อ่านง่ายและนำไปใช้ได้จริง เริ่มปรับเปลี่ยนนิสัยได้หลายอย่างแล้ว แนะนำสำหรับคนที่ต้องการพัฒนาตัวเอง",
 		Status:      model.ReviewStatusPending,
 		CreatedDate: "2026-08-18T09:00:00.000Z",
@@ -77,7 +74,6 @@ var seedReviews = []seedReviewRow{
 		// สแปมที่รอผู้จัดการตัดสิน — คิวของหน้าจัดการรายงานต้องมีของตั้งแต่เข้าระบบครั้งแรก
 		CustomerEmail: "kanya@example.com", BookID: 113,
 		Rating:      1,
-		Headline:    "ไม่เกี่ยวกับหนังสือเลย",
 		Comment:     "คลิกที่นี่เพื่อหารายได้ต่อวันด้วยการทำงานจากที่บ้าน! แผนการลงทุนที่ดีที่สุดรับประกันผลตอบแทน ไปที่ www.scam-link.biz เพื่อเริ่มรับรายได้ตอนนี้ หนังสือก็โอเคแหละมั้ง",
 		Status:      model.ReviewStatusPending,
 		Flagged:     true,
@@ -93,7 +89,6 @@ var seedReviews = []seedReviewRow{
 	{
 		CustomerEmail: "kanya@example.com", BookID: 106,
 		Rating:      1,
-		Headline:    "ข้อความหยาบคาย",
 		Comment:     "คนแปลห่วยมาก อ่านไม่รู้เรื่องเลย เสียเงินเปล่า",
 		Status:      model.ReviewStatusHidden,
 		Flagged:     true,
@@ -111,7 +106,6 @@ var seedReviews = []seedReviewRow{
 	{
 		CustomerEmail: "napat@example.com", BookID: 108,
 		Rating:      1,
-		Headline:    "สแปมและคุกคาม",
 		Comment:     "โพสต์สแปมข้อความซ้ำ ๆ และข้อความขยะ",
 		Status:      model.ReviewStatusRemoved,
 		Flagged:     true,
@@ -148,7 +142,6 @@ func seedReviewRows(tx *gorm.DB) (int, error) {
 			BookID:      row.BookID,
 			OrderID:     row.OrderID,
 			Rating:      row.Rating,
-			Headline:    row.Headline,
 			Comment:     row.Comment,
 			Status:      row.Status,
 			Flagged:     row.Flagged,

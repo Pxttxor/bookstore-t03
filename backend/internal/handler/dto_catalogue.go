@@ -41,7 +41,6 @@ type catalogueReviewDTO struct {
 	ReviewID         int              `json:"reviewId"`
 	CustomerName     string           `json:"customerName"`
 	Rating           int              `json:"rating"`
-	Headline         string           `json:"headline,omitempty"`
 	Comment          string           `json:"comment"`
 	VerifiedPurchase bool             `json:"verifiedPurchase"`
 	CreatedDate      time.Time        `json:"createdDate"`
@@ -109,7 +108,6 @@ func toCatalogueReviewDTO(row repository.ReviewRow) catalogueReviewDTO {
 		ReviewID:         review.ReviewID,
 		CustomerName:     row.Customer.Name(),
 		Rating:           review.Rating,
-		Headline:         review.Headline,
 		Comment:          review.Comment,
 		VerifiedPurchase: review.IsVerifiedPurchase(),
 		CreatedDate:      review.CreatedDate,

@@ -23,7 +23,7 @@ REST API เขียนด้วย **Go + GORM + PostgreSQL** ของโค�
 
 ```bash
 cp .env.example .env        # แล้วกรอก DATABASE_URL กับ JWT_SECRET
-go run ./cmd/api -migrate -seed
+go run ./cmd/api -migrate -seen
 ```
 
 เปิดที่ `http://localhost:8080` · ทดสอบด้วย [api.http](api.http) (ส่วนขยาย REST Client ของ VS Code)

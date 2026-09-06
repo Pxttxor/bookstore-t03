@@ -106,6 +106,9 @@ func Migrate(db *gorm.DB) error {
 	if err := db.Exec(backfillTrackingLocations).Error; err != nil {
 		return fmt.Errorf("เติมค่า location พัสดุไม่สำเร็จ: %w", err)
 	}
+	if err := db.Exec(`ALTER TABLE review DROP COLUMN IF EXISTS headline`).Error; err != nil {
+		return fmt.Errorf("ลบคอลัมน์ headline ออกจาก review ไม่สำเร็จ: %w", err)
+	}
 	return applyViews(db)
 }
 
