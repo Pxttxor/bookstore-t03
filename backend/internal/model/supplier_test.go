@@ -30,14 +30,14 @@ func TestSupplierRegisterAndDeactivate(t *testing.T) {
 	}
 }
 
-// UpdateInfo จงใจไม่ให้แก้ชื่อบริษัท เพราะเป็นคีย์ตรวจซ้ำของ U1
-func TestUpdateInfoKeepsCompanyName(t *testing.T) {
+// U2: ชื่อบริษัทแก้ได้ (SupplierService.Update ตรวจชื่อซ้ำกับรายอื่นก่อนเรียก)
+func TestUpdateInfoChangesCompanyName(t *testing.T) {
 	supplier := &Supplier{CompanyName: "สำนักพิมพ์ก้าวหน้า", ContactName: "สมศักดิ์ ทองดี"}
-	supplier.UpdateInfo("วราภรณ์ ศรีสุข", "081-000-0000", "new@example.com",
+	supplier.UpdateInfo("สำนักพิมพ์รุ่งเรือง", "วราภรณ์ ศรีสุข", "081-000-0000", "new@example.com",
 		"ที่อยู่ใหม่", "ส่วนลด 40%", "เครดิต 60 วัน")
 
-	if supplier.CompanyName != "สำนักพิมพ์ก้าวหน้า" {
-		t.Errorf("ชื่อบริษัทไม่ควรเปลี่ยน ได้ %q", supplier.CompanyName)
+	if supplier.CompanyName != "สำนักพิมพ์รุ่งเรือง" {
+		t.Errorf("ชื่อบริษัท = %q, ต้องการ สำนักพิมพ์รุ่งเรือง", supplier.CompanyName)
 	}
 	if supplier.ContactName != "วราภรณ์ ศรีสุข" {
 		t.Errorf("ผู้ติดต่อ = %q, ต้องการ วราภรณ์ ศรีสุข", supplier.ContactName)

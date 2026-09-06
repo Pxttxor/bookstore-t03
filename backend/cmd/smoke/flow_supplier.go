@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -47,6 +48,27 @@ func runSupplierFlow(e *env) {
 			return fmt.Errorf("ไม่มีประวัติการแก้ไข")
 		}
 		return expect(updated["contactName"], "ผู้ติดต่อคนใหม่")
+	})
+	check("แก้ชื่อบริษัทได้ พร้อมบันทึกลงประวัติการแก้ไข", func() error {
+		renamed := name + " (เปลี่ยนชื่อ)"
+		body := supplierBody(renamed)
+		updated, err := put(warehouse, fmt.Sprintf("/api/suppliers/%d", newSupplierID), body, 200)
+		if err != nil {
+			return err
+		}
+		if err := expect(updated["companyName"], renamed); err != nil {
+			return err
+		}
+		history, _ := updated["editHistory"].([]any)
+		if len(history) == 0 {
+			return fmt.Errorf("ไม่มีประวัติการแก้ไข")
+		}
+		last, _ := history[len(history)-1].(map[string]any)
+		if summary, _ := last["summary"].(string); !strings.Contains(summary, "ชื่อบริษัท") {
+			return fmt.Errorf("ประวัติการแก้ไขไม่ได้บันทึกว่าเปลี่ยนชื่อบริษัท: %q", summary)
+		}
+		name = renamed // หัวข้อ U4 ต้องค้นด้วยชื่อปัจจุบัน
+		return nil
 	})
 
 	section("U3 ปิดใช้งานผู้จัดจำหน่าย")
