@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import { useAuth } from '../../auth/AuthContext'
@@ -20,6 +20,8 @@ export type NotificationKind =
   | 'RETURN_ESCALATED'
   // Inventory subsystem — a counting round found a variance.
   | 'STOCK_DISCREPANCY'
+  // Inventory subsystem — a warehouse employee adjusted stock manually.
+  | 'STOCK_ADJUSTED'
   // Customer-order flow (Order / Delivery subsystems).
   | 'ORDER_PLACED'
   | 'ORDER_READY_TO_SHIP'
@@ -65,6 +67,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // ถ้ายิงตอนยังไม่ล็อกอินหรือเป็นลูกค้าจะได้ 401/403 ทุกครั้งที่มีคนเปิดหน้าแรก
   const enabled = user !== null && isEmployee(user.role)
   const { data, loading, error, reload, apply } = useResource(loadNotifications, enabled)
+
+  useEffect(() => {
+    if (!enabled) return
+    const timer = window.setInterval(() => void reload(), 10000)
+    return () => window.clearInterval(timer)
+  }, [enabled, reload])
 
   const value = useMemo<NotificationValue>(() => {
     const notifications = data ?? []

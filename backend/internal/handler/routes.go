@@ -79,6 +79,7 @@ func (h *Handler) Routes(cfg RouteConfig) http.Handler {
 	mux.HandleFunc("GET /api/catalogue", h.listCatalogue)
 	mux.HandleFunc("GET /api/catalogue/categories", h.listCatalogueCategories)
 	mux.HandleFunc("GET /api/catalogue/{id}", h.getCatalogueBook)
+	mux.HandleFunc("GET /api/catalogue/{id}/cover", h.getBookCover)
 	mux.HandleFunc("GET /api/promotions/active", h.listActivePromotions)
 
 	register := registrar(func(pattern string, roles []model.Role, handler http.HandlerFunc) {

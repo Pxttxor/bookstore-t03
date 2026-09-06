@@ -185,7 +185,17 @@ func (s *InventoryService) AdjustStock(input AdjustInput, by string) ([]model.St
 		if err := s.assertNoNegativeStock(tx, deltas); err != nil {
 			return err
 		}
-		return s.inventory.ApplyStrictStockChanges(tx, txns)
+		if err := s.inventory.ApplyStrictStockChanges(tx, txns); err != nil {
+			return err
+		}
+
+		body := fmt.Sprintf("ปรับยอดหนังสือ %d รายการ · ผู้ปรับ %s", len(txns), by)
+		for _, txn := range txns {
+			body += fmt.Sprintf(" · เล่ม %d %+d เล่ม (%s)", txn.BookID, txn.QuantityChange, txn.Reason)
+		}
+		return pushBothChannels(tx, s.notifications, model.RoleManager,
+			model.NotifyStockAdjusted, "มีการปรับยอดสต็อก", body,
+			"/admin/stock/adjustments")
 	})
 	if err != nil {
 		return nil, err

@@ -217,6 +217,7 @@ const (
 	NotifyOrderCancelled   NotificationKind = "ORDER_CANCELLED"
 	NotifyReturnEscalated  NotificationKind = "RETURN_ESCALATED"
 	NotifyStockDiscrepancy NotificationKind = "STOCK_DISCREPANCY"
+	NotifyStockAdjusted    NotificationKind = "STOCK_ADJUSTED"
 	NotifyOrderPlaced      NotificationKind = "ORDER_PLACED"
 	NotifyOrderPaid        NotificationKind = "ORDER_PAID"
 	NotifyOrderReadyToShip NotificationKind = "ORDER_READY_TO_SHIP"
