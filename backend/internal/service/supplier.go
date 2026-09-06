@@ -111,10 +111,6 @@ func (s *SupplierService) Update(supplierID int, input SupplierInput, by string)
 	if err != nil {
 		return nil, err
 	}
-	// ฟอร์มแก้ไขไม่ให้เปลี่ยนชื่อบริษัท จึงเติมชื่อเดิมกลับไปก่อนตรวจความครบถ้วน
-	if strings.TrimSpace(input.CompanyName) == "" {
-		input.CompanyName = current.CompanyName
-	}
 	if err := s.validate(input); err != nil {
 		return nil, err
 	}
@@ -129,6 +125,7 @@ func (s *SupplierService) Update(supplierID int, input SupplierInput, by string)
 
 	updated := *current
 	updated.UpdateInfo(
+		strings.TrimSpace(input.CompanyName),
 		strings.TrimSpace(input.ContactName),
 		strings.TrimSpace(input.Phone),
 		strings.TrimSpace(input.Email),
@@ -264,6 +261,7 @@ func describeChanges(before, after *model.Supplier) string {
 		after  string
 	}
 	fields := []field{
+		{"ชื่อบริษัท", before.CompanyName, after.CompanyName},
 		{"ผู้ติดต่อ", before.ContactName, after.ContactName},
 		{"เบอร์โทร", before.Phone, after.Phone},
 		{"อีเมล", before.Email, after.Email},

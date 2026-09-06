@@ -20,6 +20,7 @@ import (
 func (h *Handler) registerBookRoutes(register registrar) {
 	register("GET /api/categories", roleOffice, h.listCategories)
 	register("GET /api/books", roleOffice, h.listBooks)
+	register("GET /api/book-change-logs", roleManager, h.allBookChangeLogs)
 	register("GET /api/books/{id}", roleOffice, h.getBook)
 	register("GET /api/books/{id}/cover", roleOffice, h.getBookCover)
 	register("GET /api/books/{id}/change-logs", roleCatalogue, h.bookChangeLogs)
@@ -29,6 +30,15 @@ func (h *Handler) registerBookRoutes(register registrar) {
 	register("PUT /api/books/{id}/cover", roleCatalogue, h.uploadBookCover)
 	register("DELETE /api/books/{id}/cover", roleCatalogue, h.deleteBookCover)
 	register("POST /api/books/{id}/status", roleCatalogue, h.setBookStatus) // เปิด/ปิดการขาย
+}
+
+func (h *Handler) allBookChangeLogs(w http.ResponseWriter, _ *http.Request) {
+	logs, err := h.books.AllChangeLogs()
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, toChangeLogDTOs(logs))
 }
 
 const maxCoverImageSize = 5 << 20
@@ -45,13 +55,19 @@ func (h *Handler) getBookCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", cover.MediaType)
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// Covers can be replaced by sales staff, so clients must fetch the current BLOB.
+	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Length", strconv.Itoa(len(cover.Data)))
 	_, _ = w.Write(cover.Data)
 }
 
 func (h *Handler) uploadBookCover(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathInt(r, "id")
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	current, err := identity(r)
 	if err != nil {
 		httpx.Error(w, err)
 		return
@@ -85,7 +101,7 @@ func (h *Handler) uploadBookCover(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, model.ErrCoverImageInvalid)
 		return
 	}
-	if err := h.books.SetCover(id, image, mediaType); err != nil {
+	if err := h.books.SetCover(id, image, mediaType, current.Name); err != nil {
 		httpx.Error(w, err)
 		return
 	}
@@ -98,7 +114,12 @@ func (h *Handler) deleteBookCover(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	if err := h.books.ClearCover(id); err != nil {
+	current, err := identity(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	if err := h.books.ClearCover(id, current.Name); err != nil {
 		httpx.Error(w, err)
 		return
 	}

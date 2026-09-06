@@ -202,6 +202,13 @@ func (r *BookRepository) ChangeLogs(bookID int) ([]model.BookChangeLog, error) {
 	return logs, err
 }
 
+// AllChangeLogs — ประวัติการแก้ไขหนังสือทั้งหมด ล่าสุดขึ้นก่อน
+func (r *BookRepository) AllChangeLogs() ([]model.BookChangeLog, error) {
+	var logs []model.BookChangeLog
+	err := r.db.Order("changed_date DESC, log_id DESC").Find(&logs).Error
+	return logs, err
+}
+
 // ── หมวดหมู่ ────────────────────────────────────────────────────────────
 
 func (r *BookRepository) ListCategories() ([]model.Category, error) {

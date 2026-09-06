@@ -85,6 +85,7 @@ const (
 	BookFieldDescription BookField = "description"
 	BookFieldCategoryID  BookField = "categoryId"
 	BookFieldStatus      BookField = "status"
+	BookFieldCoverImage  BookField = "coverImage"
 )
 
 // BookFields — ลำดับฟิลด์ที่ตรวจการเปลี่ยนแปลง ตรงกับ CHANGE_FIELDS ฝั่งหน้าจอ

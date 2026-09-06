@@ -58,6 +58,7 @@ func TestCatalogueIsPublic(t *testing.T) {
 		"/api/catalogue",
 		"/api/catalogue/categories",
 		"/api/catalogue/101",
+		"/api/catalogue/101/cover",
 		"/api/promotions/active",
 	}
 
@@ -91,6 +92,7 @@ func TestProtectedRoutesRequireToken(t *testing.T) {
 		{http.MethodGet, "/api/categories"},
 		{http.MethodGet, "/api/books"},
 		{http.MethodGet, "/api/books/101"},
+		{http.MethodGet, "/api/book-change-logs"},
 		{http.MethodGet, "/api/books/101/cover"},
 		{http.MethodGet, "/api/books/101/change-logs"},
 		{http.MethodGet, "/api/books/101/stock-transactions"},

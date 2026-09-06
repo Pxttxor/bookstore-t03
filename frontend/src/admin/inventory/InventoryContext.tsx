@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { apiGet, apiPost, apiPut } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import { useAuth } from '../../auth/AuthContext'
+import { useNotifications } from '../notifications/NotificationContext'
 import { can } from '../permissions'
 import {
   isBelowReorder,
@@ -80,6 +81,7 @@ const InventoryContext = createContext<InventoryValue | null>(null)
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const { reload: reloadNotifications } = useNotifications()
   const loader = user && can.viewStockCounts(user.role) ? loadInventory : loadStockOnly
   const { data, loading, error, reload, apply } = useResource(loader, !!user && can.viewStock(user.role))
 
@@ -115,7 +117,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           referenceDoc: line.referenceDoc,
         })),
       })
-      await reload()
+      await Promise.all([reload(), reloadNotifications()])
     }
 
     // เดิมหน้าจอคำนวณผลต่าง เปิดรายงานเอง และยิงแจ้งเตือนเอง — ตอนนี้เซิร์ฟเวอร์ทำทั้งหมด
@@ -156,7 +158,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       resolveDiscrepancy: (reportId, note) => decide(reportId, 'approve', note),
       rejectDiscrepancy: (reportId, note) => decide(reportId, 'reject', note),
     }
-  }, [data, loading, error, reload, apply])
+  }, [data, loading, error, reload, apply, reloadNotifications])
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>
 }

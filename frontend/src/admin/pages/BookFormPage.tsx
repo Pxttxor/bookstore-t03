@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { apiGetBlob, ApiError } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import Breadcrumb from '../components/Breadcrumb'
@@ -17,6 +18,7 @@ import {
 } from '../books/books'
 import { formatBookCode } from '../inventory/inventory'
 import { useInventory } from '../inventory/InventoryContext'
+import BookCover from '../../components/BookCover'
 import '../components/AdminForm.css'
 import './BookFormPage.css'
 
@@ -56,7 +58,7 @@ export default function BookFormPage() {
 
 function BookForm({ id }: { id?: string }) {
   const { user } = useAuth()
-  const { findById, findByIsbn, categories, add, update } = useBooks()
+  const { findById, findByIsbn, categories, add, update, uploadCover, deleteCover } = useBooks()
   // เพิ่มหนังสือหนึ่งเล่ม เซิร์ฟเวอร์เปิดแถว inventory_item ยอด 0 ให้ในทรานแซกชันเดียวกัน
   // (composition Book *-- InventoryItem) หน้าจอสต็อกจึงต้องรู้ด้วย ไม่งั้นเล่มใหม่จะหาย
   // จากยอดคงเหลือจนกว่าจะรีเฟรชทั้งหน้า · BookProvider อยู่นอก InventoryProvider
@@ -80,6 +82,39 @@ function BookForm({ id }: { id?: string }) {
   })
   const [errors, setErrors] = useState<Partial<Record<BookField, string>>>({})
   const [saving, setSaving] = useState(false)
+  const [coverUrl, setCoverUrl] = useState<string>()
+  const [coverFile, setCoverFile] = useState<File>()
+  const [coverRemoved, setCoverRemoved] = useState(false)
+  const [coverError, setCoverError] = useState<string>()
+  const coverInput = useRef<HTMLInputElement>(null)
+  const coverObjectUrl = useRef<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!existing) return
+    let active = true
+    let objectUrl: string | undefined
+    void apiGetBlob(`/api/books/${existing.bookId}/cover`)
+      .then((blob) => {
+        if (!active || coverObjectUrl.current) return
+        objectUrl = URL.createObjectURL(blob)
+        setCoverUrl(objectUrl)
+      })
+      .catch((err: unknown) => {
+        if (active && (!(err instanceof ApiError) || err.status !== 404)) {
+          setCoverError(err instanceof Error ? err.message : 'โหลดรูปปกไม่สำเร็จ')
+        }
+      })
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [existing])
+
+  useEffect(() => {
+    return () => {
+      if (coverObjectUrl.current) URL.revokeObjectURL(coverObjectUrl.current)
+    }
+  }, [])
 
   if (!can.editBooks(user!.role)) {
     return (
@@ -169,10 +204,13 @@ function BookForm({ id }: { id?: string }) {
       if (existing) {
         // ผู้แก้ไขมาจาก JWT · เซิร์ฟเวอร์เขียน book_change_log ให้เองทีละฟิลด์ที่เปลี่ยนจริง
         await update(existing.bookId, draft)
+        if (coverFile) await uploadCover(existing.bookId, coverFile)
+        else if (coverRemoved) await deleteCover(existing.bookId)
         notify('success', 'บันทึกเสร็จสิ้น')
         navigate(`/admin/books/${existing.bookId}`)
       } else {
         const created = await add(draft)
+        if (coverFile) await uploadCover(created.bookId, coverFile)
         await reloadInventory()
         notify('success', `บันทึกเสร็จสิ้น (รหัส ${formatBookCode(created.bookId)})`)
         navigate(`/admin/books/${created.bookId}`)
@@ -182,6 +220,35 @@ function BookForm({ id }: { id?: string }) {
       notify('error', err instanceof Error ? err.message : 'บันทึกข้อมูลไม่สำเร็จ')
       setSaving(false)
     }
+  }
+
+  const chooseCover = (file: File | undefined) => {
+    setCoverError(undefined)
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setCoverError('กรุณาเลือกไฟล์รูปภาพ')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCoverError('รูปปกต้องมีขนาดไม่เกิน 5 MB')
+      return
+    }
+    if (coverObjectUrl.current) URL.revokeObjectURL(coverObjectUrl.current)
+    coverObjectUrl.current = URL.createObjectURL(file)
+    setCoverUrl(coverObjectUrl.current)
+    setCoverFile(file)
+    setCoverRemoved(false)
+  }
+
+  const removeCover = () => {
+    if (coverObjectUrl.current) {
+      URL.revokeObjectURL(coverObjectUrl.current)
+      coverObjectUrl.current = undefined
+    }
+    setCoverFile(undefined)
+    setCoverUrl(undefined)
+    setCoverRemoved(true)
+    setCoverError(undefined)
   }
 
   const title = existing ? 'แก้ไขข้อมูลหนังสือ' : 'เพิ่มหนังสือ'
@@ -323,6 +390,65 @@ function BookForm({ id }: { id?: string }) {
             </label>
           </div>
         </section>
+
+        {can.editBooks(user!.role) && (
+          <section className="admin-card book-form__card book-cover-editor">
+            <div>
+              <h2 className="admin-card__title">รูปปกหนังสือ</h2>
+              <p className="admin-field__hint">
+                ไฟล์รูปภาพต้องมีขนาดไม่เกิน 5 MB
+                {!existing && ' · รูปปกจะถูกบันทึกพร้อมหนังสือ'}
+              </p>
+            </div>
+            <div className="book-cover-editor__body">
+              <div className="book-cover-editor__preview">
+                {coverRemoved ? (
+                  <span className="book-cover-editor__empty">รูปปกจะถูกลบเมื่อกดบันทึก</span>
+                ) : coverUrl ? (
+                  <img src={coverUrl} alt={`ปก ${existing?.title ?? values.title}`} />
+                ) : existing ? (
+                  <BookCover bookId={existing.bookId} title={existing.title} size="md" />
+                ) : (
+                  <span className="book-cover-editor__empty">ยังไม่มีรูปปก</span>
+                )}
+              </div>
+              <div className="book-cover-editor__controls">
+                <input
+                  ref={coverInput}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(event) => chooseCover(event.target.files?.[0])}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => coverInput.current?.click()}
+                  disabled={saving}
+                >
+                  เลือกรูปปก
+                </button>
+                {(coverFile || (existing && coverUrl) || coverRemoved) ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={removeCover}
+                    disabled={saving}
+                  >
+                    ล้างรูปปก
+                  </button>
+                ) : null}
+                {coverFile && (
+                  <span className="book-cover-editor__filename">เลือกแล้ว: {coverFile.name}</span>
+                )}
+                {coverRemoved && (
+                  <span className="book-cover-editor__filename">รูปปกจะถูกลบเมื่อกดบันทึก</span>
+                )}
+                {coverError && <span className="admin-field__error">{coverError}</span>}
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="book-form__actions">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate(-1)}>

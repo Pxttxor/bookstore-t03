@@ -119,6 +119,7 @@ func (r *SupplierRepository) Create(supplier *model.Supplier) error {
 func (r *SupplierRepository) Update(supplier *model.Supplier, entry *model.SupplierEditLog) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		fields := map[string]any{
+			"company_name": supplier.CompanyName,
 			"contact_name": supplier.ContactName,
 			"phone":        supplier.Phone,
 			"email":        supplier.Email,

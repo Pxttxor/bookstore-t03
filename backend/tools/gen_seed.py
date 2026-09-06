@@ -75,7 +75,11 @@ def calls(source, name):
 
 book_re = re.compile(r"book\(\s*(\d+),\s*" + STR + r",\s*" + STR + r",\s*" + STR +
                      r",\s*" + STR + r",\s*" + NUM + r",\s*(\d+),\s*" + STR)
-log_re = re.compile(r"logId: (\d+),\s*changedField: " + STR + r",\s*oldValue: " + STR +
+# `bookId` ไม่บังคับ: BookChangeLog ฝั่ง TS ประกาศไว้ให้หน้าประวัติรวมใช้ แต่ที่นี่ไม่ต้องอ่าน
+# เพราะเลขเล่มมาจาก `book(...)` ที่ครอบอยู่แล้ว · ต้องเป็น (?:...) ไม่ใช่ (...) ไม่งั้นเลขกลุ่ม
+# 1–6 ที่บรรทัดอ่านค่าใช้แบบตำแหน่งจะเลื่อนทั้งแถว
+log_re = re.compile(r"logId: (\d+),\s*(?:bookId: \d+,\s*)?changedField: " + STR +
+                    r",\s*oldValue: " + STR +
                     r",\s*newValue: " + STR + r",\s*changedDate: " + STR +
                     r",\s*changedBy: " + STR)
 
