@@ -38,6 +38,7 @@ type orderDTO struct {
 	Code              string             `json:"code"`
 	CustomerID        int                `json:"customerId"`
 	CustomerName      string             `json:"customerName"`
+	CustomerPhone     string             `json:"customerPhone,omitempty"`
 	CustomerEmail     string             `json:"customerEmail,omitempty"`
 	Channel           model.OrderChannel `json:"channel"`
 	ChannelLabel      string             `json:"channelLabel"`
@@ -115,12 +116,15 @@ func toOrderDTO(view service.OrderView) orderDTO {
 		}
 	}
 
-	cancelReason := order.CancelReason
-	if cancelReason == "" {
-		for i := len(order.Timeline) - 1; i >= 0; i-- {
-			if order.Timeline[i].Status == model.OrderStatusCancelled {
-				cancelReason = order.Timeline[i].Note
-				break
+	cancelReason := ""
+	if order.Status == model.OrderStatusCancelled || order.Status == model.OrderStatusRejected {
+		cancelReason = order.CancelReason
+		if cancelReason == "" {
+			for i := len(order.Timeline) - 1; i >= 0; i-- {
+				if order.Timeline[i].Status == model.OrderStatusCancelled || order.Timeline[i].Status == model.OrderStatusRejected {
+					cancelReason = order.Timeline[i].Note
+					break
+				}
 			}
 		}
 	}
@@ -148,6 +152,7 @@ func toOrderDTO(view service.OrderView) orderDTO {
 		Code:              model.FormatOrderCode(order.OrderID),
 		CustomerID:        order.CustomerID,
 		CustomerName:      view.CustomerName,
+		CustomerPhone:     view.CustomerPhone,
 		CustomerEmail:     view.CustomerEmail,
 		Channel:           order.Channel,
 		ChannelLabel:      order.Channel.Label(),

@@ -54,6 +54,7 @@ export interface CustomerOrder {
   channel: OrderChannel
   orderDate: string
   customerName: string
+  customerPhone?: string
   /** Email of the signed-in customer who placed it — the key the storefront order-history
    *  page filters by. Optional: guest checkouts and seed orders leave it undefined. */
   customerEmail?: string
@@ -96,7 +97,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   SHIPPED: 'จัดส่งแล้ว',
   DELIVERED: 'ส่งถึงแล้ว',
   CANCELLED: 'ยกเลิกและรอคืนเงิน',
-  REJECTED: 'ปฏิเสธ',
+  REJECTED: 'สลิปไม่ถูกต้อง (รอแนบใหม่)',
 }
 
 export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
@@ -117,6 +118,9 @@ export function getOrderStatusLabel(order: Pick<CustomerOrder, 'status' | 'refun
   if (order.status === 'CANCELLED') {
     if (order.refundStatus === 'REFUNDED') return 'คืนเงินแล้ว'
     return 'ยกเลิกและรอคืนเงิน'
+  }
+  if (order.status === 'REJECTED') {
+    return 'สลิปไม่ถูกต้อง (รอแนบใหม่)'
   }
   return ORDER_STATUS_LABELS[order.status] ?? order.status
 }
@@ -167,7 +171,7 @@ const MILESTONE_OF: Record<OrderStatus, number> = {
 export const milestoneOf = (status: OrderStatus) => MILESTONE_OF[status]
 
 export const isClosedOrder = (status: OrderStatus) =>
-  status === 'DELIVERED' || status === 'CANCELLED' || status === 'REJECTED'
+  status === 'DELIVERED' || status === 'CANCELLED'
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 

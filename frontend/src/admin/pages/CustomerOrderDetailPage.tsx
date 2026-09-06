@@ -339,9 +339,16 @@ export default function CustomerOrderDetailPage() {
         </div>
       )}
       {order.status === 'REJECTED' && (
-        <p className="order-detail__banner order-detail__banner--danger">
-          <Icon name="alert-triangle" size={18} /> คำสั่งซื้อนี้ถูกปฏิเสธ (การชำระเงินไม่ผ่าน)
-        </p>
+        <div className="order-detail__banner order-detail__banner--danger">
+          <p className="order-detail__banner-title">
+            <Icon name="alert-triangle" size={18} /> คำสั่งซื้อนี้ถูกปฏิเสธ (สลิปไม่ถูกต้อง — รอลูกค้าแนบใหม่)
+          </p>
+          {order.cancelReason && (
+            <p className="order-detail__cancel-reason-text">
+              <strong>เหตุผลที่ปฏิเสธ:</strong> {order.cancelReason}
+            </p>
+          )}
+        </div>
       )}
 
       {step >= 0 && (
@@ -372,6 +379,8 @@ export default function CustomerOrderDetailPage() {
             <dl className="order-detail__dl">
               <dt>ชื่อผู้รับ</dt>
               <dd>{order.customerName}</dd>
+              <dt>เบอร์โทรศัพท์</dt>
+              <dd>{order.customerPhone || '—'}</dd>
               <dt>ที่อยู่จัดส่ง</dt>
               <dd>{order.shippingAddress}</dd>
               <dt>สลิปการชำระเงิน</dt>

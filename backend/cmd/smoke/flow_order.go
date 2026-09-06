@@ -432,6 +432,44 @@ func runOrderFlow(e *env) {
 		}
 		return expect(body["status"], "REJECTED")
 	})
+	check("ลูกค้าแนบสลิปใหม่หลังถูกปฏิเสธ → VERIFYING_PAYMENT และฝ่ายขายตรวจผ่าน", func() error {
+		id, err := placeOrder(customer, []any{orderLine(orderBookOther, 1)})
+		if err != nil {
+			return err
+		}
+		if _, err := post(sales, fmt.Sprintf("/api/orders/%d/confirm-stock", id), nil, 200); err != nil {
+			return err
+		}
+		if _, err := post(customer, fmt.Sprintf("/api/orders/%d/payment", id),
+			map[string]any{"slipFileName": "slip-wrong.jpg"}, 200); err != nil {
+			return err
+		}
+		if _, err := post(sales, fmt.Sprintf("/api/orders/%d/reject-payment", id),
+			map[string]any{"note": "ยอดเงินไม่ตรง"}, 200); err != nil {
+			return err
+		}
+		// แนบสลิปใหม่หลังจากถูกปฏิเสธ
+		body, err := post(customer, fmt.Sprintf("/api/orders/%d/payment", id),
+			map[string]any{"slipFileName": "slip-correct.jpg"}, 200)
+		if err != nil {
+			return err
+		}
+		if err := expect(body["status"], "VERIFYING_PAYMENT"); err != nil {
+			return err
+		}
+		// ฝ่ายขายตรวจสอบการชำระเงินใหม่
+		verify, err := post(sales, fmt.Sprintf("/api/orders/%d/verify-payment", id), nil, 200)
+		if err != nil {
+			return err
+		}
+		if err := expect(verify["status"], "PAID"); err != nil {
+			return err
+		}
+		// ยกเลิกใบนี้เพื่อไม่ให้ค้าง
+		_, err = post(sales, fmt.Sprintf("/api/orders/%d/cancel", id),
+			map[string]any{"note": "จบทดสอบ"}, 200)
+		return err
+	})
 	check("สั่งเกินจำนวนที่มีในคลัง → 409 INSUFFICIENT_STOCK ตอนยืนยันสต็อก", func() error {
 		id, err := placeOrder(customer, []any{orderLine(orderBookID, onHand(warehouse, orderBookID)+50)})
 		if err != nil {

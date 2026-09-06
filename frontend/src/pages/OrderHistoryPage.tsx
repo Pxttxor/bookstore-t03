@@ -78,6 +78,11 @@ export default function OrderHistoryPage() {
                         <Icon name="alert-triangle" size={14} /> เหตุผลที่ยกเลิก: {order.cancelReason}
                       </span>
                     )}
+                    {order.status === 'REJECTED' && (
+                      <span className="history__cancel-reason history__cancel-reason--rejected">
+                        <Icon name="alert-triangle" size={14} /> สลิปไม่ผ่าน{order.cancelReason ? `: ${order.cancelReason}` : ''} (คลิกเพื่อแนบใหม่)
+                      </span>
+                    )}
                   </div>
                   <div className="history__card-side">
                     <StatusBadge tone={getOrderStatusTone(order)}>
