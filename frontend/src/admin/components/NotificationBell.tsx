@@ -28,6 +28,9 @@ export default function NotificationBell({ role }: { role: Role }) {
   // ตัวเลขบนกระดิ่งอยู่บนแถบบนตลอด — ระหว่างโหลดหรือโหลดไม่สำเร็จให้ซ่อนไว้
   // ดีกว่าขึ้น 0 แล้วกระโดดเป็นเลขจริง หรือค้างเลขเก่าที่อาจไม่จริงแล้ว
   const unread = loading || error ? 0 : entries.filter((entry) => !entry.read).length
+  // ป้ายกลมบนกระดิ่งกว้างพอสำหรับตัวเลขไม่เกิน 2 หลัก (ดีไซน์เดิม min-width 18px +
+  // right:-8px) — เลข 3 หลักดันป้ายกว้างขึ้นจนล้ำทับไอคอนกระดิ่ง จึงตัดที่ 99 แทนที่จะโชว์ตัวเลขจริง
+  const badgeLabel = unread > 99 ? '99' : String(unread)
 
   useEffect(() => {
     if (!open) return
@@ -58,7 +61,7 @@ export default function NotificationBell({ role }: { role: Role }) {
         onClick={() => setOpen((value) => !value)}
       >
         <Icon name="bell" size={20} />
-        {unread > 0 && <span className="admin-bar__badge">{unread}</span>}
+        {unread > 0 && <span className="admin-bar__badge">{badgeLabel}</span>}
       </button>
 
       {open && (

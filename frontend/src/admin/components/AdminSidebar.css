@@ -46,16 +46,6 @@
   font-weight: 600;
 }
 
-.admin-nav__link--off {
-  color: var(--text-muted);
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.admin-nav__link--off:hover {
-  background: none;
-}
-
 .admin-nav__dot {
   width: 8px;
   height: 8px;

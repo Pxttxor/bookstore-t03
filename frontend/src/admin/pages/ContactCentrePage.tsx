@@ -27,7 +27,6 @@ const ROUTING = [
     channel: 'ในระบบ + อีเมล',
     trigger: 'อัตโนมัติ',
     auto: true,
-    useCase: 'U6→U7',
   },
   {
     document: 'ผลอนุมัติ/ตีกลับ',
@@ -35,7 +34,6 @@ const ROUTING = [
     channel: 'ในระบบ + อีเมล',
     trigger: 'อัตโนมัติ เมื่อผู้จัดการร้านตัดสิน',
     auto: true,
-    useCase: 'U7',
   },
   {
     document: 'ใบสั่งซื้อ (PO)',
@@ -43,7 +41,6 @@ const ROUTING = [
     channel: 'อีเมล (แนบ PDF)',
     trigger: 'กด "ส่งให้ผู้จัดจำหน่าย"',
     auto: false,
-    useCase: 'U8',
   },
   {
     document: 'ใบรับสินค้า (GRN)',
@@ -51,7 +48,6 @@ const ROUTING = [
     channel: 'ในระบบ',
     trigger: 'อัตโนมัติ เมื่อบันทึกรับ',
     auto: true,
-    useCase: 'U9',
   },
   {
     document: 'ใบส่งคืน',
@@ -59,7 +55,6 @@ const ROUTING = [
     channel: 'อีเมล + แนบหลักฐาน',
     trigger: 'กด "ส่งเรื่องคืน"',
     auto: false,
-    useCase: 'U10',
   },
   {
     document: 'ส่งต่อผู้จัดการ (กรณีปฏิเสธคืน)',
@@ -67,7 +62,6 @@ const ROUTING = [
     channel: 'ในระบบ + อีเมล',
     trigger: 'กด "ส่งเรื่องให้ผู้จัดการร้านพิจารณา"',
     auto: false,
-    useCase: 'U10',
   },
   {
     document: 'แจ้งเตือนถึงจุดสั่งซื้อ',
@@ -75,7 +69,6 @@ const ROUTING = [
     channel: 'ในระบบ (กระดิ่ง)',
     trigger: 'อัตโนมัติ ตามรอบเวลา',
     auto: true,
-    useCase: 'U5',
   },
 ]
 
@@ -199,7 +192,6 @@ export default function ContactCentrePage() {
                   <th>ผู้รับ</th>
                   <th>ช่องทาง</th>
                   <th>ทริกเกอร์</th>
-                  <th>Use Case</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,7 +206,6 @@ export default function ContactCentrePage() {
                       </StatusBadge>
                       <span className="contacts__trigger">{row.trigger}</span>
                     </td>
-                    <td className="data-table__code">{row.useCase}</td>
                   </tr>
                 ))}
               </tbody>

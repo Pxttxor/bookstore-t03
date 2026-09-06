@@ -237,41 +237,34 @@ export default function AdminSidebar({ role }: { role: Role }) {
       ? pendingReports.length
       : 0
 
+  // แต่ละบทบาทเห็นเฉพาะเมนูของหน้าที่ตัวเอง — กรองก่อนเรนเดอร์ ไม่ใช่แค่ทำจาง
+  // แล้วตัดหัวข้อกลุ่มที่ไม่เหลือเมนูใดให้แสดงทิ้งไปด้วย
+  const visibleGroups = MENU.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.allowed(role)),
+  })).filter((group) => group.items.length > 0)
+
   return (
     <aside className="admin-nav">
-      {MENU.map((group) => (
+      {visibleGroups.map((group) => (
         <div key={group.heading} className="admin-nav__group">
           <p className="admin-nav__heading">{group.heading}</p>
           <ul>
-            {group.items.map((item) => {
-              const allowed = item.allowed(role)
-
-              return (
-                <li key={item.label}>
-                  {allowed ? (
-                    <NavLink
-                      to={item.to}
-                      end={item.end}
-                      className={({ isActive }) =>
-                        'admin-nav__link' + (isActive ? ' admin-nav__link--active' : '')
-                      }
-                    >
-                      <Icon name={item.icon} size={19} />
-                      <span>{item.label}</span>
-                      {dotCount(item.dot) > 0 && <span className="admin-nav__dot" />}
-                    </NavLink>
-                  ) : (
-                    <span
-                      className="admin-nav__link admin-nav__link--off"
-                      title="บทบาทของคุณไม่มีสิทธิ์เข้าถึงเมนูนี้"
-                    >
-                      <Icon name={item.icon} size={19} />
-                      <span>{item.label}</span>
-                    </span>
-                  )}
-                </li>
-              )
-            })}
+            {group.items.map((item) => (
+              <li key={item.label}>
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    'admin-nav__link' + (isActive ? ' admin-nav__link--active' : '')
+                  }
+                >
+                  <Icon name={item.icon} size={19} />
+                  <span>{item.label}</span>
+                  {dotCount(item.dot) > 0 && <span className="admin-nav__dot" />}
+                </NavLink>
+              </li>
+            ))}
           </ul>
         </div>
       ))}

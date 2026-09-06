@@ -43,6 +43,15 @@
   font-weight: 600;
 }
 
+.pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 34px;
+  color: var(--text-muted);
+}
+
 .pagination__size {
   display: inline-flex;
   align-items: center;

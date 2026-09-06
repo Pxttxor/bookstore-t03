@@ -2,9 +2,12 @@ import type { Role } from '../auth/roles'
 
 // Permission rules for the back office, following the role table in §2 of the UI
 // specification. The role sets mirror `internal/handler/routes.go` in the backend
-// one for one — the server checks again because a user can call the API directly. Where a role owns an action but may not perform it right now, the
-// screen renders the control disabled with a title; where the action is outside the
-// role's scope entirely, the control is hidden.
+// one for one — the server checks again because a user can call the API directly. Where a role
+// owns an in-page action but may not perform it right now, the screen renders the control
+// disabled with a title. Where a whole section is outside the role's scope, it is hidden
+// outright: AdminSidebar filters MENU by these guards before rendering, and RequireCan
+// (../admin/components/RequireCan.tsx) uses them to block the route itself, so a role never
+// sees another role's menu or reaches its screens via a direct URL.
 export const can = {
   // Supplier management (U1-U4)
   viewSuppliers: (role: Role) => role === 'warehouse' || role === 'manager' || role === 'sales',
