@@ -129,8 +129,11 @@ var (
 var (
 	ErrCategoryNotFound = NotFound("CATEGORY_NOT_FOUND", "ไม่พบหมวดหมู่หนังสือ")
 
-	ErrInvalidBookStatus = Validation("INVALID_BOOK_STATUS", "สถานะหนังสือไม่ถูกต้อง")
-	ErrInvalidBookPrice  = Validation("INVALID_BOOK_PRICE", "ราคาปกต้องมากกว่า 0")
+	ErrInvalidBookStatus  = Validation("INVALID_BOOK_STATUS", "สถานะหนังสือไม่ถูกต้อง")
+	ErrInvalidBookPrice   = Validation("INVALID_BOOK_PRICE", "ราคาปกต้องมากกว่า 0")
+	ErrCoverImageNotFound = NotFound("COVER_IMAGE_NOT_FOUND", "หนังสือเล่มนี้ยังไม่มีรูปปก")
+	ErrCoverImageInvalid  = Validation("INVALID_COVER_IMAGE", "ไฟล์รูปปกไม่ถูกต้องหรือไม่ใช่รูปภาพ")
+	ErrCoverImageTooLarge = Validation("COVER_IMAGE_TOO_LARGE", "รูปปกต้องมีขนาดไม่เกิน 5 MB")
 )
 
 // IsbnTaken — ISBN ซ้ำกับหนังสือเล่มที่มีอยู่แล้ว

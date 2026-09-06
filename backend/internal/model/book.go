@@ -32,15 +32,17 @@ func (Category) TableName() string { return "category" }
 // CategoryID ไม่ใส่ not null เพราะ AutoMigrate เพิ่มคอลัมน์ NOT NULL บนตารางที่มีข้อมูลอยู่แล้วไม่ได้
 // backfillBookCategories() ใน migrate.go เติมค่าแล้วค่อยบังคับ NOT NULL ทีหลัง (แบบเดียวกับ person)
 type Book struct {
-	BookID      int        `gorm:"column:book_id;primaryKey" json:"bookId"`
-	ISBN        string     `gorm:"column:isbn;type:varchar(20);not null;uniqueIndex" json:"isbn"`
-	Title       string     `gorm:"column:title;type:varchar(300);not null" json:"title"`
-	Author      string     `gorm:"column:author;type:varchar(200);not null" json:"author"`
-	Publisher   string     `gorm:"column:publisher;type:varchar(200);not null" json:"publisher"`
-	Price       float64    `gorm:"column:price;type:numeric(12,2);not null" json:"price"`
-	Description string     `gorm:"column:description;type:text" json:"description"`
-	CategoryID  int        `gorm:"column:category_id;index" json:"categoryId"`
-	Status      BookStatus `gorm:"column:status;type:varchar(20);not null" json:"status"`
+	BookID         int        `gorm:"column:book_id;primaryKey" json:"bookId"`
+	ISBN           string     `gorm:"column:isbn;type:varchar(20);not null;uniqueIndex" json:"isbn"`
+	Title          string     `gorm:"column:title;type:varchar(300);not null" json:"title"`
+	Author         string     `gorm:"column:author;type:varchar(200);not null" json:"author"`
+	Publisher      string     `gorm:"column:publisher;type:varchar(200);not null" json:"publisher"`
+	Price          float64    `gorm:"column:price;type:numeric(12,2);not null" json:"price"`
+	Description    string     `gorm:"column:description;type:text" json:"description"`
+	CategoryID     int        `gorm:"column:category_id;index" json:"categoryId"`
+	Status         BookStatus `gorm:"column:status;type:varchar(20);not null" json:"status"`
+	CoverImage     []byte     `gorm:"column:cover_image;type:bytes" json:"-"`
+	CoverImageType string     `gorm:"column:cover_image_type;type:varchar(100)" json:"-"`
 }
 
 func (Book) TableName() string { return "book" }
