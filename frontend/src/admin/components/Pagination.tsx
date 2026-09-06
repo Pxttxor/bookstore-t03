@@ -12,6 +12,26 @@ interface PaginationProps {
 
 const PAGE_SIZES = [10, 20, 50]
 
+// A list this long (SO-1001..SO-1418 style datasets run past 40 pages) rendered every
+// page number in a row and blew the `.pagination` container far past the card's edge.
+// Windowing to the current page's neighbours plus the first/last page keeps the strip
+// inside its frame regardless of how many pages exist.
+const PAGE_WINDOW = 1
+
+function pageList(page: number, pageCount: number): (number | 'ellipsis')[] {
+  if (pageCount <= 7) {
+    return Array.from({ length: pageCount }, (_, i) => i + 1)
+  }
+  const start = Math.max(2, page - PAGE_WINDOW)
+  const end = Math.min(pageCount - 1, page + PAGE_WINDOW)
+  const pages: (number | 'ellipsis')[] = [1]
+  if (start > 2) pages.push('ellipsis')
+  for (let n = start; n <= end; n++) pages.push(n)
+  if (end < pageCount - 1) pages.push('ellipsis')
+  pages.push(pageCount)
+  return pages
+}
+
 export default function Pagination({
   page,
   pageCount,
@@ -40,16 +60,22 @@ export default function Pagination({
           <Icon name="chevron-left" size={18} />
         </button>
 
-        {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            type="button"
-            className={'pagination__page' + (n === page ? ' pagination__page--active' : '')}
-            onClick={() => onPageChange(n)}
-          >
-            {n}
-          </button>
-        ))}
+        {pageList(page, pageCount).map((n, index) =>
+          n === 'ellipsis' ? (
+            <span key={`ellipsis-${index}`} className="pagination__ellipsis" aria-hidden="true">
+              …
+            </span>
+          ) : (
+            <button
+              key={n}
+              type="button"
+              className={'pagination__page' + (n === page ? ' pagination__page--active' : '')}
+              onClick={() => onPageChange(n)}
+            >
+              {n}
+            </button>
+          ),
+        )}
 
         <button
           type="button"

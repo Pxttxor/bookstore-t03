@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import StorefrontLayout from './layouts/StorefrontLayout'
 import AuthLayout from './layouts/AuthLayout'
 import AdminLayout from './admin/AdminLayout'
+import RequireCan from './admin/components/RequireCan'
+import { can } from './admin/permissions'
 import HomePage from './pages/HomePage'
 import BookDetailPage from './pages/BookDetailPage'
 
@@ -71,27 +73,42 @@ export default function App() {
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
 
         <Route path="payments" element={<Navigate to="/admin/orders" replace />} />
-        <Route path="payments/report" element={<PaymentReportPage />} />
+        <Route element={<RequireCan allowed={can.managePaymentReports} />}>
+          <Route path="payments/report" element={<PaymentReportPage />} />
+        </Route>
         <Route path="payments/:id" element={<Navigate to="/admin/orders" replace />} />
-        <Route path="members" element={<MemberTierListPage />} />
+        <Route element={<RequireCan allowed={can.viewMembers} />}>
+          <Route path="members" element={<MemberTierListPage />} />
+        </Route>
 
         <Route path="delivery-report" element={<DeliverySummaryReportPage />} />
 
-        <Route path="books" element={<BookListPage />} />
-        <Route path="books/new" element={<BookFormPage />} />
-        <Route path="books/:id" element={<AdminBookDetailPage />} />
-        <Route path="books/:id/edit" element={<BookFormPage />} />
+        <Route element={<RequireCan allowed={can.viewBooks} />}>
+          <Route path="books" element={<BookListPage />} />
+          <Route path="books/:id" element={<AdminBookDetailPage />} />
+        </Route>
+        <Route element={<RequireCan allowed={can.editBooks} />}>
+          <Route path="books/new" element={<BookFormPage />} />
+          <Route path="books/:id/edit" element={<BookFormPage />} />
+        </Route>
 
-        <Route path="suppliers" element={<SupplierListPage />} />
-        <Route path="suppliers/new" element={<SupplierFormPage />} />
-        <Route path="suppliers/:id" element={<SupplierDetailPage />} />
-        <Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
+        <Route element={<RequireCan allowed={can.viewSuppliers} />}>
+          <Route path="suppliers" element={<SupplierListPage />} />
+          <Route path="suppliers/:id" element={<SupplierDetailPage />} />
+        </Route>
+        <Route element={<RequireCan allowed={can.editSuppliers} />}>
+          <Route path="suppliers/new" element={<SupplierFormPage />} />
+          <Route path="suppliers/:id/edit" element={<SupplierFormPage />} />
+        </Route>
 
-        {/* stock and stock/low are the same screen; it reads the pathname itself. */}
+        {/* stock and stock/low are the same screen; it reads the pathname itself. Both
+            paths already gate on can.viewStock inside StockListPage. */}
         <Route path="stock" element={<StockListPage />} />
         <Route path="stock/low" element={<StockListPage />} />
         <Route path="stock/adjust" element={<StockAdjustPage />} />
-        <Route path="stock/adjustments" element={<StockAdjustmentHistoryPage />} />
+        <Route element={<RequireCan allowed={can.viewAdjustmentHistory} />}>
+          <Route path="stock/adjustments" element={<StockAdjustmentHistoryPage />} />
+        </Route>
         <Route path="stock/counts" element={<StockCountListPage />} />
         <Route path="stock/counts/new" element={<StockCountFormPage />} />
         <Route path="stock/counts/:id" element={<StockCountDetailPage />} />
@@ -99,24 +116,36 @@ export default function App() {
 
         <Route path="alerts" element={<ReorderAlertsPage />} />
 
-        <Route path="purchasing" element={<PurchasingListPage />} />
+        <Route element={<RequireCan allowed={can.viewPurchasing} />}>
+          <Route path="purchasing" element={<PurchasingListPage />} />
+          <Route path="purchasing/po/:id" element={<OrderDetailPage />} />
+        </Route>
         <Route path="purchasing/pr/new" element={<RequisitionFormPage />} />
         <Route path="purchasing/pr/:id" element={<RequisitionFormPage />} />
         <Route path="purchasing/pr/:id/approve" element={<ApproveRequisitionPage />} />
-        <Route path="purchasing/po/:id" element={<OrderDetailPage />} />
         <Route path="purchasing/po/:id/receive" element={<ReceiveGoodsPage />} />
-        <Route path="purchasing/receipts" element={<ReceiptsListPage />} />
+        <Route element={<RequireCan allowed={can.receiveGoods} />}>
+          <Route path="purchasing/receipts" element={<ReceiptsListPage />} />
+        </Route>
         <Route path="purchasing/returns/new" element={<PurchaseReturnPage />} />
         <Route path="purchasing/returns/:id" element={<PurchaseReturnPage />} />
 
-        <Route path="promotions" element={<PromotionListPage />} />
-        <Route path="promotions/new" element={<PromotionFormPage />} />
-        <Route path="promotions/:id/edit" element={<PromotionFormPage />} />
+        <Route element={<RequireCan allowed={can.viewPromotions} />}>
+          <Route path="promotions" element={<PromotionListPage />} />
+          <Route path="promotions/new" element={<PromotionFormPage />} />
+          <Route path="promotions/:id/edit" element={<PromotionFormPage />} />
+        </Route>
 
-        <Route path="reviews" element={<ReviewModerationPage />} />
-        <Route path="reviews/manage" element={<ReviewManagerPage />} />
+        <Route element={<RequireCan allowed={can.moderateReview} />}>
+          <Route path="reviews" element={<ReviewModerationPage />} />
+        </Route>
+        <Route element={<RequireCan allowed={can.manageReportedReviews} />}>
+          <Route path="reviews/manage" element={<ReviewManagerPage />} />
+        </Route>
 
-        <Route path="contacts" element={<ContactCentrePage />} />
+        <Route element={<RequireCan allowed={can.viewContacts} />}>
+          <Route path="contacts" element={<ContactCentrePage />} />
+        </Route>
 
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
