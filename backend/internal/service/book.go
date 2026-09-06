@@ -7,6 +7,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -17,15 +18,17 @@ import (
 )
 
 type BookService struct {
-	db        *gorm.DB
-	books     *repository.BookRepository
-	inventory *repository.InventoryRepository
+	db            *gorm.DB
+	books         *repository.BookRepository
+	inventory     *repository.InventoryRepository
+	notifications *repository.NotificationRepository
 }
 
 func NewBookService(
 	db *gorm.DB, books *repository.BookRepository, inventory *repository.InventoryRepository,
+	notifications *repository.NotificationRepository,
 ) *BookService {
-	return &BookService{db: db, books: books, inventory: inventory}
+	return &BookService{db: db, books: books, inventory: inventory, notifications: notifications}
 }
 
 // BookView — หนังสือพร้อมชื่อหมวดหมู่ที่หน้าจอต้องแสดงคู่กันเสมอ
@@ -96,14 +99,18 @@ func (s *BookService) SetCover(bookID int, image []byte, imageType, by string) e
 		if err := s.books.UpdateCover(tx, bookID, image, imageType); err != nil {
 			return err
 		}
-		return s.books.AddChangeLogs(tx, []model.BookChangeLog{{
+		logs := []model.BookChangeLog{{
 			BookID:       bookID,
 			ChangedField: string(model.BookFieldCoverImage),
 			OldValue:     coverLogValue(book.CoverImageType),
 			NewValue:     imageType,
 			ChangedDate:  time.Now().UTC(),
 			ChangedBy:    by,
-		}})
+		}}
+		if err := s.books.AddChangeLogs(tx, logs); err != nil {
+			return err
+		}
+		return s.notifyBookUpdated(tx, bookID, by, logs)
 	})
 }
 
@@ -119,13 +126,17 @@ func (s *BookService) ClearCover(bookID int, by string) error {
 		if err := s.books.ClearCover(tx, bookID); err != nil {
 			return err
 		}
-		return s.books.AddChangeLogs(tx, []model.BookChangeLog{{
+		logs := []model.BookChangeLog{{
 			BookID:       bookID,
 			ChangedField: string(model.BookFieldCoverImage),
 			OldValue:     coverLogValue(book.CoverImageType),
 			ChangedDate:  time.Now().UTC(),
 			ChangedBy:    by,
-		}})
+		}}
+		if err := s.books.AddChangeLogs(tx, logs); err != nil {
+			return err
+		}
+		return s.notifyBookUpdated(tx, bookID, by, logs)
 	})
 }
 
@@ -134,6 +145,23 @@ func coverLogValue(imageType string) string {
 		return "ไม่มีรูปปก"
 	}
 	return imageType
+}
+
+func (s *BookService) notifyBookUpdated(
+	tx *gorm.DB, bookID int, by string, logs []model.BookChangeLog,
+) error {
+	if s.notifications == nil || len(logs) == 0 {
+		return nil
+	}
+	fields := make([]string, 0, len(logs))
+	for _, log := range logs {
+		fields = append(fields, model.BookFieldLabels[model.BookField(log.ChangedField)])
+	}
+	body := fmt.Sprintf("หนังสือ %d · แก้ไข %s · ผู้แก้ไข %s",
+		bookID, strings.Join(fields, ", "), by)
+	return pushBothChannels(tx, s.notifications, model.RoleManager,
+		model.NotifyBookUpdated, "ข้อมูลหนังสือถูกแก้ไข", body,
+		fmt.Sprintf("/admin/books/%d", bookID))
 }
 
 // ChangeLogs — ประวัติการแก้ไขของหนังสือเล่มหนึ่ง (แท็บประวัติในหน้ารายละเอียด)
@@ -240,7 +268,10 @@ func (s *BookService) write(
 		if err := s.books.Save(tx, book); err != nil {
 			return err
 		}
-		return s.books.AddChangeLogs(tx, logs)
+		if err := s.books.AddChangeLogs(tx, logs); err != nil {
+			return err
+		}
+		return s.notifyBookUpdated(tx, bookID, by, logs)
 	})
 	if err != nil {
 		return nil, err

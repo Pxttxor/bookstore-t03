@@ -22,6 +22,8 @@ export type NotificationKind =
   | 'STOCK_DISCREPANCY'
   // Inventory subsystem — a warehouse employee adjusted stock manually.
   | 'STOCK_ADJUSTED'
+  // Book catalogue edits are routed to the manager.
+  | 'BOOK_UPDATED'
   // Customer-order flow (Order / Delivery subsystems).
   | 'ORDER_PLACED'
   | 'ORDER_READY_TO_SHIP'
