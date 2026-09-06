@@ -194,7 +194,6 @@ function BookDetailView({ book }: { book: CatalogueDetail }) {
                   </div>
                   <RatingStars value={r.rating} size={16} />
                 </header>
-                {r.headline && <p className="review-card__headline">{r.headline}</p>}
                 <p className="review-card__text">{r.comment}</p>
                 {r.replies.map((reply) => (
                   <div key={reply.replyId} className="review-card__reply">

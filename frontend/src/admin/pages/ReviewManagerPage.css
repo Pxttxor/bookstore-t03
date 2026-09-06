@@ -583,6 +583,13 @@
   color: #b45309;
 }
 
+/* รายงานที่ผู้จัดการตัดสินไปแล้ว — โทนกลาง เพื่อไม่ให้ปนกับใบที่ยังรอตัดสิน */
+.report-tag--decided {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
+}
+
 /* Review Speech/Quote Bubble Box */
 .review-comment-box {
   background: #ffffff;

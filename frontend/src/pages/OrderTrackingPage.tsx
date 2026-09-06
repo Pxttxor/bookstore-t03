@@ -6,7 +6,7 @@ import BookCover from '../components/BookCover'
 import LoadingState from '../admin/components/LoadingState'
 import ErrorState from '../admin/components/ErrorState'
 import EmptyState from '../admin/components/EmptyState'
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client'
+import { apiGet, apiPost, apiDelete, ApiError } from '../api/client'
 import { formatPrice } from '../data/money'
 import { useAuth } from '../auth/AuthContext'
 import { useOrders } from '../admin/orders/OrderContext'
@@ -31,7 +31,6 @@ interface CustomerReview {
   orderId?: number
   orderCode?: string
   rating: number
-  headline?: string
   comment: string
   status: 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'REMOVED'
   statusLabel?: string
@@ -45,9 +44,8 @@ interface ReviewFormProps {
   onRefresh: () => void | Promise<void>
 }
 
-// ReviewForm — จัดการรีวิวของลูกค้า (เขียนใหม่ / แก้ไข / ลบ)
+// ReviewForm — จัดการรีวิวของลูกค้า (เขียนใหม่ / ลบ)
 function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProps) {
-  const [isEditing, setIsEditing] = useState(false)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -57,23 +55,7 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
   const [profanityDetected, setProfanityDetected] = useState<string | null>(null)
 
   const badComment = detectProfanity(comment)
-
-  const startEdit = () => {
-    if (!existingReview) return
-    setRating(existingReview.rating)
-    setComment(existingReview.comment)
-    setError('')
-    setSuccessMsg('')
-    setProfanityDetected(null)
-    setIsEditing(true)
-  }
-
-  const cancelEdit = () => {
-    setIsEditing(false)
-    setError('')
-    setSuccessMsg('')
-    setProfanityDetected(null)
-  }
+  const badWord = badComment
 
   const submitNew = async () => {
     if (submitting) return
@@ -93,8 +75,8 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
       return
     }
     // ตรวจสอบคำหยาบคายก่อนส่ง ถ้ามีให้เตือนลูกค้าพิมพ์ใหม่
-    if (badComment) {
-      setProfanityDetected(badComment)
+    if (badWord) {
+      setProfanityDetected(badWord)
       setError('ตรวจพบคำไม่สุภาพหรือไม่เหมาะสมในข้อความรีวิว กรุณาตรวจสอบและพิมพ์ใหม่')
       return
     }
@@ -103,57 +85,17 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     setSuccessMsg('')
     setProfanityDetected(null)
     try {
-      await apiPost('/api/reviews', { bookId, rating, comment: comment.trim() })
+      await apiPost('/api/reviews', {
+        bookId,
+        rating,
+        comment: comment.trim(),
+      })
       setRating(0)
       setComment('')
-      setSuccessMsg('ส่งรีวิวแล้ว รอพนักงานตรวจสอบก่อนเผยแพร่')
+      setSuccessMsg('ส่งรีวิวสำเร็จแล้ว')
       await onRefresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'ส่งรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const saveEdit = async () => {
-    if (submitting || !existingReview) return
-    if (rating === 0) {
-      setError('กรุณาให้คะแนนก่อนบันทึก')
-      setProfanityDetected(null)
-      return
-    }
-    if (comment.trim() === '') {
-      setError('กรุณาเขียนความเห็นก่อนบันทึก')
-      setProfanityDetected(null)
-      return
-    }
-    if (comment.trim().length > 75) {
-      setError('ข้อความรีวิวต้องไม่เกิน 75 ตัวอักษร')
-      setProfanityDetected(null)
-      return
-    }
-    if (badComment) {
-      setProfanityDetected(badComment)
-      setError('ตรวจพบคำไม่สุภาพหรือไม่เหมาะสมในข้อความรีวิว กรุณาตรวจสอบและพิมพ์ใหม่')
-      return
-    }
-    setSubmitting(true)
-    setError('')
-    setSuccessMsg('')
-    setProfanityDetected(null)
-    try {
-      // ต้องส่ง headline กลับไปด้วยแม้ฟอร์มนี้ไม่มีช่องแก้ไข — service.UpdateReviewInput
-      // เขียนทับ Headline แบบไม่มีเงื่อนไข ไม่ส่ง = ค่าเดิมหายเงียบ ๆ
-      await apiPut(`/api/reviews/${existingReview.reviewId}`, {
-        rating,
-        headline: existingReview.headline ?? '',
-        comment: comment.trim(),
-      })
-      setIsEditing(false)
-      setSuccessMsg('แก้ไขรีวิวสำเร็จแล้ว')
-      await onRefresh()
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'แก้ไขรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     } finally {
       setSubmitting(false)
     }
@@ -169,7 +111,6 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     setSuccessMsg('')
     try {
       await apiDelete(`/api/reviews/${existingReview.reviewId}`)
-      setIsEditing(false)
       setRating(0)
       setComment('')
       await onRefresh()
@@ -180,36 +121,19 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     }
   }
 
-  // กรณีมีรีวิวแล้วและไม่ได้อยู่ในโหมดแก้ไข → แสดงรีวิวพร้อมปุ่ม แก้ไข / ลบ
-  if (existingReview && !isEditing) {
+  // กรณีมีรีวิวแล้ว → แสดงรีวิวพร้อมปุ่ม ลบ (ไม่มีปุ่มแก้ไข)
+  if (existingReview) {
     return (
       <div className="track-review">
         <div className="track-review__book">
           <BookCover bookId={bookId} title={title} size="sm" />
           <div className="track-review__book-info">
             <h4>{title}</h4>
-            <div className="track-review__status-row">
-              <span className={`track-review__badge is-${existingReview.status.toLowerCase()}`}>
-                {existingReview.status === 'PUBLISHED' ? (
-                  <>
-                    <Icon name="check-circle" size={14} /> เผยแพร่แล้ว
-                  </>
-                ) : existingReview.status === 'HIDDEN' ? (
-                  <>
-                    <Icon name="eye-off" size={14} /> ถูกซ่อน
-                  </>
-                ) : (
-                  <>
-                    <Icon name="clock" size={14} /> รอพนักงานตรวจสอบ
-                  </>
-                )}
+            {existingReview.createdDate && (
+              <span className="track-review__date">
+                รีวิวเมื่อ {new Date(existingReview.createdDate).toLocaleDateString('th-TH')}
               </span>
-              {existingReview.createdDate && (
-                <span className="track-review__date">
-                  รีวิวเมื่อ {new Date(existingReview.createdDate).toLocaleDateString('th-TH')}
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
@@ -231,86 +155,11 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
         <div className="track-review__actions">
           <button
             type="button"
-            className="btn btn-outline btn-sm track-review__btn-edit"
-            onClick={startEdit}
-          >
-            <Icon name="edit" size={15} /> แก้ไขรีวิว
-          </button>
-          <button
-            type="button"
             className="btn btn-outline-danger btn-sm track-review__btn-delete"
             onClick={() => void deleteReview()}
             disabled={deleting}
           >
             <Icon name="trash" size={15} /> {deleting ? 'กำลังลบ…' : 'ลบรีวิว'}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // กรณีมีรีวิวแล้วและกดแก้ไข → แสดงแบบฟอร์มแก้ไข
-  if (existingReview && isEditing) {
-    return (
-      <div className="track-review">
-        <div className="track-review__book">
-          <BookCover bookId={bookId} title={title} size="sm" />
-          <div className="track-review__book-info">
-            <h4>{title}</h4>
-            <span className="track-review__editing-badge">กำลังแก้ไขรีวิวของคุณ</span>
-          </div>
-        </div>
-
-        <div className="track-review__rate">
-          <span>แก้ไขคะแนน</span>
-          <RatingStars value={rating} interactive size={22} onChange={setRating} />
-        </div>
-        <div className="track-review__field">
-          <div className="track-review__field-header">
-            <span>แก้ไขความเห็น</span>
-            <span className={`track-review__char-count ${comment.length >= 75 ? 'is-max' : ''}`}>
-              {comment.length}/75 ตัวอักษร
-            </span>
-          </div>
-          <textarea
-            rows={3}
-            maxLength={75}
-            placeholder="หนังสือเล่มนี้เป็นอย่างไรบ้าง (ไม่เกิน 75 ตัวอักษร)"
-            value={comment}
-            className={profanityDetected && badComment ? 'track-review__input--warning' : ''}
-            onChange={(e) => {
-              setComment(e.target.value)
-              if (error) setError('')
-              if (profanityDetected) setProfanityDetected(null)
-            }}
-          />
-        </div>
-        {error && (
-          <div
-            className={`track-review__notice ${
-              profanityDetected ? 'track-review__notice--warning' : 'track-review__notice--error'
-            }`}
-          >
-            <Icon name="alert-triangle" size={18} />
-            <span>{error}</span>
-          </div>
-        )}
-        <div className="track-review__actions">
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => void saveEdit()}
-            disabled={submitting}
-          >
-            {submitting ? 'กำลังบันทึก…' : 'บันทึกการแก้ไข'}
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={cancelEdit}
-            disabled={submitting}
-          >
-            ยกเลิก
           </button>
         </div>
       </div>

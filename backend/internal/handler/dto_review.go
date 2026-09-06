@@ -45,7 +45,6 @@ type reviewDTO struct {
 	OrderCode        string             `json:"orderCode,omitempty"`
 	VerifiedPurchase bool               `json:"verifiedPurchase"`
 	Rating           int                `json:"rating"`
-	Headline         string             `json:"headline,omitempty"`
 	Comment          string             `json:"comment"`
 	Status           model.ReviewStatus `json:"status"`
 	StatusLabel      string             `json:"statusLabel"`
@@ -87,7 +86,6 @@ func toReviewDTO(row repository.ReviewRow) reviewDTO {
 		OrderID:          review.OrderID,
 		VerifiedPurchase: review.IsVerifiedPurchase(),
 		Rating:           review.Rating,
-		Headline:         review.Headline,
 		Comment:          review.Comment,
 		Status:           review.Status,
 		StatusLabel:      review.Status.Label(),

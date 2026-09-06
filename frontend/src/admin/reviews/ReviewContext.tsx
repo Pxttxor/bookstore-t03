@@ -167,8 +167,12 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       reload,
-      pendingCount: reviews.filter((r) => r.status === 'PENDING').length,
-      approvedCount: reviews.filter((r) => r.status === 'PUBLISHED').length,
+      pendingCount: reviews.filter(
+        (r) => r.status === 'PENDING' || (r.report?.isReported && r.report?.managerStatus === 'PENDING')
+      ).length,
+      approvedCount: reviews.filter(
+        (r) => r.status === 'PUBLISHED' && !(r.report?.isReported && r.report?.managerStatus === 'PENDING')
+      ).length,
       deletedCount: reviews.filter((r) => r.status === 'REMOVED' || r.status === 'HIDDEN')
         .length,
       unrepliedCount: reviews.filter((r) => !r.reply).length,

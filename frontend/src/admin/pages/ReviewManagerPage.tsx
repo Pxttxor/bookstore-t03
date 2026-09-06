@@ -13,6 +13,7 @@ import { coverFor } from '../../data/covers'
 import { useReviews } from '../reviews/ReviewContext'
 import {
   formatThaiRelativeTime,
+  REPORT_DECISION_LABELS,
   type Review,
 } from '../reviews/reviews'
 import ReviewDetailDrawer from './ReviewDetailDrawer'
@@ -60,10 +61,12 @@ export default function ReviewManagerPage() {
 
     let result = reviews.filter((r) => {
       // Tab filter
+      const isPending =
+        r.status === 'PENDING' || (r.report?.isReported && r.report?.managerStatus === 'PENDING')
       if (activeTab === 'PENDING') {
-        if (r.status !== 'PENDING') return false
+        if (!isPending) return false
       } else if (activeTab === 'APPROVED') {
-        if (r.status !== 'PUBLISHED') return false
+        if (isPending || r.status !== 'PUBLISHED') return false
       } else if (activeTab === 'DELETED') {
         if (r.status !== 'REMOVED' && r.status !== 'HIDDEN') return false
       }
@@ -421,6 +424,12 @@ export default function ReviewManagerPage() {
             const report = review.report
             const isSpam = report?.category === 'spam' || report?.reason?.includes('สแปม')
             const isService = report?.category === 'service' || report?.reason?.includes('บริการ') || report?.reason?.includes('ขนส่ง')
+            // เซิร์ฟเวอร์ปิดรายงานให้พร้อมกับสถานะรีวิวเสมอ — ใบที่ตัดสินแล้วจึงต้องเลิก
+            // แสดงเป็นป้ายเตือน ไม่งั้นผู้จัดการดูไม่ออกว่ารายการไหนยังค้างอยู่จริง
+            const decision =
+              report?.managerStatus && report.managerStatus !== 'PENDING'
+                ? report.managerStatus
+                : undefined
 
             return (
               <article key={review.reviewId} className="review-card">
@@ -495,18 +504,23 @@ export default function ReviewManagerPage() {
                     {/* Report Tag Pill on right */}
                     {report?.isReported && (
                       <div
-                        className={`review-report-tag ${isSpam
-                          ? 'report-tag--spam'
-                          : isService
-                            ? 'report-tag--service'
-                            : 'report-tag--warning'
+                        className={`review-report-tag ${decision
+                          ? 'report-tag--decided'
+                          : isSpam
+                            ? 'report-tag--spam'
+                            : isService
+                              ? 'report-tag--service'
+                              : 'report-tag--warning'
                           }`}
                       >
                         <Icon
-                          name={isSpam ? 'flag' : 'alert-triangle'}
+                          name={decision ? 'check-check' : isSpam ? 'flag' : 'alert-triangle'}
                           size={14}
                         />
-                        <span>{report.reason}</span>
+                        <span>
+                          {report.reason}
+                          {decision && ` · ${REPORT_DECISION_LABELS[decision]}`}
+                        </span>
                       </div>
                     )}
                   </div>
