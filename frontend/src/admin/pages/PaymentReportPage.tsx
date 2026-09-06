@@ -44,8 +44,8 @@ export default function PaymentReportPage() {
   const role = user!.role
   const mayGenerate = can.managePaymentReports(role)
 
-  // สรุปสด ๆ ตามช่วงที่เลือก ผู้จัดการจึงเห็นตัวเลขก่อนกดบันทึกรายงาน
-  const preview = useMemo(() => summarise(payments, from, to), [payments, from, to])
+  // สรุปสด ๆ ตามช่วงที่เลือก ผู้จัดการจึงเห็นตัวเลขก่อนกดบันทึกรายงาน (หักยอดออร์เดอร์ที่ถูกยกเลิกแล้ว)
+  const preview = useMemo(() => summarise(payments, from, to, orders), [payments, from, to, orders])
 
   const save = async () => {
     if (!from || !to) {
@@ -151,14 +151,22 @@ export default function PaymentReportPage() {
         <StatTile
           label="ยอดรับชำระจริง"
           value={formatPrice(preview.totalReceived)}
-          note={`ช่วง ${from} ถึง ${to}`}
+          note={
+            preview.cancelledPayments.length > 0
+              ? `หักคำสั่งซื้อที่ยกเลิก ${preview.cancelledPayments.length} รายการ (-${formatPrice(preview.cancelledTotal)}) แล้ว`
+              : `ช่วง ${from} ถึง ${to}`
+          }
           icon="credit-card"
           tone="accent"
         />
         <StatTile
           label="จำนวนรายการ"
           value={preview.itemCount}
-          note="รายการที่ตรวจสอบผ่าน"
+          note={
+            preview.cancelledPayments.length > 0
+              ? `รับจริง ${preview.itemCount} รายการ (ยกเลิก ${preview.cancelledPayments.length})`
+              : 'รายการที่ตรวจสอบผ่าน'
+          }
           icon="check-circle"
         />
         <StatTile
@@ -191,23 +199,49 @@ export default function PaymentReportPage() {
                 </tr>
               </thead>
               <tbody>
-                {preview.payments.map((payment) => (
-                  <tr key={payment.paymentId}>
-                    <td className="data-table__code">{formatPaymentCode(payment.paymentId)}</td>
-                    <td>{formatOrderCode(payment.orderId)}</td>
-                    <td className="data-table__strong">
-                      {orders.find((order) => order.orderId === payment.orderId)?.customerName ?? '—'}
-                    </td>
-                    <td>{paymentDate(payment)}</td>
-                    <td>{payment.verifiedBy ?? '—'}</td>
-                    <td className="payment-report__num">{formatPrice(payment.amount)}</td>
-                  </tr>
-                ))}
+                {preview.payments.map((payment) => {
+                  const order = orders.find((o) => o.orderId === payment.orderId)
+                  const isCancelled = order?.status === 'CANCELLED' || order?.status === 'REJECTED'
+                  return (
+                    <tr
+                      key={payment.paymentId}
+                      className={isCancelled ? 'payment-report__row--cancelled' : undefined}
+                    >
+                      <td className="data-table__code">{formatPaymentCode(payment.paymentId)}</td>
+                      <td>
+                        <div className="payment-report__order-col">
+                          <span>{formatOrderCode(payment.orderId)}</span>
+                          {isCancelled && (
+                            <span className="payment-report__cancelled-badge">
+                              {order?.status === 'CANCELLED' ? 'ยกเลิกแล้ว' : 'ปฏิเสธแล้ว'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="data-table__strong">{order?.customerName ?? '—'}</td>
+                      <td>{paymentDate(payment)}</td>
+                      <td>{payment.verifiedBy ?? '—'}</td>
+                      <td className="payment-report__num">
+                        {isCancelled ? (
+                          <div className="payment-report__cancelled-num">
+                            <span className="payment-report__cancelled-amt">
+                              {formatPrice(payment.amount)}
+                            </span>
+                            <span className="payment-report__deducted-tag">(หักออก)</span>
+                          </div>
+                        ) : (
+                          formatPrice(payment.amount)
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
               <tfoot>
                 <tr>
                   <td colSpan={5} className="payment-report__total-label">
                     รวมรับจริง {preview.itemCount} รายการ
+                    {preview.cancelledPayments.length > 0 && ` (ยกเลิก ${preview.cancelledPayments.length} รายการ)`}
                   </td>
                   <td className="payment-report__num payment-report__total">
                     {formatPrice(preview.totalReceived)}

@@ -36,6 +36,7 @@ const StockCountDetailPage = lazy(() => import('./admin/pages/StockCountDetailPa
 const StockDiscrepancyPage = lazy(() => import('./admin/pages/StockDiscrepancyPage'))
 const OrdersListPage = lazy(() => import('./admin/pages/OrdersListPage'))
 const CustomerOrderDetailPage = lazy(() => import('./admin/pages/CustomerOrderDetailPage'))
+const RefundsListPage = lazy(() => import('./admin/pages/RefundsListPage'))
 const DeliverySummaryReportPage = lazy(() => import('./admin/pages/DeliverySummaryReportPage'))
 const SupplierListPage = lazy(() => import('./admin/pages/SupplierListPage'))
 const SupplierDetailPage = lazy(() => import('./admin/pages/SupplierDetailPage'))
@@ -72,6 +73,7 @@ export default function App() {
 
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
+        <Route path="refunds" element={<RefundsListPage />} />
 
         <Route path="payments" element={<Navigate to="/admin/orders" replace />} />
         <Route element={<RequireCan allowed={can.managePaymentReports} />}>

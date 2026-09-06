@@ -75,6 +75,11 @@ export default function DashboardPage() {
   const deliveryReadyOrders = customerOrders.filter(
     (o) => o.status === 'READY_TO_SHIP' || o.status === 'SHIPPED',
   )
+  const pendingRefundOrders = customerOrders.filter(
+    (o) =>
+      o.status === 'CANCELLED' &&
+      (o.refundStatus === 'PENDING' || (!o.refundStatus && o.netAmount > 0)),
+  )
 
   // Same reading as the delivery summary report, which also opens on the latest day.
   const deliveryRecords = buildDeliveryRecords(customerOrders)
@@ -168,6 +173,19 @@ export default function DashboardPage() {
               icon="shopping-bag"
               to="/admin/orders"
               linkLabel="ดูคำสั่งซื้อลูกค้า"
+            />
+            <StatTile
+              label="รายการคืนเงิน"
+              value={pendingRefundOrders.length}
+              note={
+                pendingRefundOrders.length > 0
+                  ? `รอการโอนเงินคืน ${pendingRefundOrders.length} รายการ`
+                  : 'ไม่มีรายการรอคืนเงิน'
+              }
+              icon="dollar-sign"
+              tone={pendingRefundOrders.length > 0 ? 'warning' : 'default'}
+              to="/admin/refunds"
+              linkLabel="ดูรายการคืนเงิน"
             />
             <StatTile
               label="ผู้จัดจำหน่ายที่ใช้งานอยู่"
@@ -365,6 +383,19 @@ export default function DashboardPage() {
             linkLabel="ดูคำสั่งซื้อลูกค้า"
           />
           <StatTile
+            label="รายการคืนเงิน"
+            value={pendingRefundOrders.length}
+            note={
+              pendingRefundOrders.length > 0
+                ? `รอการโอนเงินคืน ${pendingRefundOrders.length} รายการ`
+                : 'ไม่มีรายการรอคืนเงิน'
+            }
+            icon="dollar-sign"
+            tone={pendingRefundOrders.length > 0 ? 'warning' : 'default'}
+            to="/admin/refunds"
+            linkLabel="ดูรายการคืนเงิน"
+          />
+          <StatTile
             label="ตรวจสอบรีวิว"
             value={unrepliedCount}
             note={
@@ -432,6 +463,7 @@ export default function DashboardPage() {
           />
         </section>
       )}
+
     </div>
   )
 }

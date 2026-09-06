@@ -14,9 +14,10 @@ import {
   formatOrderCode,
   formatOrderDate,
   milestoneOf,
-  ORDER_STATUS_LABELS,
+  getOrderStatusLabel,
   type CustomerOrder,
 } from '../admin/orders/orders'
+import { THAI_BANKS, formatBankAccount, findBank } from '../data/banks'
 import { detectProfanity } from '../admin/reviews/reviews'
 import './OrderTrackingPage.css'
 
@@ -276,9 +277,65 @@ export default function OrderTrackingPage() {
 
 function RealOrderView({ order }: { order: CustomerOrder }) {
   const { user } = useAuth()
+  const { updateRefundInfo } = useOrders()
   const [reviews, setReviews] = useState<CustomerReview[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  const [localOrder, setLocalOrder] = useState<CustomerOrder | null>(null)
+  const currentOrder = localOrder && localOrder.orderId === order.orderId ? localOrder : order
+
+  const [bankName, setBankName] = useState(
+    currentOrder.refundBankName || THAI_BANKS[0].name,
+  )
+  const [accountNo, setAccountNo] = useState(
+    currentOrder.refundAccountNo
+      ? formatBankAccount(
+          currentOrder.refundBankName || THAI_BANKS[0].name,
+          currentOrder.refundAccountNo,
+        )
+      : '',
+  )
+  const [accountName, setAccountName] = useState(
+    currentOrder.refundAccountName || '',
+  )
+  const [savingBank, setSavingBank] = useState(false)
+  const [bankError, setBankError] = useState('')
+  const [bankSuccess, setBankSuccess] = useState('')
+
+  // หลังจากกรอกข้อมูลครบถ้วนแล้ว ไม่อยากให้ลูกค้ากรอกซ้ำ
+  const isBankSaved = Boolean(
+    currentOrder.refundBankName &&
+      currentOrder.refundAccountNo &&
+      currentOrder.refundAccountName,
+  )
+
+  const handleSaveBank = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!bankName.trim() || !accountNo.trim() || !accountName.trim()) {
+      setBankError('กรุณากรอกข้อมูลธนาคาร เลขที่บัญชี และชื่อ-นามสกุลผู้รับเงินให้ครบถ้วน')
+      return
+    }
+    setSavingBank(true)
+    setBankError('')
+    setBankSuccess('')
+    try {
+      const updated = await updateRefundInfo(
+        currentOrder.orderId,
+        bankName.trim(),
+        accountNo.trim(),
+        accountName.trim(),
+      )
+      if (updated) {
+        setLocalOrder(updated)
+      }
+      setBankSuccess('บันทึกข้อมูลบัญชีรับเงินคืนเรียบร้อยแล้ว')
+    } catch (err) {
+      setBankError(err instanceof Error ? err.message : 'บันทึกข้อมูลไม่สำเร็จ')
+    } finally {
+      setSavingBank(false)
+    }
+  }
 
   const loadReviews = useCallback(async () => {
     if (!user) return
@@ -293,20 +350,20 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
   }, [user])
 
   useEffect(() => {
-    if (order.status === 'DELIVERED' && user) {
+    if (currentOrder.status === 'DELIVERED' && user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadReviews()
     }
-  }, [order.status, user, loadReviews])
+  }, [currentOrder.status, user, loadReviews])
 
-  const steps = buildSteps(order)
+  const steps = buildSteps(currentOrder)
   const activeIndex = Math.max(0, steps.findIndex((s) => s.status === 'current'))
   const progress =
-    order.status === 'DELIVERED' ? 100 : (activeIndex / (steps.length - 1)) * 100
-  const cancelled = order.status === 'CANCELLED' || order.status === 'REJECTED'
+    currentOrder.status === 'DELIVERED' ? 100 : (activeIndex / (steps.length - 1)) * 100
+  const cancelled = currentOrder.status === 'CANCELLED' || currentOrder.status === 'REJECTED'
 
-  const trackingNumber = order.shipment?.trackingNumber?.trim() || ''
-  const carrier = order.shipment?.carrier || 'รอจัดส่ง'
+  const trackingNumber = currentOrder.shipment?.trackingNumber?.trim() || ''
+  const carrier = currentOrder.shipment?.carrier || 'รอจัดส่ง'
 
   const copyTracking = async (tracking: string) => {
     try {
@@ -335,17 +392,38 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
     <div className="track page-shell">
       <header className="track__head">
         <div>
-          <h1>คำสั่งซื้อ {formatOrderCode(order.orderId)}</h1>
-          <p>สั่งซื้อเมื่อ {formatOrderDate(order.orderDate)}</p>
+          <h1>คำสั่งซื้อ {formatOrderCode(currentOrder.orderId)}</h1>
+          <p>สั่งซื้อเมื่อ {formatOrderDate(currentOrder.orderDate)}</p>
         </div>
       </header>
 
       <section className="track__status">
-        <h2>สถานะ: {ORDER_STATUS_LABELS[order.status]}</h2>
+        <h2>สถานะ: {getOrderStatusLabel(currentOrder)}</h2>
         {cancelled ? (
-          <p className="track__cancelled">
-            <Icon name="alert-triangle" size={18} /> คำสั่งซื้อนี้{ORDER_STATUS_LABELS[order.status]}
-          </p>
+          <div
+            className={`track__cancelled-box ${
+              currentOrder.refundStatus === 'REFUNDED'
+                ? 'is-refunded'
+                : currentOrder.refundStatus === 'PENDING'
+                  ? 'is-refund-pending'
+                  : ''
+            }`}
+          >
+            <p className="track__cancelled">
+              <Icon
+                name={currentOrder.refundStatus === 'REFUNDED' ? 'check-circle' : 'alert-triangle'}
+                size={20}
+              />
+              {currentOrder.refundStatus === 'REFUNDED'
+                ? 'คำสั่งซื้อนี้ถูกยกเลิก และทางร้านได้ดำเนินการคืนเงินให้ท่านเรียบร้อยแล้ว'
+                : 'คำสั่งซื้อนี้ถูกยกเลิก และอยู่ระหว่างขั้นตอนการคืนเงิน'}
+            </p>
+            {currentOrder.cancelReason && (
+              <p className="track__cancel-reason">
+                <strong>เหตุผลที่ยกเลิก:</strong> {currentOrder.cancelReason}
+              </p>
+            )}
+          </div>
         ) : (
           <div className="track__steps">
             <div className="track__line" />
@@ -369,6 +447,177 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
         )}
       </section>
 
+      {currentOrder.status === 'CANCELLED' && (
+        <section
+          className={`track__refund-card ${
+            currentOrder.refundStatus === 'REFUNDED' ? 'is-refunded' : ''
+          }`}
+        >
+          <div className="track__refund-header">
+            <Icon
+              name={currentOrder.refundStatus === 'REFUNDED' ? 'check-circle' : 'credit-card'}
+              size={22}
+            />
+            <div>
+              <h3 className="track__refund-title">ข้อมูลการคืนเงินให้ลูกค้า</h3>
+              <span
+                className={`track__refund-tag is-${(
+                  currentOrder.refundStatus || 'pending'
+                ).toLowerCase()}`}
+              >
+                {currentOrder.refundStatus === 'REFUNDED'
+                  ? 'คืนเงินแล้ว'
+                  : isBankSaved
+                    ? 'บันทึกข้อมูลแล้ว - รอพนักงานโอนเงิน'
+                    : 'กรุณากรอกข้อมูลบัญชีรับเงินคืน'}
+              </span>
+            </div>
+          </div>
+
+          {currentOrder.refundStatus === 'REFUNDED' ? (
+            <div className="track__refund-content is-success">
+              <div className="track__refund-msg">
+                <Icon name="check-circle" size={20} />
+                <span>พนักงานได้ดำเนินการคืนเงินให้ลูกค้าเรียบร้อยแล้ว</span>
+              </div>
+              <div className="track__refund-account-box">
+                <div>
+                  <strong>ยอดเงินที่คืน:</strong>{' '}
+                  <span className="track__refund-highlight-amount">
+                    ฿ {formatPrice(currentOrder.netAmount)}
+                  </span>
+                </div>
+                <div>
+                  <strong>ชื่อธนาคาร:</strong> {currentOrder.refundBankName || '—'}
+                </div>
+                <div>
+                  <strong>เลขที่บัญชี:</strong> {currentOrder.refundAccountNo || '—'}
+                </div>
+                {currentOrder.refundAccountName && (
+                  <div>
+                    <strong>ชื่อ-นามสกุลผู้รับเงิน:</strong> {currentOrder.refundAccountName}
+                  </div>
+                )}
+              </div>
+              {currentOrder.refundNote && (
+                <p className="track__refund-detail">
+                  <strong>ข้อความบันทึกจากร้าน:</strong> {currentOrder.refundNote}
+                </p>
+              )}
+              {currentOrder.refundedAt && (
+                <p className="track__refund-detail">
+                  <strong>วันเวลาที่คืนเงิน:</strong>{' '}
+                  {new Date(currentOrder.refundedAt).toLocaleString('th-TH')}
+                </p>
+              )}
+            </div>
+          ) : isBankSaved ? (
+            <div className="track__refund-content">
+              <div className="track__refund-saved-view">
+                <div className="track__refund-saved-badge">
+                  <Icon name="check" size={16} /> บันทึกข้อมูลบัญชีรับเงินคืนเรียบร้อยแล้ว
+                </div>
+                <p className="track__refund-info-text">
+                  ระบบได้บันทึกข้อมูลบัญชีของท่านเรียบร้อยแล้ว ขณะนี้อยู่ระหว่างพนักงานตรวจสอบและโอนเงินคืนตามข้อมูลด้านล่างนี้
+                </p>
+                <div className="track__refund-account-box">
+                  <div>
+                    <strong>ยอดเงินที่ได้รับคืน:</strong>{' '}
+                    <span className="track__refund-highlight-amount">
+                      ฿ {formatPrice(currentOrder.netAmount)}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>ธนาคาร:</strong> {currentOrder.refundBankName}
+                  </div>
+                  <div>
+                    <strong>เลขที่บัญชี:</strong> {currentOrder.refundAccountNo}
+                  </div>
+                  <div>
+                    <strong>ชื่อนามสกุลผู้รับ:</strong> {currentOrder.refundAccountName}
+                  </div>
+                </div>
+                {bankSuccess && <p className="track__refund-success">{bankSuccess}</p>}
+                <p className="track__refund-locked-notice">
+                  <Icon name="lock" size={14} /> ข้อมูลนี้ถูกบันทึกเข้าระบบแล้ว ไม่อนุญาตให้แก้ไขซ้ำ เพื่อความปลอดภัยและถูกต้อง
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="track__refund-content">
+              <form className="track__refund-form" onSubmit={(e) => void handleSaveBank(e)}>
+                <p className="track__refund-form-prompt">
+                  กรุณาเลือกธนาคารและกรอกเลขที่บัญชี พร้อมชื่อ-นามสกุล เพื่อให้พนักงานดำเนินการโอนเงินคืนยอด{' '}
+                  <strong>฿ {formatPrice(currentOrder.netAmount)}</strong>
+                </p>
+                <div className="track__refund-form-grid">
+                  <label className="track__refund-form-label">
+                    <span>ธนาคารที่รับเงินคืน</span>
+                    <select
+                      className="track__refund-select"
+                      value={bankName}
+                      onChange={(e) => {
+                        const newBank = e.target.value
+                        setBankName(newBank)
+                        setAccountNo(formatBankAccount(newBank, accountNo))
+                      }}
+                      required
+                    >
+                      {THAI_BANKS.map((b) => (
+                        <option key={b.code} value={b.name}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="track__refund-form-label">
+                    <span>
+                      {findBank(bankName)?.code === 'PROMPTPAY'
+                        ? 'เบอร์พร้อมเพย์ 10 หลัก (ระบบใส่ขีดให้อัตโนมัติ)'
+                        : 'เลขที่บัญชี (ระบบใส่ขีดให้อัตโนมัติ)'}
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      className="track__refund-input"
+                      placeholder={findBank(bankName)?.placeholder || '000-0-00000-0'}
+                      maxLength={findBank(bankName)?.code === 'PROMPTPAY' ? 12 : 16}
+                      value={accountNo}
+                      onChange={(e) => setAccountNo(formatBankAccount(bankName, e.target.value))}
+                    />
+                  </label>
+
+                  <label className="track__refund-form-label track__refund-form-label--full">
+                    <span>ชื่อ - นามสกุล ผู้รับเงินคืน (ตามหน้าสมุดบัญชี)</span>
+                    <input
+                      type="text"
+                      required
+                      className="track__refund-input"
+                      placeholder="เช่น น.ส. สมศรี มีสุข"
+                      value={accountName}
+                      onChange={(e) => setAccountName(e.target.value)}
+                    />
+                  </label>
+                </div>
+                {bankError && <p className="track__refund-error">{bankError}</p>}
+                {bankSuccess && <p className="track__refund-success">{bankSuccess}</p>}
+                <div className="track__refund-form-btns">
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-sm"
+                    disabled={savingBank}
+                  >
+                    <Icon name="check" size={16} />
+                    {savingBank ? 'กำลังบันทึก…' : 'ยืนยันข้อมูลบัญชีรับเงินคืน'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="track__grid">
         <div className="track__col">
           <section className="track__panel">
@@ -378,9 +627,9 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
             <dl className="track__dl">
               <dt>ที่อยู่จัดส่ง</dt>
               <dd>
-                {order.customerName}
+                {currentOrder.customerName}
                 <br />
-                {order.shippingAddress}
+                {currentOrder.shippingAddress}
               </dd>
               <dt>ผู้ให้บริการขนส่ง</dt>
               <dd>{carrier}</dd>
@@ -414,17 +663,17 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
             <div className="track__totals">
               <div className="track__row">
                 <span>รวมค่าสินค้า</span>
-                <span>{formatPrice(order.subtotal)}</span>
+                <span>{formatPrice(currentOrder.subtotal)}</span>
               </div>
-              {order.discountAmount > 0 && (
+              {currentOrder.discountAmount > 0 && (
                 <div className="track__row track__row--discount">
-                  <span>ส่วนลด {order.promotionName ? `(${order.promotionName})` : ''}</span>
-                  <span>-{formatPrice(order.discountAmount)}</span>
+                  <span>ส่วนลด {currentOrder.promotionName ? `(${currentOrder.promotionName})` : ''}</span>
+                  <span>-{formatPrice(currentOrder.discountAmount)}</span>
                 </div>
               )}
               <div className="track__row track__row--total">
                 <span>ยอดชำระทั้งสิ้น</span>
-                <span>{formatPrice(order.netAmount)}</span>
+                <span>{formatPrice(currentOrder.netAmount)}</span>
               </div>
             </div>
           </section>
@@ -434,7 +683,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
           <section className="track__panel">
             <h3 className="track__panel-title">รายการที่สั่งซื้อ</h3>
             <ul className="track__items">
-              {order.items.map((line) => (
+              {currentOrder.items.map((line) => (
                 <li key={line.bookId} className="track__item">
                   <div className="track__item-cover">
                     <BookCover bookId={line.bookId} title={line.title} size="sm" />
@@ -451,7 +700,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
             </ul>
           </section>
 
-          {order.status === 'DELIVERED' && (
+          {currentOrder.status === 'DELIVERED' && (
             <section className="track__panel">
               <h3 className="track__panel-title">
                 <Icon name="star" size={18} filled /> รีวิวและให้คะแนน
@@ -462,12 +711,12 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 </div>
               ) : (
                 <div className="track__reviews">
-                  {order.items.map((line) => {
+                  {currentOrder.items.map((line) => {
                     const existingReview =
                       reviews.find(
                         (r) =>
                           r.bookId === line.bookId &&
-                          (r.orderId == null || r.orderId === order.orderId) &&
+                          (r.orderId == null || r.orderId === currentOrder.orderId) &&
                           r.status !== 'REMOVED'
                       ) ||
                       reviews.find((r) => r.bookId === line.bookId && r.status !== 'REMOVED')

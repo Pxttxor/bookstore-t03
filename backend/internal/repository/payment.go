@@ -128,10 +128,12 @@ func (r *PaymentRepository) SummarizeSuccess(start, end model.Date) (float64, in
 		Total float64
 		Count int
 	}
-	err := r.db.Model(&model.Payment{}).
-		Select("COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count").
-		Where("status = ?", model.PaymentStatusSuccess).
-		Where("verified_date >= ? AND verified_date < ?", start.Time, end.AddDays(1).Time).
+	err := r.db.Table("payment").
+		Select("COALESCE(SUM(payment.amount), 0) AS total, COUNT(*) AS count").
+		Joins("JOIN customer_order ON customer_order.order_id = payment.order_id").
+		Where("payment.status = ?", model.PaymentStatusSuccess).
+		Where("customer_order.status NOT IN (?, ?)", model.OrderStatusCancelled, model.OrderStatusRejected).
+		Where("payment.verified_date >= ? AND payment.verified_date < ?", start.Time, end.AddDays(1).Time).
 		Scan(&summary).Error
 	return summary.Total, summary.Count, err
 }

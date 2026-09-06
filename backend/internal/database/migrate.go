@@ -251,6 +251,7 @@ var foreignKeys = []foreignKey{
 	{"point_transaction", "order_id", "customer_order", "order_id"},
 	{"redemption", "member_id", "member", "member_id"},
 	{"redemption", "reward_id", "reward", "reward_id"},
+	{"redemption", "order_id", "customer_order", "order_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},

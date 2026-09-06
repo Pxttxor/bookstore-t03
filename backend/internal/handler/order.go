@@ -14,9 +14,10 @@ import (
 // หน้าที่แบ่งตามบทบาทเหมือน can.* ฝั่งหน้าจอ: ฝ่ายขายรับออร์เดอร์และตรวจการชำระเงิน
 // คลังแพ็ก ฝ่ายจัดส่งบันทึกการส่งและการรับของ · ลูกค้าเห็นเฉพาะใบของตัวเอง
 func (h *Handler) registerOrderRoutes(register registrar) {
-	register("GET /api/orders", roleAnyUser, h.listOrders)      // can.viewOrders + ลูกค้าดูของตัวเอง
-	register("GET /api/orders/{id}", roleAnyUser, h.getOrder)   // service กรองเจ้าของให้อีกชั้น
-	register("POST /api/orders", roleOrderIntake, h.placeOrder) // Customer.placeOrder()
+	register("GET /api/orders", roleAnyUser, h.listOrders)                              // can.viewOrders + ลูกค้าดูของตัวเอง
+	register("GET /api/orders/{id}", roleAnyUser, h.getOrder)                           // service กรองเจ้าของให้อีกชั้น
+	register("POST /api/orders/validate-discount", roleAnyUser, h.validateDiscountCode) // ตรวจสอบโค้ดส่วนลด
+	register("POST /api/orders", roleOrderIntake, h.placeOrder)                         // Customer.placeOrder()
 
 	register("POST /api/orders/{id}/confirm-stock", roleSales, h.confirmStock)      // can.confirmStock
 	register("POST /api/orders/{id}/await-payment", roleSales, h.awaitPayment)      // ช่องทางโทร/ข้อความ
@@ -28,6 +29,8 @@ func (h *Handler) registerOrderRoutes(register registrar) {
 	register("POST /api/orders/{id}/ship", roleDelivery, h.shipOrder)               // can.shipOrder + เปิดพัสดุ
 	register("POST /api/orders/{id}/deliver", roleDelivery, h.deliverOrder)         // can.confirmDelivery
 	register("POST /api/orders/{id}/cancel", roleOrderAdmin, h.cancelCustomerOrder) // can.cancelOrder
+	register("POST /api/orders/{id}/refund-bank", roleAnyUser, h.setRefundBank)     // บันทึกข้อมูลบัญชีคืนเงิน
+	register("POST /api/orders/{id}/refund-confirm", roleOrderAdmin, h.confirmRefund) // พนักงานยืนยันการคืนเงิน
 }
 
 // registerPromotionRoutes — โปรโมชั่น (StoreManager.managePromotion)
@@ -68,6 +71,29 @@ func (h *Handler) getOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.OK(w, toOrderDTO(*view))
+}
+
+func (h *Handler) validateDiscountCode(w http.ResponseWriter, r *http.Request) {
+	current, err := identity(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var body validateDiscountInput
+	if err := httpx.Decode(r, &body); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	result, err := h.orders.ValidateDiscountCode(*current, body.Code, body.Subtotal)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, discountValidationDTO{
+		Code:           result.Code,
+		RewardName:     result.RewardName,
+		DiscountAmount: result.DiscountAmount,
+	})
 }
 
 func (h *Handler) placeOrder(w http.ResponseWriter, r *http.Request) {
@@ -174,6 +200,44 @@ func (h *Handler) cancelCustomerOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		return h.orders.Cancel(id, body, by)
 	})
+}
+
+func (h *Handler) setRefundBank(w http.ResponseWriter, r *http.Request) {
+	current, id, err := currentAndID(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var body service.RefundBankInput
+	if err := httpx.Decode(r, &body); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	view, err := h.orders.SetRefundBank(id, body, *current)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, toOrderDTO(*view))
+}
+
+func (h *Handler) confirmRefund(w http.ResponseWriter, r *http.Request) {
+	current, id, err := currentAndID(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var body service.RefundConfirmInput
+	if err := httpx.Decode(r, &body); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	view, err := h.orders.ConfirmRefund(id, body, current.Name)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, toOrderDTO(*view))
 }
 
 // advanceOrder — โครงร่วมของ handler ที่เปลี่ยนสถานะคำสั่งซื้อหนึ่งใบ

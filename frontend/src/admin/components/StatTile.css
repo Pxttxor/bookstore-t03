@@ -10,6 +10,17 @@
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   font-family: var(--font-thai);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.tile--clickable {
+  cursor: pointer;
+}
+
+.tile--clickable:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-deep);
+  transform: translateY(-2px);
 }
 
 .tile--accent {

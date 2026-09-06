@@ -35,6 +35,11 @@ func NotFound(code, message string) *DomainError {
 	return newErr(http.StatusNotFound, code, message)
 }
 
+// Forbidden — ผู้ใช้ไม่มีสิทธิ์ทำรายการนี้
+func Forbidden(code, message string) *DomainError {
+	return newErr(http.StatusForbidden, code, message)
+}
+
 // ── ผู้จัดจำหน่าย (U1–U4) ───────────────────────────────────────────────
 var (
 	ErrSupplierNotFound  = NotFound("SUPPLIER_NOT_FOUND", "ไม่พบข้อมูลผู้จัดจำหน่าย")
@@ -246,6 +251,13 @@ var (
 	ErrInvalidPointRate     = Validation("INVALID_POINT_RATE", "อัตราการให้แต้มต้องมากกว่าศูนย์")
 	ErrInvalidMinPurchase   = Validation("INVALID_MIN_PURCHASE", "ยอดสะสมขั้นต่ำต้องไม่ติดลบ")
 	ErrInvalidDiscountValue = Validation("INVALID_DISCOUNT_VALUE", "มูลค่าส่วนลดต้องมากกว่าศูนย์")
+
+	// โค้ดส่วนลดจากการแลกของรางวัล
+	ErrDiscountCodeNotFound    = NotFound("DISCOUNT_CODE_NOT_FOUND", "ไม่พบโค้ดส่วนลดนี้")
+	ErrDiscountCodeAlreadyUsed = Conflict("DISCOUNT_CODE_ALREADY_USED", "โค้ดส่วนลดนี้ถูกใช้งานไปแล้ว")
+	ErrDiscountCodeNotOwned    = Forbidden("DISCOUNT_CODE_NOT_OWNED", "คุณไม่มีสิทธิ์ใช้งานโค้ดส่วนลดนี้")
+	ErrDiscountCodeNotDiscount = Validation("DISCOUNT_CODE_NOT_DISCOUNT", "โค้ดนี้ไม่ใช่ของรางวัลประเภทส่วนลด")
+	ErrDiscountCodeEmpty       = Validation("DISCOUNT_CODE_EMPTY", "กรุณากรอกโค้ดส่วนลด")
 )
 
 // ── ระบบย่อยรีวิวลูกค้า ────────────────────────────────────────────────

@@ -68,9 +68,17 @@ type PlaceOrderInput struct {
 	Channel         model.OrderChannel `json:"channel"`
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
+	DiscountCode    string             `json:"discountCode,omitempty"`
 	SlipFileName    string             `json:"slipFileName"`
 	BankID          *int               `json:"bankId,omitempty"`
 	Items           []OrderLineInput   `json:"items"`
+}
+
+// DiscountValidationResult — ผลการตรวจคูปองส่วนลด
+type DiscountValidationResult struct {
+	Code           string  `json:"code"`
+	RewardName     string  `json:"rewardName"`
+	DiscountAmount float64 `json:"discountAmount"`
 }
 
 // PaymentSlipInput — หลักฐานการโอน · BankID ระบุหรือไม่ก็ได้ (0..1 ใน class diagram)
@@ -81,6 +89,21 @@ type PaymentSlipInput struct {
 
 // OrderNoteInput — เหตุผลที่แนบมากับการยกเลิกหรือปฏิเสธ
 type OrderNoteInput struct {
+	Note              string `json:"note"`
+	RefundBankName    string `json:"refundBankName,omitempty"`
+	RefundAccountNo   string `json:"refundAccountNo,omitempty"`
+	RefundAccountName string `json:"refundAccountName,omitempty"`
+}
+
+// RefundBankInput — ข้อมูลบัญชีสำหรับรับเงินคืน
+type RefundBankInput struct {
+	RefundBankName    string `json:"refundBankName"`
+	RefundAccountNo   string `json:"refundAccountNo"`
+	RefundAccountName string `json:"refundAccountName"`
+}
+
+// RefundConfirmInput — ข้อความบันทึกยืนยันการคืนเงิน
+type RefundConfirmInput struct {
 	Note string `json:"note"`
 }
 
@@ -150,6 +173,18 @@ func (s *OrderService) Place(input PlaceOrderInput, current Identity) (*OrderVie
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.orders.Create(tx, order); err != nil {
 			return err
+		}
+		if order.DiscountCode != "" {
+			redemption, err := s.members.FindRedemptionByCode(tx, order.DiscountCode)
+			if err != nil {
+				return err
+			}
+			if redemption.IsUsed() {
+				return model.ErrDiscountCodeAlreadyUsed
+			}
+			if err := s.members.MarkRedemptionUsed(tx, redemption.RedemptionID, order.OrderID, order.OrderDate); err != nil {
+				return err
+			}
 		}
 		if input.BankID != nil {
 			exists, err := s.payments.BankExists(tx, *input.BankID)
@@ -239,6 +274,9 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	if err := s.applyPromotion(order, input.PromotionID); err != nil {
 		return nil, err
 	}
+	if err := s.applyDiscountCode(order, input.DiscountCode, current); err != nil {
+		return nil, err
+	}
 	order.Timeline = []model.OrderStatusHistory{{
 		Status: order.Status, ChangedDate: now, ChangedBy: current.Name,
 		Note: "รับคำสั่งซื้อ",
@@ -312,6 +350,91 @@ func (s *OrderService) applyPromotion(order *model.Order, promotionID *int) erro
 	}
 
 	return nil
+}
+
+// applyDiscountCode — ตรวจสอบและนำโค้ดส่วนลดจากการแลกแต้มมาหักออกจากยอดคำสั่งซื้อ
+func (s *OrderService) applyDiscountCode(order *model.Order, rawCode string, current Identity) error {
+	code := strings.TrimSpace(rawCode)
+	if code == "" {
+		return nil
+	}
+
+	redemption, err := s.members.FindRedemptionByCode(s.db, code)
+	if err != nil {
+		return err
+	}
+	if current.IsCustomer() {
+		member, err := s.members.FindMemberByCustomer(s.db, current.CustomerID)
+		if err != nil {
+			return err
+		}
+		if redemption.MemberID != member.Member.MemberID {
+			return model.ErrDiscountCodeNotOwned
+		}
+	}
+	if redemption.IsUsed() {
+		return model.ErrDiscountCodeAlreadyUsed
+	}
+
+	reward, err := s.members.FindReward(s.db, redemption.RewardID)
+	if err != nil {
+		return err
+	}
+	if reward.Type != model.RewardTypeDiscount || reward.DiscountValue <= 0 {
+		return model.ErrDiscountCodeNotDiscount
+	}
+
+	order.DiscountCode = redemption.CouponCode
+	order.DiscountAmount += reward.DiscountValue
+	if order.DiscountAmount > order.Subtotal {
+		order.DiscountAmount = order.Subtotal
+	}
+	order.CalcTotal()
+	return nil
+}
+
+// ValidateDiscountCode — ตรวจสอบความถูกต้องและสิทธิ์ของโค้ดส่วนลดก่อนการสั่งซื้อ
+func (s *OrderService) ValidateDiscountCode(current Identity, rawCode string, subtotal float64) (*DiscountValidationResult, error) {
+	code := strings.TrimSpace(rawCode)
+	if code == "" {
+		return nil, model.ErrDiscountCodeEmpty
+	}
+
+	redemption, err := s.members.FindRedemptionByCode(s.db, code)
+	if err != nil {
+		return nil, err
+	}
+	if current.IsCustomer() {
+		member, err := s.members.FindMemberByCustomer(s.db, current.CustomerID)
+		if err != nil {
+			return nil, err
+		}
+		if redemption.MemberID != member.Member.MemberID {
+			return nil, model.ErrDiscountCodeNotOwned
+		}
+	}
+	if redemption.IsUsed() {
+		return nil, model.ErrDiscountCodeAlreadyUsed
+	}
+
+	reward, err := s.members.FindReward(s.db, redemption.RewardID)
+	if err != nil {
+		return nil, err
+	}
+	if reward.Type != model.RewardTypeDiscount || reward.DiscountValue <= 0 {
+		return nil, model.ErrDiscountCodeNotDiscount
+	}
+
+	discount := reward.DiscountValue
+	if subtotal > 0 && discount > subtotal {
+		discount = subtotal
+	}
+
+	return &DiscountValidationResult{
+		Code:           redemption.CouponCode,
+		RewardName:     reward.Name,
+		DiscountAmount: discount,
+	}, nil
 }
 
 // ── เปลี่ยนสถานะ ────────────────────────────────────────────────────────
@@ -624,7 +747,101 @@ func (s *OrderService) Cancel(orderID int, input OrderNoteInput, by string) (*Or
 	if note == "" {
 		return nil, model.ErrReasonRequired
 	}
-	return s.advance(orderID, model.OrderStatusCancelled, by, note, nil)
+	hook := func(tx *gorm.DB, order *model.Order) error {
+		order.CancelReason = note
+		// คำสั่งซื้อที่ถูกยกเลิกให้ตั้งสถานะคืนเงินเป็น PENDING เสมอ (ยกเว้นกรณีคืนเงินแล้ว)
+		if order.RefundStatus != model.RefundStatusRefunded {
+			order.RefundStatus = model.RefundStatusPending
+		}
+		if input.RefundBankName != "" {
+			order.RefundBankName = strings.TrimSpace(input.RefundBankName)
+		}
+		if input.RefundAccountNo != "" {
+			order.RefundAccountNo = strings.TrimSpace(input.RefundAccountNo)
+		}
+		if input.RefundAccountName != "" {
+			order.RefundAccountName = strings.TrimSpace(input.RefundAccountName)
+		}
+		return nil
+	}
+	return s.advance(orderID, model.OrderStatusCancelled, by, note, hook)
+}
+
+// SetRefundBank — บันทึกหรือแก้ไขชื่อธนาคารและเลขบัญชีสำหรับรับเงินคืน
+func (s *OrderService) SetRefundBank(orderID int, input RefundBankInput, current Identity) (*OrderView, error) {
+	bankName := strings.TrimSpace(input.RefundBankName)
+	accountNo := strings.TrimSpace(input.RefundAccountNo)
+	accountName := strings.TrimSpace(input.RefundAccountName)
+	if bankName == "" || accountNo == "" || accountName == "" {
+		return nil, model.Validation("REFUND_INFO_REQUIRED", "กรุณาระบุชื่อธนาคาร เลขที่บัญชี และชื่อนามสกุลผู้รับเงินคืน")
+	}
+
+	var order *model.Order
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		found, err := s.orders.FindForUpdate(tx, orderID)
+		if err != nil {
+			return err
+		}
+		if current.IsCustomer() && found.CustomerID != current.CustomerID {
+			return model.ErrForbidden
+		}
+		// หากลูกค้าเคยกรอกข้อมูลบัญชีไว้ครบถ้วนแล้ว ไม่อนุญาตให้กรอกซ้ำ
+		if current.IsCustomer() && found.RefundAccountNo != "" && found.RefundBankName != "" && found.RefundAccountName != "" {
+			return model.Validation("REFUND_ALREADY_RECORDED", "ท่านได้บันทึกข้อมูลบัญชีรับเงินคืนไปแล้ว ไม่สามารถบันทึกซ้ำได้")
+		}
+		found.RefundBankName = bankName
+		found.RefundAccountNo = accountNo
+		found.RefundAccountName = accountName
+		if found.RefundStatus != model.RefundStatusRefunded {
+			found.RefundStatus = model.RefundStatusPending
+		}
+		if err := s.orders.Save(tx, found); err != nil {
+			return err
+		}
+		order = found
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.view(*order)
+}
+
+// ConfirmRefund — พนักงานบันทึกว่าคืนเงินลูกค้าแล้ว
+func (s *OrderService) ConfirmRefund(orderID int, input RefundConfirmInput, by string) (*OrderView, error) {
+	note := strings.TrimSpace(input.Note)
+	if note == "" {
+		note = "คืนเงินลูกค้าไปแล้ว"
+	}
+	now := time.Now().UTC()
+
+	var order *model.Order
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		found, err := s.orders.FindForUpdate(tx, orderID)
+		if err != nil {
+			return err
+		}
+		found.RefundStatus = model.RefundStatusRefunded
+		found.RefundNote = note
+		found.RefundedAt = &now
+		found.RefundedBy = strings.TrimSpace(by)
+		found.Timeline = append(found.Timeline, model.OrderStatusHistory{
+			OrderID:     found.OrderID,
+			Status:      model.OrderStatusCancelled,
+			ChangedDate: now,
+			ChangedBy:   strings.TrimSpace(by),
+			Note:        "คืนเงินลูกค้าแล้ว: " + note,
+		})
+		if err := s.orders.Save(tx, found); err != nil {
+			return err
+		}
+		order = found
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.view(*order)
 }
 
 // advance — โครงร่วมของทุกการเปลี่ยนสถานะ

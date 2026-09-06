@@ -9,8 +9,8 @@ import { formatPrice } from '../data/money'
 import {
   formatOrderCode,
   orderItemCount,
-  ORDER_STATUS_LABELS,
-  ORDER_STATUS_TONES,
+  getOrderStatusLabel,
+  getOrderStatusTone,
 } from '../admin/orders/orders'
 import './OrderHistoryPage.css'
 
@@ -73,10 +73,15 @@ export default function OrderHistoryPage() {
                     <span className="history__meta">
                       {order.orderDate ? order.orderDate.slice(0, 10) : '—'} · {orderItemCount(order)} เล่ม
                     </span>
+                    {order.status === 'CANCELLED' && order.cancelReason && (
+                      <span className="history__cancel-reason">
+                        <Icon name="alert-triangle" size={14} /> เหตุผลที่ยกเลิก: {order.cancelReason}
+                      </span>
+                    )}
                   </div>
                   <div className="history__card-side">
-                    <StatusBadge tone={ORDER_STATUS_TONES[order.status]}>
-                      {ORDER_STATUS_LABELS[order.status]}
+                    <StatusBadge tone={getOrderStatusTone(order)}>
+                      {getOrderStatusLabel(order)}
                     </StatusBadge>
                     <span className="history__total">{formatPrice(order.netAmount)}</span>
                     <Icon name="arrow-right" size={18} />

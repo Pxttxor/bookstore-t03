@@ -1,6 +1,20 @@
 import './StatusBadge.css'
 
-export type BadgeTone = 'success' | 'warning' | 'danger' | 'neutral' | 'info'
+export type BadgeTone =
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'neutral'
+  | 'info'
+  | 'amber'
+  | 'cyan'
+  | 'orange'
+  | 'violet'
+  | 'blue'
+  | 'purple'
+  | 'teal'
+  | 'indigo'
+  | 'rose'
 
 interface StatusBadgeProps {
   tone: BadgeTone
