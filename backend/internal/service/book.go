@@ -87,18 +87,53 @@ func (s *BookService) GetCover(bookID int) (*CoverImage, error) {
 	return &CoverImage{Data: book.CoverImage, MediaType: book.CoverImageType}, nil
 }
 
-func (s *BookService) SetCover(bookID int, image []byte, imageType string) error {
-	if _, err := s.books.Find(s.db, bookID); err != nil {
-		return err
-	}
-	return s.books.UpdateCover(s.db, bookID, image, imageType)
+func (s *BookService) SetCover(bookID int, image []byte, imageType, by string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		book, err := s.books.Cover(tx, bookID)
+		if err != nil {
+			return err
+		}
+		if err := s.books.UpdateCover(tx, bookID, image, imageType); err != nil {
+			return err
+		}
+		return s.books.AddChangeLogs(tx, []model.BookChangeLog{{
+			BookID:       bookID,
+			ChangedField: string(model.BookFieldCoverImage),
+			OldValue:     coverLogValue(book.CoverImageType),
+			NewValue:     imageType,
+			ChangedDate:  time.Now().UTC(),
+			ChangedBy:    by,
+		}})
+	})
 }
 
-func (s *BookService) ClearCover(bookID int) error {
-	if _, err := s.books.Find(s.db, bookID); err != nil {
-		return err
+func (s *BookService) ClearCover(bookID int, by string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		book, err := s.books.Cover(tx, bookID)
+		if err != nil {
+			return err
+		}
+		if book.CoverImageType == "" && len(book.CoverImage) == 0 {
+			return s.books.ClearCover(tx, bookID)
+		}
+		if err := s.books.ClearCover(tx, bookID); err != nil {
+			return err
+		}
+		return s.books.AddChangeLogs(tx, []model.BookChangeLog{{
+			BookID:       bookID,
+			ChangedField: string(model.BookFieldCoverImage),
+			OldValue:     coverLogValue(book.CoverImageType),
+			ChangedDate:  time.Now().UTC(),
+			ChangedBy:    by,
+		}})
+	})
+}
+
+func coverLogValue(imageType string) string {
+	if imageType == "" {
+		return "ไม่มีรูปปก"
 	}
-	return s.books.ClearCover(s.db, bookID)
+	return imageType
 }
 
 // ChangeLogs — ประวัติการแก้ไขของหนังสือเล่มหนึ่ง (แท็บประวัติในหน้ารายละเอียด)
@@ -107,6 +142,10 @@ func (s *BookService) ChangeLogs(bookID int) ([]model.BookChangeLog, error) {
 		return nil, err
 	}
 	return s.books.ChangeLogs(bookID)
+}
+
+func (s *BookService) AllChangeLogs() ([]model.BookChangeLog, error) {
+	return s.books.AllChangeLogs()
 }
 
 // ── เขียน ───────────────────────────────────────────────────────────────

@@ -58,6 +58,7 @@ export const can = {
   viewBooks: (role: Role) => role === 'warehouse' || role === 'manager' || role === 'sales',
   editBooks: (role: Role) => role === 'sales' || role === 'manager',
   viewBookHistory: (role: Role) => role === 'sales' || role === 'manager',
+  viewAllBookHistory: (role: Role) => role === 'manager',
 
   // Inventory (Inventory subsystem). Warehouse owns the counting work; only the
   // store manager decides a discrepancy report. `viewStock` is the read-only

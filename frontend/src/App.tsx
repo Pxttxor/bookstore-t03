@@ -24,6 +24,7 @@ const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 const DashboardPage = lazy(() => import('./admin/pages/DashboardPage'))
 const BookListPage = lazy(() => import('./admin/pages/BookListPage'))
 const BookFormPage = lazy(() => import('./admin/pages/BookFormPage'))
+const BookChangeHistoryPage = lazy(() => import('./admin/pages/BookChangeHistoryPage'))
 // The storefront has a BookDetailPage too; this one is the back-office view.
 const AdminBookDetailPage = lazy(() => import('./admin/pages/BookDetailPage'))
 const StockListPage = lazy(() => import('./admin/pages/StockListPage'))
@@ -86,6 +87,9 @@ export default function App() {
         <Route element={<RequireCan allowed={can.viewBooks} />}>
           <Route path="books" element={<BookListPage />} />
           <Route path="books/:id" element={<AdminBookDetailPage />} />
+        </Route>
+        <Route element={<RequireCan allowed={can.viewAllBookHistory} />}>
+          <Route path="books/change-logs" element={<BookChangeHistoryPage />} />
         </Route>
         <Route element={<RequireCan allowed={can.editBooks} />}>
           <Route path="books/new" element={<BookFormPage />} />

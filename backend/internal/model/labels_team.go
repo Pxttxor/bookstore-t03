@@ -23,6 +23,7 @@ var BookFieldLabels = map[BookField]string{
 	BookFieldDescription: "รายละเอียด",
 	BookFieldCategoryID:  "หมวดหมู่",
 	BookFieldStatus:      "สถานะ",
+	BookFieldCoverImage:  "รูปปกหนังสือ",
 }
 
 var StockCountStatusLabels = map[StockCountStatus]string{
