@@ -19,17 +19,17 @@ func (h *Handler) registerOrderRoutes(register registrar) {
 	register("POST /api/orders/validate-discount", roleAnyUser, h.validateDiscountCode) // ตรวจสอบโค้ดส่วนลด
 	register("POST /api/orders", roleOrderIntake, h.placeOrder)                         // Customer.placeOrder()
 
-	register("POST /api/orders/{id}/confirm-stock", roleSales, h.confirmStock)      // can.confirmStock
-	register("POST /api/orders/{id}/await-payment", roleSales, h.awaitPayment)      // ช่องทางโทร/ข้อความ
-	register("POST /api/orders/{id}/payment", roleOrderIntake, h.submitPayment)     // แนบสลิป
-	register("POST /api/orders/{id}/verify-payment", roleSales, h.verifyPayment)    // can.verifyPayment
-	register("POST /api/orders/{id}/reject-payment", roleSales, h.rejectPayment)    //
-	register("POST /api/orders/{id}/pack", roleWarehouse, h.packOrder)              // can.packOrder
-	register("POST /api/orders/{id}/ready", roleWarehouse, h.readyToShip)           //
-	register("POST /api/orders/{id}/ship", roleDelivery, h.shipOrder)               // can.shipOrder + เปิดพัสดุ
-	register("POST /api/orders/{id}/deliver", roleDelivery, h.deliverOrder)         // can.confirmDelivery
-	register("POST /api/orders/{id}/cancel", roleOrderAdmin, h.cancelCustomerOrder) // can.cancelOrder
-	register("POST /api/orders/{id}/refund-bank", roleAnyUser, h.setRefundBank)     // บันทึกข้อมูลบัญชีคืนเงิน
+	register("POST /api/orders/{id}/confirm-stock", roleSales, h.confirmStock)        // can.confirmStock
+	register("POST /api/orders/{id}/await-payment", roleSales, h.awaitPayment)        // ช่องทางโทร/ข้อความ
+	register("POST /api/orders/{id}/payment", roleOrderIntake, h.submitPayment)       // แนบสลิป
+	register("POST /api/orders/{id}/verify-payment", roleSales, h.verifyPayment)      // can.verifyPayment
+	register("POST /api/orders/{id}/reject-payment", roleSales, h.rejectPayment)      //
+	register("POST /api/orders/{id}/pack", roleWarehouse, h.packOrder)                // can.packOrder
+	register("POST /api/orders/{id}/ready", roleWarehouse, h.readyToShip)             //
+	register("POST /api/orders/{id}/ship", roleDelivery, h.shipOrder)                 // can.shipOrder + เปิดพัสดุ
+	register("POST /api/orders/{id}/deliver", roleDelivery, h.deliverOrder)           // can.confirmDelivery
+	register("POST /api/orders/{id}/cancel", roleOrderAdmin, h.cancelCustomerOrder)   // can.cancelOrder
+	register("POST /api/orders/{id}/refund-bank", roleAnyUser, h.setRefundBank)       // บันทึกข้อมูลบัญชีคืนเงิน
 	register("POST /api/orders/{id}/refund-confirm", roleOrderAdmin, h.confirmRefund) // พนักงานยืนยันการคืนเงิน
 }
 

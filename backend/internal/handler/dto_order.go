@@ -34,24 +34,24 @@ type orderShipmentDTO struct {
 }
 
 type orderDTO struct {
-	OrderID         int                `json:"orderId"`
-	Code            string             `json:"code"`
-	CustomerID      int                `json:"customerId"`
-	CustomerName    string             `json:"customerName"`
-	CustomerEmail   string             `json:"customerEmail,omitempty"`
-	Channel         model.OrderChannel `json:"channel"`
-	ChannelLabel    string             `json:"channelLabel"`
-	OrderDate       time.Time          `json:"orderDate"`
-	ShippingAddress string             `json:"shippingAddress"`
-	Status          model.OrderStatus  `json:"status"`
-	StatusLabel     string             `json:"statusLabel"`
-	Subtotal        float64            `json:"subtotal"`
-	DiscountAmount  float64            `json:"discountAmount"`
-	NetAmount       float64            `json:"netAmount"`
-	PromotionID     *int               `json:"promotionId,omitempty"`
-	PromotionName   string             `json:"promotionName,omitempty"`
-	DiscountCode    string             `json:"discountCode,omitempty"`
-	SlipFileName    string             `json:"slipFileName,omitempty"`
+	OrderID           int                `json:"orderId"`
+	Code              string             `json:"code"`
+	CustomerID        int                `json:"customerId"`
+	CustomerName      string             `json:"customerName"`
+	CustomerEmail     string             `json:"customerEmail,omitempty"`
+	Channel           model.OrderChannel `json:"channel"`
+	ChannelLabel      string             `json:"channelLabel"`
+	OrderDate         time.Time          `json:"orderDate"`
+	ShippingAddress   string             `json:"shippingAddress"`
+	Status            model.OrderStatus  `json:"status"`
+	StatusLabel       string             `json:"statusLabel"`
+	Subtotal          float64            `json:"subtotal"`
+	DiscountAmount    float64            `json:"discountAmount"`
+	NetAmount         float64            `json:"netAmount"`
+	PromotionID       *int               `json:"promotionId,omitempty"`
+	PromotionName     string             `json:"promotionName,omitempty"`
+	DiscountCode      string             `json:"discountCode,omitempty"`
+	SlipFileName      string             `json:"slipFileName,omitempty"`
 	ItemCount         int                `json:"itemCount"`
 	Closed            bool               `json:"closed"`
 	CanCancel         bool               `json:"canCancel"`
@@ -143,23 +143,23 @@ func toOrderDTO(view service.OrderView) orderDTO {
 	}
 
 	dto := orderDTO{
-		OrderID:         order.OrderID,
-		CanCancel:       order.CanTransitionTo(model.OrderStatusCancelled),
-		Code:            model.FormatOrderCode(order.OrderID),
-		CustomerID:      order.CustomerID,
-		CustomerName:    view.CustomerName,
-		CustomerEmail:   view.CustomerEmail,
-		Channel:         order.Channel,
-		ChannelLabel:    order.Channel.Label(),
-		OrderDate:       order.OrderDate,
-		ShippingAddress: order.ShippingAddress,
-		Status:          order.Status,
-		StatusLabel:     statusLabel,
-		Subtotal:        order.Subtotal,
-		DiscountAmount:  order.DiscountAmount,
-		NetAmount:       order.NetAmount,
-		PromotionID:     order.PromotionID,
-		DiscountCode:    order.DiscountCode,
+		OrderID:           order.OrderID,
+		CanCancel:         order.CanTransitionTo(model.OrderStatusCancelled),
+		Code:              model.FormatOrderCode(order.OrderID),
+		CustomerID:        order.CustomerID,
+		CustomerName:      view.CustomerName,
+		CustomerEmail:     view.CustomerEmail,
+		Channel:           order.Channel,
+		ChannelLabel:      order.Channel.Label(),
+		OrderDate:         order.OrderDate,
+		ShippingAddress:   order.ShippingAddress,
+		Status:            order.Status,
+		StatusLabel:       statusLabel,
+		Subtotal:          order.Subtotal,
+		DiscountAmount:    order.DiscountAmount,
+		NetAmount:         order.NetAmount,
+		PromotionID:       order.PromotionID,
+		DiscountCode:      order.DiscountCode,
 		SlipFileName:      order.SlipFileName,
 		CancelReason:      cancelReason,
 		RefundBankName:    order.RefundBankName,

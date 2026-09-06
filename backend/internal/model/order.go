@@ -18,29 +18,29 @@ import (
 // PromotionID เป็น pointer เพราะคำสั่งซื้อส่วนใหญ่ไม่ได้ใช้โปรโมชั่น (0..1 ใน diagram)
 // SlipFileName เป็นการจำลองการแนบสลิป เช่นเดียวกับที่การส่งอีเมลเป็นการจำลอง
 type Order struct {
-	OrderID         int                  `gorm:"column:order_id;primaryKey;autoIncrement" json:"orderId"`
-	CustomerID      int                  `gorm:"column:customer_id;not null;index" json:"customerId"`
-	CustomerName    string               `gorm:"column:customer_name;type:varchar(200)" json:"customerName,omitempty"`
-	Channel         OrderChannel         `gorm:"column:channel;type:varchar(20);not null" json:"channel"`
-	OrderDate       time.Time            `gorm:"column:order_date;type:timestamptz;not null" json:"orderDate"`
-	ShippingAddress string               `gorm:"column:shipping_address;type:text;not null" json:"shippingAddress"`
-	Status          OrderStatus          `gorm:"column:status;type:varchar(30);not null;index" json:"status"`
-	Subtotal        float64              `gorm:"column:subtotal;type:numeric(12,2);not null" json:"subtotal"`
-	DiscountAmount  float64              `gorm:"column:discount_amount;type:numeric(12,2);not null" json:"discountAmount"`
-	NetAmount       float64              `gorm:"column:net_amount;type:numeric(12,2);not null" json:"netAmount"`
-	PromotionID     *int                 `gorm:"column:promotion_id" json:"promotionId,omitempty"`
-	DiscountCode    string               `gorm:"column:discount_code;type:varchar(50)" json:"discountCode,omitempty"`
-	SlipFileName    string               `gorm:"column:slip_file_name;type:varchar(200)" json:"slipFileName,omitempty"`
-	CancelReason    string               `gorm:"column:cancel_reason;type:text" json:"cancelReason,omitempty"`
+	OrderID           int                  `gorm:"column:order_id;primaryKey;autoIncrement" json:"orderId"`
+	CustomerID        int                  `gorm:"column:customer_id;not null;index" json:"customerId"`
+	CustomerName      string               `gorm:"column:customer_name;type:varchar(200)" json:"customerName,omitempty"`
+	Channel           OrderChannel         `gorm:"column:channel;type:varchar(20);not null" json:"channel"`
+	OrderDate         time.Time            `gorm:"column:order_date;type:timestamptz;not null" json:"orderDate"`
+	ShippingAddress   string               `gorm:"column:shipping_address;type:text;not null" json:"shippingAddress"`
+	Status            OrderStatus          `gorm:"column:status;type:varchar(30);not null;index" json:"status"`
+	Subtotal          float64              `gorm:"column:subtotal;type:numeric(12,2);not null" json:"subtotal"`
+	DiscountAmount    float64              `gorm:"column:discount_amount;type:numeric(12,2);not null" json:"discountAmount"`
+	NetAmount         float64              `gorm:"column:net_amount;type:numeric(12,2);not null" json:"netAmount"`
+	PromotionID       *int                 `gorm:"column:promotion_id" json:"promotionId,omitempty"`
+	DiscountCode      string               `gorm:"column:discount_code;type:varchar(50)" json:"discountCode,omitempty"`
+	SlipFileName      string               `gorm:"column:slip_file_name;type:varchar(200)" json:"slipFileName,omitempty"`
+	CancelReason      string               `gorm:"column:cancel_reason;type:text" json:"cancelReason,omitempty"`
 	RefundBankName    string               `gorm:"column:refund_bank_name;type:varchar(100)" json:"refundBankName,omitempty"`
 	RefundAccountNo   string               `gorm:"column:refund_account_no;type:varchar(50)" json:"refundAccountNo,omitempty"`
 	RefundAccountName string               `gorm:"column:refund_account_name;type:varchar(200)" json:"refundAccountName,omitempty"`
 	RefundStatus      string               `gorm:"column:refund_status;type:varchar(30)" json:"refundStatus,omitempty"`
-	RefundNote      string               `gorm:"column:refund_note;type:text" json:"refundNote,omitempty"`
-	RefundedAt      *time.Time           `gorm:"column:refunded_at;type:timestamptz" json:"refundedAt,omitempty"`
-	RefundedBy      string               `gorm:"column:refunded_by;type:varchar(200)" json:"refundedBy,omitempty"`
-	Items           []OrderItem          `gorm:"foreignKey:OrderID;references:OrderID;constraint:OnDelete:CASCADE" json:"items"`
-	Timeline        []OrderStatusHistory `gorm:"foreignKey:OrderID;references:OrderID;constraint:OnDelete:CASCADE" json:"timeline"`
+	RefundNote        string               `gorm:"column:refund_note;type:text" json:"refundNote,omitempty"`
+	RefundedAt        *time.Time           `gorm:"column:refunded_at;type:timestamptz" json:"refundedAt,omitempty"`
+	RefundedBy        string               `gorm:"column:refunded_by;type:varchar(200)" json:"refundedBy,omitempty"`
+	Items             []OrderItem          `gorm:"foreignKey:OrderID;references:OrderID;constraint:OnDelete:CASCADE" json:"items"`
+	Timeline          []OrderStatusHistory `gorm:"foreignKey:OrderID;references:OrderID;constraint:OnDelete:CASCADE" json:"timeline"`
 }
 
 const (
