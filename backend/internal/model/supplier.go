@@ -78,9 +78,10 @@ func (s *Supplier) Register() {
 	s.Status = SupplierStatusActive
 }
 
-// UpdateInfo — แก้ไขข้อมูลติดต่อและเงื่อนไขการค้า (class diagram: +updateInfo())
-// จงใจไม่ให้แก้ CompanyName เพราะเป็นคีย์ที่ใช้ตรวจซ้ำตอน U1
-func (s *Supplier) UpdateInfo(contactName, phone, email, address, tradeTerms, creditTerms string) {
+// UpdateInfo — แก้ไขข้อมูลผู้จัดจำหน่าย (class diagram: +updateInfo())
+// ชื่อบริษัทแก้ได้ · SupplierService.Update ตรวจชื่อซ้ำกับผู้จัดจำหน่ายรายอื่นก่อนเรียกเมธอดนี้ (U2)
+func (s *Supplier) UpdateInfo(companyName, contactName, phone, email, address, tradeTerms, creditTerms string) {
+	s.CompanyName = companyName
 	s.ContactName = contactName
 	s.Phone = phone
 	s.Email = email
