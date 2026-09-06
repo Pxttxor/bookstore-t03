@@ -71,7 +71,7 @@ func main() {
 	authService := service.NewAuthService(db, personRepo, cfg.JWTSecret, cfg.TokenTTL)
 	personService := service.NewPersonService(db, personRepo, membershipRepo)
 	supplierService := service.NewSupplierService(db, supplierRepo, purchasingRepo, bookRepo)
-	bookService := service.NewBookService(db, bookRepo, inventoryRepo)
+	bookService := service.NewBookService(db, bookRepo, inventoryRepo, notificationRepo)
 	catalogueService := service.NewCatalogueService(db, bookRepo, inventoryRepo, reviewRepo)
 	inventoryService := service.NewInventoryService(db, inventoryRepo, bookRepo, notificationRepo)
 	promotionService := service.NewPromotionService(db, promotionRepo)

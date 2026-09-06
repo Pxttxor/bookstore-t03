@@ -24,6 +24,7 @@ export interface Category {
 
 export interface BookChangeLog {
   logId: number
+  bookId: number
   /** A key of BOOK_FIELD_LABELS. */
   changedField: string
   oldValue: string
@@ -150,6 +151,7 @@ export const SEED_BOOKS: Book[] = [
     // One seeded row so the change-history tab has something to show on first load.
     [{
       logId: 1,
+      bookId: 101,
       changedField: 'price',
       oldValue: '459',
       newValue: '438',

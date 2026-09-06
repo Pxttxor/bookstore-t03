@@ -87,6 +87,12 @@ const MENU: MenuGroup[] = [
         icon: 'book',
         allowed: can.viewBooks,
       },
+      {
+        label: 'ประวัติการแก้ไขหนังสือ',
+        to: '/admin/books/change-logs',
+        icon: 'clock',
+        allowed: can.viewAllBookHistory,
+      },
     ],
   },
   {
