@@ -6,14 +6,12 @@ import EmptyState from '../components/EmptyState'
 import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import { useBooks } from '../books/BookContext'
-import { BOOK_FIELD_LABELS, type BookChangeLog, type BookField } from '../books/books'
+import { bookFieldLabel, type BookChangeLog } from '../books/books'
 import { formatBookCode } from '../inventory/inventory'
 import '../components/DataTable.css'
 import './BookChangeHistoryPage.css'
 
 const whenText = (iso: string) => new Date(iso).toLocaleString('th-TH')
-const fieldLabel = (field: string) =>
-  field === 'coverImage' ? 'รูปปกหนังสือ' : BOOK_FIELD_LABELS[field as BookField] ?? field
 
 export default function BookChangeHistoryPage() {
   const { books } = useBooks()
@@ -69,7 +67,7 @@ export default function BookChangeHistoryPage() {
                         <strong>{book?.title ?? `หนังสือ ${formatBookCode(change.bookId)}`}</strong>
                         <span className="book-history__code">{formatBookCode(change.bookId)}</span>
                       </td>
-                      <td className="data-table__strong">{fieldLabel(change.changedField)}</td>
+                      <td className="data-table__strong">{bookFieldLabel(change.changedField)}</td>
                       <td>{change.oldValue || '—'}</td>
                       <td>{change.newValue || '—'}</td>
                       <td>{change.changedBy}</td>

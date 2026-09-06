@@ -256,6 +256,7 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | POST | `/suppliers/{id}/deactivate` | U3 | ผู้จัดการร้าน |
 | GET | `/categories` · `/books` · `/books/{id}` · `/inventory` | — | คลัง, ผจก., ฝ่ายขาย |
 | GET | `/books/{id}/change-logs` | — | ฝ่ายขาย, ผจก. |
+| GET | `/book-change-logs` | — | ผู้จัดการร้าน (ประวัติการแก้ไขหนังสือทุกเล่มรวมกัน) |
 | POST/PUT | `/books` · `/books/{id}` · `/books/{id}/status` | — | ฝ่ายขาย, ผจก. |
 | GET | `/inventory/alerts` | U5 | คลังสินค้า |
 | GET | `/inventory/low-stock` | — | คลัง, ผจก., ฝ่ายขาย |

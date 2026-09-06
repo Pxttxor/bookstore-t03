@@ -88,6 +88,30 @@ export const BOOK_FIELD_LABELS: Record<BookField, string> = {
   status: 'สถานะ',
 }
 
+/**
+ * The fields a change log can name — the editable ones plus `coverImage`.
+ *
+ * Kept apart from `BookField` on purpose: `BookFormPage` types its form state as
+ * `Record<BookField, string>`, and the cover is not a text input on that form — it is
+ * its own upload/delete endpoint. Widening `BookField` would demand a `coverImage` key
+ * in the form's state literal that nothing would ever fill.
+ */
+export type BookLogField = BookField | 'coverImage'
+
+export const BOOK_LOG_FIELD_LABELS: Record<BookLogField, string> = {
+  ...BOOK_FIELD_LABELS,
+  coverImage: 'รูปปกหนังสือ',
+}
+
+/**
+ * Thai label for a `BookChangeLog.changedField`, falling back to the raw key.
+ *
+ * Both history screens go through this — the per-book tab on `BookDetailPage` and the
+ * manager-wide `BookChangeHistoryPage`. Never hardcode the Thai string at a call site.
+ */
+export const bookFieldLabel = (field: string) =>
+  BOOK_LOG_FIELD_LABELS[field as BookLogField] ?? field
+
 /** The fields the form refuses to leave blank — "กรุณากรอกข้อมูลให้ครบ". */
 export const REQUIRED_BOOK_FIELDS: BookField[] = [
   'isbn',
