@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { apiGet, apiPost, apiPut } from '../../api/client'
+import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
@@ -42,6 +42,8 @@ interface BookValue {
   /** Book.update() — เซิร์ฟเวอร์เขียน book_change_log ให้เองทีละฟิลด์ที่เปลี่ยนจริง */
   update: (bookId: number, draft: BookDraft) => Promise<Book>
   setStatus: (bookId: number, status: BookStatus) => Promise<void>
+  uploadCover: (bookId: number, file: File) => Promise<void>
+  deleteCover: (bookId: number) => Promise<void>
   /**
    * ประวัติการแก้ไขของเล่มหนึ่ง — ไม่ได้ติดมากับ `GET /api/books` เพราะเป็นคนละ endpoint
    * (`bookDTO` ไม่มีฟิลด์นี้) หน้ารายละเอียดจึงต้องเรียกเอง
@@ -107,6 +109,14 @@ export function BookProvider({ children }: { children: ReactNode }) {
       apply(replace(updated))
     }
 
+    const uploadCover = async (bookId: number, file: File) => {
+      await apiUpload<void>(`/api/books/${bookId}/cover`, file)
+    }
+
+    const deleteCover = async (bookId: number) => {
+      await apiDelete<void>(`/api/books/${bookId}/cover`)
+    }
+
     return {
       books,
       categories,
@@ -124,6 +134,8 @@ export function BookProvider({ children }: { children: ReactNode }) {
       add,
       update,
       setStatus,
+      uploadCover,
+      deleteCover,
       changeLogs: (bookId: number) =>
         apiGet<BookChangeLog[]>(`/api/books/${bookId}/change-logs`),
     }

@@ -58,6 +58,7 @@ func TestCatalogueIsPublic(t *testing.T) {
 		"/api/catalogue",
 		"/api/catalogue/categories",
 		"/api/catalogue/101",
+		"/api/catalogue/101/cover",
 		"/api/promotions/active",
 	}
 

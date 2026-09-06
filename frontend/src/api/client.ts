@@ -70,14 +70,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {}
   const token = tokenStore.get()
   if (token) headers.Authorization = `Bearer ${token}`
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json'
 
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     })
   } catch {
     // เซิร์ฟเวอร์ไม่ตอบเลย (ปิดอยู่ · เน็ตหลุด · CORS ปฏิเสธ) — ไม่มี response ให้แกะ
@@ -110,6 +110,35 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   throw new ApiError(code, message, response.status)
 }
 
+async function requestBinary(path: string): Promise<Blob> {
+  const token = tokenStore.get()
+  let response: Response
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      cache: 'no-store',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
+  } catch {
+    throw new ApiError('NETWORK_ERROR', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง', 0)
+  }
+
+  if (response.ok) return response.blob()
+
+  let payload: ErrorBody = {}
+  try {
+    payload = (await response.json()) as ErrorBody
+  } catch {
+    // Use the common fallback when the binary endpoint returns a non-JSON error.
+  }
+  const code = payload.error?.code ?? 'UNEXPECTED_ERROR'
+  const message = payload.error?.message ?? 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง'
+  if (response.status === 401) {
+    tokenStore.clear()
+    onUnauthorized?.()
+  }
+  throw new ApiError(code, message, response.status)
+}
+
 // คำขอ GET ที่ path เดียวกันและยังไม่ได้คำตอบ ใช้คำขอตัวเดียวร่วมกัน
 //
 // เกิดขึ้นจริงสองกรณี: `StrictMode` เรียก effect สองรอบในโหมดพัฒนา ทำให้ทุก provider
@@ -135,4 +164,17 @@ export function apiGet<T>(path: string): Promise<T> {
 export const apiPost = <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {})
 export const apiPut = <T>(path: string, body: unknown) => request<T>('PUT', path, body)
 export const apiDelete = <T>(path: string) => request<T>('DELETE', path)
+
+export const apiGetBlob = (path: string) => requestBinary(path)
+
+export const apiUpload = <T>(path: string, file: File) => {
+  const form = new FormData()
+  form.append('cover', file)
+  return request<T>('POST', path, form).then((result) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('book-cover-updated', { detail: { path } }))
+    }
+    return result
+  })
+}
 

@@ -45,7 +45,8 @@ func (h *Handler) getBookCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", cover.MediaType)
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// Covers can be replaced by sales staff, so clients must fetch the current BLOB.
+	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Length", strconv.Itoa(len(cover.Data)))
 	_, _ = w.Write(cover.Data)
 }

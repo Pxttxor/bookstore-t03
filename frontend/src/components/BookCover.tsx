@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { apiGetBlob } from '../api/client'
 import { coverFor } from '../data/covers'
 import './BookCover.css'
 
@@ -26,11 +28,58 @@ export default function BookCover({
   size = 'md',
   className,
 }: BookCoverProps) {
-  const src = coverFor(bookId)
+  const fallbackSrc = coverFor(bookId)
+  const [databaseCover, setDatabaseCover] = useState<{ bookId: number; url: string }>()
+  const [failedCover, setFailedCover] = useState<number>()
   const classes = ['book-cover', `book-cover--${size}`, className].filter(Boolean).join(' ')
 
-  if (src) {
-    return <img className={classes} src={src} alt={title} loading="lazy" decoding="async" />
+  useEffect(() => {
+    let active = true
+    let objectUrl: string | undefined
+
+    const loadCover = () => {
+      void apiGetBlob(`/api/catalogue/${bookId}/cover`)
+        .then((blob) => {
+          if (!active) return
+          if (objectUrl) URL.revokeObjectURL(objectUrl)
+          objectUrl = URL.createObjectURL(blob)
+          setDatabaseCover({ bookId, url: objectUrl })
+          setFailedCover(undefined)
+        })
+        .catch(() => undefined)
+    }
+
+    const refreshIfBookMatches = (event: Event) => {
+      const path = (event as CustomEvent<{ path?: string }>).detail?.path
+      if (path?.includes(`/books/${bookId}/cover`)) loadCover()
+    }
+
+    loadCover()
+    window.addEventListener('book-cover-updated', refreshIfBookMatches)
+    return () => {
+      active = false
+      window.removeEventListener('book-cover-updated', refreshIfBookMatches)
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [bookId])
+
+  const databaseSrc = databaseCover?.bookId === bookId ? databaseCover.url : undefined
+  const src = databaseSrc ?? fallbackSrc
+
+  if (src && failedCover !== bookId) {
+    return (
+      <img
+        className={classes}
+        src={src}
+        alt={title}
+        loading="lazy"
+        decoding="async"
+        onError={() => {
+          if (databaseSrc) setDatabaseCover(undefined)
+          setFailedCover(bookId)
+        }}
+      />
+    )
   }
 
   // 137 เป็นจำนวนเฉพาะ ทำให้รหัสที่เรียงติดกันได้สีต่างกันชัด ไม่ไล่เฉดทีละนิด
