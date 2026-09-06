@@ -14,8 +14,9 @@ import {
   CHANNEL_LABELS,
   formatOrderCode,
   formatOrderDate,
+  getOrderStatusLabel,
+  getOrderStatusTone,
   ORDER_STATUS_LABELS,
-  ORDER_STATUS_TONES,
   orderItemCount,
   type OrderStatus,
 } from '../orders/orders'
@@ -165,8 +166,8 @@ export default function OrdersListPage() {
                       <td>{formatOrderDate(order.orderDate)}</td>
                       <td className="orders-list__num">{formatPrice(order.netAmount)}</td>
                       <td>
-                        <StatusBadge tone={ORDER_STATUS_TONES[order.status]}>
-                          {ORDER_STATUS_LABELS[order.status]}
+                        <StatusBadge tone={getOrderStatusTone(order)}>
+                          {getOrderStatusLabel(order)}
                         </StatusBadge>
                       </td>
                       <td>

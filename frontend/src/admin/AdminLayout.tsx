@@ -5,7 +5,6 @@ import { isEmployee } from '../auth/roles'
 import AdminTopBar from './components/AdminTopBar'
 import AdminSidebar from './components/AdminSidebar'
 import LoadingState from './components/LoadingState'
-import { ToastProvider } from './components/ToastContext'
 import { BookProvider } from './books/BookContext'
 import { InventoryProvider } from './inventory/InventoryContext'
 import { PurchasingProvider } from './purchasing/PurchasingContext'
@@ -54,19 +53,17 @@ export default function AdminLayout() {
           <PurchasingProvider>
             <PromotionProvider>
               <ReviewProvider>
-                <ToastProvider>
-                  <div className="admin">
-                    <AdminTopBar user={user} />
-                    <div className="admin__body">
-                      <AdminSidebar role={user.role} />
-                      <main className="admin__main">
-                        <Suspense fallback={null}>
-                          <Outlet />
-                        </Suspense>
-                      </main>
-                    </div>
+                <div className="admin">
+                  <AdminTopBar user={user} />
+                  <div className="admin__body">
+                    <AdminSidebar role={user.role} />
+                    <main className="admin__main">
+                      <Suspense fallback={null}>
+                        <Outlet />
+                      </Suspense>
+                    </main>
                   </div>
-                </ToastProvider>
+                </div>
               </ReviewProvider>
             </PromotionProvider>
           </PurchasingProvider>

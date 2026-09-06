@@ -93,12 +93,20 @@ func (r *OrderRepository) Save(tx *gorm.DB, order *model.Order) error {
 	return tx.Model(&model.Order{}).
 		Where("order_id = ?", order.OrderID).
 		Updates(map[string]any{
-			"status":          order.Status,
-			"subtotal":        order.Subtotal,
-			"discount_amount": order.DiscountAmount,
-			"net_amount":      order.NetAmount,
-			"promotion_id":    order.PromotionID,
-			"slip_file_name":  order.SlipFileName,
+			"status":              order.Status,
+			"subtotal":            order.Subtotal,
+			"discount_amount":     order.DiscountAmount,
+			"net_amount":          order.NetAmount,
+			"promotion_id":        order.PromotionID,
+			"slip_file_name":      order.SlipFileName,
+			"cancel_reason":       order.CancelReason,
+			"refund_bank_name":    order.RefundBankName,
+			"refund_account_no":   order.RefundAccountNo,
+			"refund_account_name": order.RefundAccountName,
+			"refund_status":       order.RefundStatus,
+			"refund_note":         order.RefundNote,
+			"refunded_at":         order.RefundedAt,
+			"refunded_by":         order.RefundedBy,
 		}).Error
 }
 

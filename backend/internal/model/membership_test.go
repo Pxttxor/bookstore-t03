@@ -231,3 +231,22 @@ func TestMembershipCodes(t *testing.T) {
 		t.Errorf("รหัสคูปอง = %s ต้องการ RWD00042", got)
 	}
 }
+
+func TestRedemptionIsUsed(t *testing.T) {
+	fresh := Redemption{CouponCode: "RWD00001"}
+	if fresh.IsUsed() {
+		t.Error("คูปองใหม่ต้องยังไม่ถูกใช้งาน")
+	}
+
+	orderID := 101
+	withOrder := Redemption{CouponCode: "RWD00001", OrderID: &orderID}
+	if !withOrder.IsUsed() {
+		t.Error("คูปองที่มี OrderID ต้องถือว่าถูกใช้งานแล้ว")
+	}
+
+	now := time.Now()
+	withDate := Redemption{CouponCode: "RWD00001", UsedDate: &now}
+	if !withDate.IsUsed() {
+		t.Error("คูปองที่มี UsedDate ต้องถือว่าถูกใช้งานแล้ว")
+	}
+}

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/Icon'
 import './StatTile.css'
 
@@ -25,8 +25,20 @@ export default function StatTile({
   to,
   linkLabel,
 }: StatTileProps) {
+  const navigate = useNavigate()
+
   return (
-    <article className={`tile tile--${tone}`}>
+    <article
+      className={`tile tile--${tone}${to ? ' tile--clickable' : ''}`}
+      onClick={
+        to
+          ? (e) => {
+              if ((e.target as HTMLElement).closest('a')) return
+              navigate(to)
+            }
+          : undefined
+      }
+    >
       <header className="tile__head">
         {icon && <Icon name={icon} size={18} />}
         <h3 className="tile__label">{label}</h3>

@@ -224,3 +224,36 @@ func TestOrderWithApplicablePromotions(t *testing.T) {
 		t.Errorf("ยอดสุทธิต้องเป็น 810 ได้ %.2f", order2.NetAmount)
 	}
 }
+
+func TestOrderCancellationAndRefundFields(t *testing.T) {
+	order := sampleOrder()
+	order.Status = OrderStatusPaid
+	order.CancelReason = "ลูกค้าขอยกเลิกคำสั่งซื้อ"
+	order.RefundBankName = "ธนาคารกสิกรไทย"
+	order.RefundAccountNo = "012-3-45678-9"
+	order.RefundAccountName = "สมศรี มีสุข"
+	order.RefundStatus = RefundStatusPending
+
+	if order.CancelReason != "ลูกค้าขอยกเลิกคำสั่งซื้อ" {
+		t.Errorf("CancelReason ไม่ถูกต้อง: %s", order.CancelReason)
+	}
+	if order.RefundBankName != "ธนาคารกสิกรไทย" || order.RefundAccountNo != "012-3-45678-9" || order.RefundAccountName != "สมศรี มีสุข" {
+		t.Errorf("ข้อมูลบัญชีคืนเงินไม่ถูกต้อง: %s %s %s", order.RefundBankName, order.RefundAccountNo, order.RefundAccountName)
+	}
+	if order.RefundStatus != RefundStatusPending {
+		t.Errorf("RefundStatus ควรเป็น PENDING ได้ %s", order.RefundStatus)
+	}
+
+	now := time.Now().UTC()
+	order.RefundStatus = RefundStatusRefunded
+	order.RefundNote = "คืนเงินลูกค้าไปแล้ว"
+	order.RefundedAt = &now
+	order.RefundedBy = "สมชาย ใจดี"
+
+	if order.RefundStatus != RefundStatusRefunded {
+		t.Errorf("RefundStatus ควรเป็น REFUNDED ได้ %s", order.RefundStatus)
+	}
+	if order.RefundNote != "คืนเงินลูกค้าไปแล้ว" {
+		t.Errorf("RefundNote ควรเป็น 'คืนเงินลูกค้าไปแล้ว' ได้ %s", order.RefundNote)
+	}
+}

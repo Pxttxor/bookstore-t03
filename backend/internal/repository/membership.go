@@ -4,6 +4,7 @@ package repository
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -304,4 +305,24 @@ func (r *MembershipRepository) ListRedemptions(filter RedemptionFilter) ([]model
 	var redemptions []model.Redemption
 	err := query.Find(&redemptions).Error
 	return redemptions, err
+}
+
+// FindRedemptionByCode — ค้นหาการแลกของรางวัลด้วยรหัสคูปอง (เช่น RWD00001)
+func (r *MembershipRepository) FindRedemptionByCode(db *gorm.DB, code string) (*model.Redemption, error) {
+	var redemption model.Redemption
+	err := db.First(&redemption, "UPPER(coupon_code) = UPPER(?)", strings.TrimSpace(code)).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, model.ErrDiscountCodeNotFound
+	}
+	return &redemption, err
+}
+
+// MarkRedemptionUsed — บันทึกว่าคูปองถูกใช้ในคำสั่งซื้อแล้ว
+func (r *MembershipRepository) MarkRedemptionUsed(tx *gorm.DB, redemptionID int, orderID int, at time.Time) error {
+	return tx.Model(&model.Redemption{}).
+		Where("redemption_id = ?", redemptionID).
+		Updates(map[string]any{
+			"order_id":  orderID,
+			"used_date": at,
+		}).Error
 }

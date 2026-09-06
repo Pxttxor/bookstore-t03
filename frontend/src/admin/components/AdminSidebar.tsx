@@ -46,6 +46,17 @@ const MENU: MenuGroup[] = [
     ],
   },
   {
+    heading: 'การคืนเงิน (Refund)',
+    items: [
+      {
+        label: 'รายการคืนเงินลูกค้า',
+        to: '/admin/refunds',
+        icon: 'dollar-sign',
+        allowed: can.viewOrders,
+      },
+    ],
+  },
+  {
     heading: 'การชำระเงิน',
     items: [
       {

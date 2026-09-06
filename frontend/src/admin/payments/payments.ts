@@ -68,10 +68,12 @@ export const REJECT_REASONS = [
 
 export const formatPaymentCode = (paymentId: number) => `PAY-${paymentId}`
 
+import type { CustomerOrder } from '../orders/orders'
+
 export const paymentDate = (payment: Payment) => payment.transferDate?.slice(0, 10) ?? '—'
 
-/** ใช้วันที่ตรวจสอบผ่านเหมือน PaymentRepository.SummarizeSuccess */
-export function summarise(payments: Payment[], from: string, to: string) {
+/** ใช้วันที่ตรวจสอบผ่านเหมือน PaymentRepository.SummarizeSuccess โดยไม่รวมคำสั่งซื้อที่ถูกยกเลิก */
+export function summarise(payments: Payment[], from: string, to: string, orders?: CustomerOrder[]) {
   const inPeriod = payments.filter((payment) => {
     const receivedDate = payment.verifiedDate?.slice(0, 10)
     return (
@@ -81,9 +83,26 @@ export function summarise(payments: Payment[], from: string, to: string) {
       receivedDate <= to
     )
   })
+
+  // แยกรายการที่คำสั่งซื้อยังดำเนินอยู่ กับรายการที่คำสั่งซื้อถูกยกเลิกแล้ว
+  const activePayments = inPeriod.filter((payment) => {
+    if (!orders) return true
+    const order = orders.find((o) => o.orderId === payment.orderId)
+    return order ? order.status !== 'CANCELLED' && order.status !== 'REJECTED' : true
+  })
+
+  const cancelledPayments = inPeriod.filter((payment) => {
+    if (!orders) return false
+    const order = orders.find((o) => o.orderId === payment.orderId)
+    return order ? order.status === 'CANCELLED' || order.status === 'REJECTED' : false
+  })
+
   return {
-    totalReceived: inPeriod.reduce((sum, payment) => sum + payment.amount, 0),
-    itemCount: inPeriod.length,
+    totalReceived: activePayments.reduce((sum, payment) => sum + payment.amount, 0),
+    itemCount: activePayments.length,
     payments: inPeriod,
+    activePayments,
+    cancelledPayments,
+    cancelledTotal: cancelledPayments.reduce((sum, payment) => sum + payment.amount, 0),
   }
 }
