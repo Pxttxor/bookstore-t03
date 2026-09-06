@@ -117,6 +117,31 @@ func TestOrderWaitingPaymentBranch(t *testing.T) {
 	}
 }
 
+// คำสั่งซื้อที่สลิปถูกปฏิเสธ สามารถแนบสลิปใหม่กลับไป VERIFYING_PAYMENT ได้
+func TestOrderRejectedCanUploadSlipAgain(t *testing.T) {
+	order := sampleOrder()
+	at := time.Now()
+	for _, next := range []OrderStatus{
+		OrderStatusStockConfirmed, OrderStatusVerifyingPayment, OrderStatusRejected,
+	} {
+		if err := order.UpdateStatus(next, "ฝ่ายขาย", "", at); err != nil {
+			t.Fatalf("เปลี่ยนเป็น %s ไม่สำเร็จ: %v", next, err)
+		}
+	}
+	if order.Status != OrderStatusRejected {
+		t.Fatalf("สถานะ = %s ต้องการ REJECTED", order.Status)
+	}
+	if !order.CanTransitionTo(OrderStatusVerifyingPayment) {
+		t.Error("คำสั่งซื้อที่ถูกปฏิเสธต้องส่งสลิปใหม่ไป VERIFYING_PAYMENT ได้")
+	}
+	if err := order.UpdateStatus(OrderStatusVerifyingPayment, "ลูกค้า", "แนบสลิปใหม่", at); err != nil {
+		t.Fatalf("ส่งสลิปใหม่ไม่สำเร็จ: %v", err)
+	}
+	if order.Status != OrderStatusVerifyingPayment {
+		t.Errorf("สถานะ = %s ต้องการ VERIFYING_PAYMENT", order.Status)
+	}
+}
+
 // ป้ายไทยต้องตรงกับ ORDER_STATUS_LABELS / CHANNEL_LABELS ฝั่งหน้าจอ
 func TestOrderLabelsMatchFrontend(t *testing.T) {
 	want := map[OrderStatus]string{

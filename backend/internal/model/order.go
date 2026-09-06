@@ -21,6 +21,7 @@ type Order struct {
 	OrderID           int                  `gorm:"column:order_id;primaryKey;autoIncrement" json:"orderId"`
 	CustomerID        int                  `gorm:"column:customer_id;not null;index" json:"customerId"`
 	CustomerName      string               `gorm:"column:customer_name;type:varchar(200)" json:"customerName,omitempty"`
+	CustomerPhone     string               `gorm:"column:customer_phone;type:varchar(50)" json:"customerPhone,omitempty"`
 	Channel           OrderChannel         `gorm:"column:channel;type:varchar(20);not null" json:"channel"`
 	OrderDate         time.Time            `gorm:"column:order_date;type:timestamptz;not null" json:"orderDate"`
 	ShippingAddress   string               `gorm:"column:shipping_address;type:text;not null" json:"shippingAddress"`
@@ -91,7 +92,7 @@ var orderTransitions = map[OrderStatus][]OrderStatus{
 	OrderStatusShipped:          {OrderStatusDelivered},
 	OrderStatusDelivered:        {},
 	OrderStatusCancelled:        {},
-	OrderStatusRejected:         {},
+	OrderStatusRejected:         {OrderStatusVerifyingPayment, OrderStatusCancelled},
 }
 
 // CanTransitionTo — เปลี่ยนจากสถานะปัจจุบันไปสถานะนี้ได้ไหม
@@ -173,7 +174,7 @@ func (o Order) ItemCount() int {
 // IsClosed — ใบที่จบแล้ว ไม่มีปุ่มให้กดต่อ
 func (o Order) IsClosed() bool {
 	switch o.Status {
-	case OrderStatusDelivered, OrderStatusCancelled, OrderStatusRejected:
+	case OrderStatusDelivered, OrderStatusCancelled:
 		return true
 	}
 	return false

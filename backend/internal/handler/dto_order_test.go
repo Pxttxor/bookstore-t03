@@ -47,6 +47,17 @@ func TestOrderDTOCustomerName(t *testing.T) {
 	}
 }
 
+func TestOrderDTOCustomerPhone(t *testing.T) {
+	view := service.OrderView{
+		Order:         model.Order{OrderID: 1, CustomerID: 10},
+		CustomerPhone: "0812345678",
+	}
+	dto := toOrderDTO(view)
+	if dto.CustomerPhone != "0812345678" {
+		t.Fatalf("expected customerPhone to be 0812345678, got %q", dto.CustomerPhone)
+	}
+}
+
 func TestOrderDTOShipment(t *testing.T) {
 	view := service.OrderView{
 		Order: model.Order{OrderID: 1039, CustomerID: 6},

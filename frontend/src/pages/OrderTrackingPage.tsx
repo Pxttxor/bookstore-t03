@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Icon from '../components/Icon'
 import RatingStars from '../components/RatingStars'
@@ -10,6 +10,7 @@ import { apiGet, apiPost, apiDelete, ApiError } from '../api/client'
 import { formatPrice } from '../data/money'
 import { useAuth } from '../auth/AuthContext'
 import { useOrders } from '../admin/orders/OrderContext'
+import { usePayments } from '../admin/payments/PaymentContext'
 import {
   formatOrderCode,
   formatOrderDate,
@@ -17,9 +18,25 @@ import {
   getOrderStatusLabel,
   type CustomerOrder,
 } from '../admin/orders/orders'
-import { THAI_BANKS, formatBankAccount, findBank } from '../data/banks'
+import { THAI_BANKS, formatBankAccount, findBank, cleanDigits } from '../data/banks'
 import { detectProfanity } from '../admin/reviews/reviews'
 import './OrderTrackingPage.css'
+
+const MAX_SLIP_BYTES = 5 * 1024 * 1024
+const SLIP_PATTERN = /\.(jpe?g|png|pdf)$/i
+
+function getSlipSource(orderId: number, slipFileName?: string): string {
+  if (!slipFileName) return ''
+  try {
+    const fromOrder = localStorage.getItem(`slip_order_${orderId}`)
+    if (fromOrder) return fromOrder
+    const fromFile = localStorage.getItem(`slip_file_${slipFileName}`)
+    if (fromFile) return fromFile
+  } catch {
+    // ignore
+  }
+  return `/slips/${slipFileName}`
+}
 
 type StepStatus = 'done' | 'current' | 'todo'
 
@@ -277,13 +294,96 @@ export default function OrderTrackingPage() {
 
 function RealOrderView({ order }: { order: CustomerOrder }) {
   const { user } = useAuth()
-  const { updateRefundInfo } = useOrders()
+  const { updateRefundInfo, reload } = useOrders()
+  const { banks } = usePayments()
   const [reviews, setReviews] = useState<CustomerReview[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const [localOrder, setLocalOrder] = useState<CustomerOrder | null>(null)
   const currentOrder = localOrder && localOrder.orderId === order.orderId ? localOrder : order
+
+  // Re-upload slip states for REJECTED orders
+  const [newSlip, setNewSlip] = useState<File | null>(null)
+  const [newSlipPreview, setNewSlipPreview] = useState<string>('')
+  const [uploadingSlip, setUploadingSlip] = useState(false)
+  const [slipUploadError, setSlipUploadError] = useState('')
+  const [slipUploadSuccess, setSlipUploadSuccess] = useState('')
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [selectedBankId, setSelectedBankId] = useState<number | undefined>(undefined)
+  const slipInputRef = useRef<HTMLInputElement>(null)
+
+  const pickNewSlip = (file: File | undefined) => {
+    setSlipUploadError('')
+    setSlipUploadSuccess('')
+    if (!file) {
+      setNewSlip(null)
+      setNewSlipPreview('')
+      if (slipInputRef.current) slipInputRef.current.value = ''
+      return
+    }
+    if (!SLIP_PATTERN.test(file.name)) {
+      setSlipUploadError('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือเอกสาร PDF')
+      setNewSlip(null)
+      setNewSlipPreview('')
+      if (slipInputRef.current) slipInputRef.current.value = ''
+      return
+    }
+    if (file.size > MAX_SLIP_BYTES) {
+      setSlipUploadError('ไฟล์สลิปต้องมีขนาดไม่เกิน 5MB')
+      setNewSlip(null)
+      setNewSlipPreview('')
+      if (slipInputRef.current) slipInputRef.current.value = ''
+      return
+    }
+    setNewSlip(file)
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setNewSlipPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setNewSlipPreview('')
+    }
+  }
+
+  const handleReuploadSlip = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newSlip) {
+      setSlipUploadError('กรุณาเลือกไฟล์สลิปก่อนส่ง')
+      return
+    }
+    setUploadingSlip(true)
+    setSlipUploadError('')
+    setSlipUploadSuccess('')
+    try {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${currentOrder.orderId}/payment`, {
+        slipFileName: newSlip.name,
+        bankId: selectedBankId,
+      })
+      if (newSlipPreview) {
+        try {
+          localStorage.setItem(`slip_order_${currentOrder.orderId}`, newSlipPreview)
+          localStorage.setItem(`slip_file_${newSlip.name}`, newSlipPreview)
+        } catch {
+          // ignore localStorage quota error
+        }
+      }
+      setLocalOrder(updated)
+      setSlipUploadSuccess('ส่งหลักฐานการชำระเงินใหม่เรียบร้อยแล้ว อยู่ระหว่างรอเจ้าหน้าที่ตรวจสอบ')
+      setNewSlip(null)
+      setNewSlipPreview('')
+      if (slipInputRef.current) slipInputRef.current.value = ''
+      await reload()
+    } catch (err) {
+      setSlipUploadError(
+        err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการส่งสลิป กรุณาลองใหม่อีกครั้ง',
+      )
+    } finally {
+      setUploadingSlip(false)
+    }
+  }
 
   const [bankName, setBankName] = useState(
     currentOrder.refundBankName || THAI_BANKS[0].name,
@@ -302,6 +402,8 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
   const [savingBank, setSavingBank] = useState(false)
   const [bankError, setBankError] = useState('')
   const [bankSuccess, setBankSuccess] = useState('')
+  const [accountTouched, setAccountTouched] = useState(false)
+  const [nameTouched, setNameTouched] = useState(false)
 
   // หลังจากกรอกข้อมูลครบถ้วนแล้ว ไม่อยากให้ลูกค้ากรอกซ้ำ
   const isBankSaved = Boolean(
@@ -310,10 +412,50 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
       currentOrder.refundAccountName,
   )
 
+  const currentBank = findBank(bankName)
+  const isPromptPay = currentBank?.code === 'PROMPTPAY'
+  const expectedDigits = currentBank?.digits || 10
+  const rawDigits = cleanDigits(accountNo)
+
+  // ตรวจสอบความถูกต้องของหมายเลขพร้อมเพย์หรือเลขบัญชี (ไม่แสดงตัวนับหลัก)
+  let accountValidationError = ''
+  if (rawDigits.length === 0) {
+    accountValidationError = isPromptPay
+      ? 'กรุณากรอกหมายเลขพร้อมเพย์'
+      : 'กรุณากรอกเลขที่บัญชี'
+  } else if (isPromptPay && !rawDigits.startsWith('0')) {
+    accountValidationError = 'หมายเลขพร้อมเพย์ต้องขึ้นต้นด้วย 0'
+  } else if (rawDigits.length < expectedDigits) {
+    accountValidationError = isPromptPay
+      ? 'กรุณากรอกหมายเลขพร้อมเพย์ให้ครบถ้วน'
+      : 'กรุณากรอกเลขที่บัญชีให้ครบถ้วน'
+  }
+
+  const isAccountValid = accountValidationError === ''
+
+  // ตรวจสอบความถูกต้องของชื่อ-นามสกุล
+  let nameValidationError = ''
+  if (!accountName.trim()) {
+    nameValidationError = 'กรุณาระบุชื่อ - นามสกุล ผู้รับเงินคืน (ตามหน้าสมุดบัญชี)'
+  } else if (accountName.trim().length < 2) {
+    nameValidationError = 'ชื่อ - นามสกุล ต้องมีความยาวอย่างน้อย 2 ตัวอักษร'
+  }
+
+  const isNameValid = nameValidationError === ''
+  const isFormValid = isAccountValid && isNameValid && Boolean(bankName.trim())
+
   const handleSaveBank = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!bankName.trim() || !accountNo.trim() || !accountName.trim()) {
-      setBankError('กรุณากรอกข้อมูลธนาคาร เลขที่บัญชี และชื่อ-นามสกุลผู้รับเงินให้ครบถ้วน')
+    setAccountTouched(true)
+    setNameTouched(true)
+    if (!isFormValid) {
+      if (accountValidationError) {
+        setBankError(accountValidationError)
+      } else if (nameValidationError) {
+        setBankError(nameValidationError)
+      } else {
+        setBankError('กรุณากรอกข้อมูลเพื่อรับเงินคืนให้ครบถ้วนและถูกต้องตามรูปแบบ')
+      }
       return
     }
     setSavingBank(true)
@@ -360,7 +502,9 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
   const activeIndex = Math.max(0, steps.findIndex((s) => s.status === 'current'))
   const progress =
     currentOrder.status === 'DELIVERED' ? 100 : (activeIndex / (steps.length - 1)) * 100
-  const cancelled = currentOrder.status === 'CANCELLED' || currentOrder.status === 'REJECTED'
+  const isCancelled = currentOrder.status === 'CANCELLED'
+  const isRejected = currentOrder.status === 'REJECTED'
+  const isVerifying = currentOrder.status === 'VERIFYING_PAYMENT'
 
   const trackingNumber = currentOrder.shipment?.trackingNumber?.trim() || ''
   const carrier = currentOrder.shipment?.carrier || 'รอจัดส่ง'
@@ -399,7 +543,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
 
       <section className="track__status">
         <h2>สถานะ: {getOrderStatusLabel(currentOrder)}</h2>
-        {cancelled ? (
+        {isCancelled ? (
           <div
             className={`track__cancelled-box ${
               currentOrder.refundStatus === 'REFUNDED'
@@ -424,6 +568,25 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               </p>
             )}
           </div>
+        ) : isRejected ? (
+          <div className="track__rejected-box">
+            <div className="track__rejected-header">
+              <Icon name="alert-triangle" size={22} />
+              <div>
+                <p className="track__rejected-title">
+                  การชำระเงินถูกปฏิเสธ (สลิปไม่ถูกต้อง)
+                </p>
+                <p className="track__rejected-desc">
+                  เจ้าหน้าที่ได้ตรวจสอบหลักฐานแล้วพบว่าข้อมูลไม่ถูกต้อง กรุณาแนบรูปสลีปใหม่อีกครั้งด้านล่าง เพื่อให้เจ้าหน้าที่ตรวจสอบ
+                </p>
+              </div>
+            </div>
+            {currentOrder.cancelReason && (
+              <p className="track__rejected-reason">
+                <strong>เหตุผลที่ปฏิเสธจากทางร้าน:</strong> {currentOrder.cancelReason}
+              </p>
+            )}
+          </div>
         ) : (
           <div className="track__steps">
             <div className="track__line" />
@@ -445,7 +608,160 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
             ))}
           </div>
         )}
+
+        {isVerifying && (
+          <div className="track__verifying-notice">
+            <Icon name="clock" size={20} />
+            <div>
+              <p className="track__verifying-title">ได้รับหลักฐานการชำระเงินแล้ว</p>
+              <p className="track__verifying-desc">
+                ขณะนี้ระบบได้รับสลิปของท่านเรียบร้อยแล้ว อยู่ระหว่างรอเจ้าหน้าที่ตรวจสอบยอดเงิน
+              </p>
+            </div>
+          </div>
+        )}
       </section>
+
+      {isRejected && (
+        <section className="track__reupload-card">
+          <div className="track__reupload-header">
+            <Icon name="upload" size={22} />
+            <div>
+              <h3 className="track__reupload-title">แนบหลักฐานการชำระเงินใหม่</h3>
+              <p className="track__reupload-subtitle">
+                ยอดชำระที่ต้องโอน: <strong className="track__reupload-amount">฿ {formatPrice(currentOrder.netAmount)}</strong>
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={(e) => void handleReuploadSlip(e)} className="track__reupload-form">
+            {banks && banks.length > 0 && (
+              <div className="track__reupload-bank-group">
+                <label className="track__reupload-bank-label">
+                  <span>บัญชีธนาคารของร้านที่โอนเข้า</span>
+                  <select
+                    className="track__reupload-select"
+                    value={selectedBankId ?? banks[0].bankId}
+                    onChange={(e) => setSelectedBankId(Number(e.target.value))}
+                  >
+                    {banks.map((b) => (
+                      <option key={b.bankId} value={b.bankId}>
+                        {b.name} ({b.accountNo})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+
+            <div
+              className={`track__reupload-dropzone ${isDragOver ? 'is-dragover' : ''} ${
+                newSlip ? 'has-file' : ''
+              }`}
+              onClick={() => slipInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setIsDragOver(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                setIsDragOver(false)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                setIsDragOver(false)
+                if (e.dataTransfer.files?.[0]) {
+                  pickNewSlip(e.dataTransfer.files[0])
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  slipInputRef.current?.click()
+                }
+              }}
+            >
+              <input
+                ref={slipInputRef}
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                style={{ display: 'none' }}
+                onChange={(e) => pickNewSlip(e.target.files?.[0])}
+              />
+
+              {newSlip ? (
+                <div className="track__reupload-preview">
+                  {newSlipPreview ? (
+                    <img
+                      src={newSlipPreview}
+                      alt="ตัวอย่างสลิปใหม่"
+                      className="track__reupload-preview-img"
+                    />
+                  ) : (
+                    <div className="track__reupload-pdf-icon">
+                      <Icon name="file-text" size={48} />
+                    </div>
+                  )}
+                  <div className="track__reupload-preview-info">
+                    <span className="track__reupload-preview-name">{newSlip.name}</span>
+                    <span className="track__reupload-preview-size">
+                      {(newSlip.size / 1024).toFixed(1)} KB
+                    </span>
+                    <button
+                      type="button"
+                      className="track__reupload-change-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        slipInputRef.current?.click()
+                      }}
+                    >
+                      <Icon name="edit" size={14} /> คลิกเพื่อเปลี่ยนไฟล์
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="track__reupload-drop-prompt">
+                  <div className="track__reupload-drop-icon">
+                    <Icon name="upload" size={32} />
+                  </div>
+                  <p className="track__reupload-drop-title">
+                    ลากไฟล์สลิปมาวางที่นี่ หรือ <span>เลือกไฟล์</span>
+                  </p>
+                  <p className="track__reupload-drop-hint">
+                    รองรับไฟล์รูปภาพ JPG, PNG หรือ PDF (ขนาดไม่เกิน 5MB)
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {slipUploadError && (
+              <div className="track__reupload-error">
+                <Icon name="alert-triangle" size={16} />
+                <span>{slipUploadError}</span>
+              </div>
+            )}
+
+            {slipUploadSuccess && (
+              <div className="track__reupload-success">
+                <Icon name="check-circle" size={16} />
+                <span>{slipUploadSuccess}</span>
+              </div>
+            )}
+
+            <div className="track__reupload-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={!newSlip || uploadingSlip}
+              >
+                <Icon name={uploadingSlip ? 'clock' : 'check'} size={18} />
+                {uploadingSlip ? 'กำลังส่งหลักฐาน…' : 'ส่งหลักฐานการชำระเงินใหม่'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {currentOrder.status === 'CANCELLED' && (
         <section
@@ -484,7 +800,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 <div>
                   <strong>ยอดเงินที่คืน:</strong>{' '}
                   <span className="track__refund-highlight-amount">
-                    ฿ {formatPrice(currentOrder.netAmount)}
+                    {formatPrice(currentOrder.netAmount)}
                   </span>
                 </div>
                 <div>
@@ -514,17 +830,14 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
           ) : isBankSaved ? (
             <div className="track__refund-content">
               <div className="track__refund-saved-view">
-                <div className="track__refund-saved-badge">
-                  <Icon name="check" size={16} /> บันทึกข้อมูลบัญชีรับเงินคืนเรียบร้อยแล้ว
-                </div>
                 <p className="track__refund-info-text">
-                  ระบบได้บันทึกข้อมูลบัญชีของท่านเรียบร้อยแล้ว ขณะนี้อยู่ระหว่างพนักงานตรวจสอบและโอนเงินคืนตามข้อมูลด้านล่างนี้
+                  รอพนักงานตรวจสอบและโอนเงินคืนตามข้อมูลด้านล่างนี้
                 </p>
                 <div className="track__refund-account-box">
                   <div>
                     <strong>ยอดเงินที่ได้รับคืน:</strong>{' '}
                     <span className="track__refund-highlight-amount">
-                      ฿ {formatPrice(currentOrder.netAmount)}
+                      {formatPrice(currentOrder.netAmount)}
                     </span>
                   </div>
                   <div>
@@ -534,13 +847,9 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                     <strong>เลขที่บัญชี:</strong> {currentOrder.refundAccountNo}
                   </div>
                   <div>
-                    <strong>ชื่อนามสกุลผู้รับ:</strong> {currentOrder.refundAccountName}
+                    <strong>ชื่อผู้รับเงิน:</strong> {currentOrder.refundAccountName}
                   </div>
                 </div>
-                {bankSuccess && <p className="track__refund-success">{bankSuccess}</p>}
-                <p className="track__refund-locked-notice">
-                  <Icon name="lock" size={14} /> ข้อมูลนี้ถูกบันทึกเข้าระบบแล้ว ไม่อนุญาตให้แก้ไขซ้ำ เพื่อความปลอดภัยและถูกต้อง
-                </p>
               </div>
             </div>
           ) : (
@@ -548,7 +857,7 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               <form className="track__refund-form" onSubmit={(e) => void handleSaveBank(e)}>
                 <p className="track__refund-form-prompt">
                   กรุณาเลือกธนาคารและกรอกเลขที่บัญชี พร้อมชื่อ-นามสกุล เพื่อให้พนักงานดำเนินการโอนเงินคืนยอด{' '}
-                  <strong>฿ {formatPrice(currentOrder.netAmount)}</strong>
+                  <strong>{formatPrice(currentOrder.netAmount)}</strong>
                 </p>
                 <div className="track__refund-form-grid">
                   <label className="track__refund-form-label">
@@ -572,20 +881,34 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                   </label>
 
                   <label className="track__refund-form-label">
-                    <span>
-                      {findBank(bankName)?.code === 'PROMPTPAY'
-                        ? 'เบอร์พร้อมเพย์ 10 หลัก (ระบบใส่ขีดให้อัตโนมัติ)'
-                        : 'เลขที่บัญชี (ระบบใส่ขีดให้อัตโนมัติ)'}
-                    </span>
+                    <span>{isPromptPay ? 'หมายเลขพร้อมเพย์' : 'เลขที่บัญชี'}</span>
                     <input
                       type="text"
+                      inputMode="numeric"
                       required
-                      className="track__refund-input"
-                      placeholder={findBank(bankName)?.placeholder || '000-0-00000-0'}
-                      maxLength={findBank(bankName)?.code === 'PROMPTPAY' ? 12 : 16}
+                      className={`track__refund-input ${
+                        accountTouched || accountNo.length > 0
+                          ? isAccountValid
+                            ? 'is-valid'
+                            : 'is-invalid'
+                          : ''
+                      }`}
+                      placeholder={currentBank?.placeholder || (isPromptPay ? '000-000-0000' : '000-0-00000-0')}
+                      maxLength={isPromptPay ? 12 : expectedDigits === 12 ? 14 : 14}
                       value={accountNo}
-                      onChange={(e) => setAccountNo(formatBankAccount(bankName, e.target.value))}
+                      onChange={(e) => {
+                        setAccountNo(formatBankAccount(bankName, e.target.value))
+                        setAccountTouched(true)
+                        setBankError('')
+                      }}
+                      onBlur={() => setAccountTouched(true)}
                     />
+                    {(accountTouched || accountNo.length > 0) && !isAccountValid && (
+                      <span className="track__refund-field-msg track__refund-field-msg--error">
+                        <Icon name="alert-triangle" size={13} />
+                        <span>{accountValidationError}</span>
+                      </span>
+                    )}
                   </label>
 
                   <label className="track__refund-form-label track__refund-form-label--full">
@@ -593,11 +916,28 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                     <input
                       type="text"
                       required
-                      className="track__refund-input"
+                      className={`track__refund-input ${
+                        nameTouched || accountName.length > 0
+                          ? isNameValid
+                            ? 'is-valid'
+                            : 'is-invalid'
+                          : ''
+                      }`}
                       placeholder="เช่น น.ส. สมศรี มีสุข"
                       value={accountName}
-                      onChange={(e) => setAccountName(e.target.value)}
+                      onChange={(e) => {
+                        setAccountName(e.target.value)
+                        setNameTouched(true)
+                        setBankError('')
+                      }}
+                      onBlur={() => setNameTouched(true)}
                     />
+                    {(nameTouched || accountName.length > 0) && !isNameValid && (
+                      <span className="track__refund-field-msg track__refund-field-msg--error">
+                        <Icon name="alert-triangle" size={13} />
+                        <span>{nameValidationError}</span>
+                      </span>
+                    )}
                   </label>
                 </div>
                 {bankError && <p className="track__refund-error">{bankError}</p>}
@@ -606,11 +946,18 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                   <button
                     type="submit"
                     className="btn btn-primary btn-sm"
-                    disabled={savingBank}
+                    disabled={savingBank || !isFormValid}
+                    title={!isFormValid ? 'กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้องตามรูปแบบก่อนกดยืนยัน' : undefined}
                   >
                     <Icon name="check" size={16} />
                     {savingBank ? 'กำลังบันทึก…' : 'ยืนยันข้อมูลบัญชีรับเงินคืน'}
                   </button>
+                  {!isFormValid && (accountNo.length > 0 || accountName.length > 0) && (
+                    <span className="track__refund-btn-hint">
+                      <Icon name="alert-triangle" size={13} />
+                      {accountValidationError || nameValidationError}
+                    </span>
+                  )}
                 </div>
               </form>
             </div>
@@ -625,12 +972,12 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               <Icon name="truck" size={18} /> ข้อมูลการจัดส่ง
             </h3>
             <dl className="track__dl">
+              <dt>ชื่อผู้รับ</dt>
+              <dd>{currentOrder.customerName}</dd>
+              <dt>เบอร์โทรศัพท์</dt>
+              <dd>{currentOrder.customerPhone || '—'}</dd>
               <dt>ที่อยู่จัดส่ง</dt>
-              <dd>
-                {currentOrder.customerName}
-                <br />
-                {currentOrder.shippingAddress}
-              </dd>
+              <dd>{currentOrder.shippingAddress}</dd>
               <dt>ผู้ให้บริการขนส่ง</dt>
               <dd>{carrier}</dd>
               <dt>หมายเลขพัสดุ</dt>
@@ -655,6 +1002,40 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               </dd>
             </dl>
           </section>
+
+          {currentOrder.slipFileName && (
+            <section className="track__panel">
+              <h3 className="track__panel-title">
+                <Icon name="file-text" size={18} /> หลักฐานการชำระเงิน
+              </h3>
+              <div className="track__slip-box">
+                <div className="track__slip-header-info">
+                  <span className="track__slip-file-name">{currentOrder.slipFileName}</span>
+                  {currentOrder.status === 'VERIFYING_PAYMENT' && (
+                    <span className="track__slip-badge is-verifying">รอตรวจสอบ</span>
+                  )}
+                  {currentOrder.status === 'REJECTED' && (
+                    <span className="track__slip-badge is-rejected">สลิปไม่ผ่าน</span>
+                  )}
+                </div>
+                {getSlipSource(currentOrder.orderId, currentOrder.slipFileName) && (
+                  <div className="track__slip-img-container">
+                    <img
+                      src={getSlipSource(currentOrder.orderId, currentOrder.slipFileName)}
+                      alt={`สลิป ${currentOrder.slipFileName}`}
+                      className="track__slip-thumb-img"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        if (!target.src.endsWith('/slips/default-slip.png')) {
+                          target.src = '/slips/default-slip.png'
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="track__panel">
             <h3 className="track__panel-title">

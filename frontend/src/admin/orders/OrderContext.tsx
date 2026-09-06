@@ -14,6 +14,7 @@ const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
   customerName?: string
+  customerPhone?: string
   shippingAddress: string
   /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
   items: { bookId: number; quantity: number }[]

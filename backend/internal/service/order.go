@@ -65,6 +65,7 @@ type OrderLineInput struct {
 type PlaceOrderInput struct {
 	CustomerID      int                `json:"customerId"`
 	CustomerName    string             `json:"customerName,omitempty"`
+	CustomerPhone   string             `json:"customerPhone,omitempty"`
 	Channel         model.OrderChannel `json:"channel"`
 	ShippingAddress string             `json:"shippingAddress"`
 	PromotionID     *int               `json:"promotionId,omitempty"`
@@ -121,6 +122,7 @@ type OrderShipmentInfo struct {
 type OrderView struct {
 	Order         model.Order
 	CustomerName  string
+	CustomerPhone string
 	CustomerEmail string
 	Books         map[int]model.Book
 	Promotion     *model.Promotion
@@ -246,10 +248,15 @@ func (s *OrderService) buildOrder(input PlaceOrderInput, current Identity) (*mod
 	if customerName == "" {
 		customerName = customer.Person.Name()
 	}
+	customerPhone := strings.TrimSpace(input.CustomerPhone)
+	if customerPhone == "" {
+		customerPhone = customer.Person.Phone
+	}
 
 	order := &model.Order{
 		CustomerID:      customerID,
 		CustomerName:    customerName,
+		CustomerPhone:   customerPhone,
 		Channel:         channel,
 		OrderDate:       now,
 		ShippingAddress: address,
@@ -498,6 +505,9 @@ func (s *OrderService) SubmitPayment(
 			}
 
 			order.SlipFileName = slip
+			if order.Status == model.OrderStatusRejected {
+				order.CancelReason = ""
+			}
 			return nil
 		})
 }
@@ -524,7 +534,8 @@ func (s *OrderService) RejectPayment(orderID int, input OrderNoteInput, by strin
 		return nil, model.ErrReasonRequired
 	}
 	return s.advance(orderID, model.OrderStatusRejected, by, note,
-		func(tx *gorm.DB, _ *model.Order) error {
+		func(tx *gorm.DB, order *model.Order) error {
+			order.CancelReason = note
 			return s.decidePayment(tx, orderID, note, by)
 		})
 }
@@ -776,6 +787,34 @@ func (s *OrderService) SetRefundBank(orderID int, input RefundBankInput, current
 		return nil, model.Validation("REFUND_INFO_REQUIRED", "กรุณาระบุชื่อธนาคาร เลขที่บัญชี และชื่อนามสกุลผู้รับเงินคืน")
 	}
 
+	var digits strings.Builder
+	for _, r := range accountNo {
+		if r >= '0' && r <= '9' {
+			digits.WriteRune(r)
+		}
+	}
+	dStr := digits.String()
+	lowerBank := strings.ToLower(bankName)
+	isPromptPay := strings.Contains(lowerBank, "promptpay") || strings.Contains(bankName, "พร้อมเพย์")
+	is12Digits := strings.Contains(bankName, "ออมสิน") || strings.Contains(bankName, "ธ.ก.ส.") || strings.Contains(lowerBank, "gsb") || strings.Contains(lowerBank, "baac")
+
+	if isPromptPay {
+		if len(dStr) != 10 || !strings.HasPrefix(dStr, "0") {
+			return nil, model.Validation("INVALID_PROMPTPAY", "หมายเลขโทรศัพท์พร้อมเพย์ต้องเป็นตัวเลข 10 หลักและขึ้นต้นด้วย 0")
+		}
+	} else if is12Digits {
+		if len(dStr) != 12 {
+			return nil, model.Validation("INVALID_ACCOUNT_NO", "เลขที่บัญชีธนาคารนี้ต้องเป็นตัวเลข 12 หลัก")
+		}
+	} else {
+		if len(dStr) != 10 {
+			return nil, model.Validation("INVALID_ACCOUNT_NO", "เลขที่บัญชีธนาคารต้องเป็นตัวเลข 10 หลัก")
+		}
+	}
+	if len(accountName) < 2 {
+		return nil, model.Validation("INVALID_ACCOUNT_NAME", "ชื่อ-นามสกุลผู้รับเงินคืนต้องมีความยาวอย่างน้อย 2 ตัวอักษร")
+	}
+
 	var order *model.Order
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		found, err := s.orders.FindForUpdate(tx, orderID)
@@ -927,9 +966,11 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 	}
 	names := make(map[int]string, len(customers))
 	emails := make(map[int]string, len(customers))
+	phones := make(map[int]string, len(customers))
 	for _, row := range customers {
 		names[row.Customer.CustomerID] = row.Person.Name()
 		emails[row.Customer.CustomerID] = row.Person.Email
+		phones[row.Customer.CustomerID] = row.Person.Phone
 	}
 	promotions, err := s.promotions.List()
 	if err != nil {
@@ -975,9 +1016,14 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 		if custName == "" {
 			custName = names[order.CustomerID]
 		}
+		custPhone := order.CustomerPhone
+		if custPhone == "" {
+			custPhone = phones[order.CustomerID]
+		}
 		views[i] = OrderView{
 			Order:         order,
 			CustomerName:  custName,
+			CustomerPhone: custPhone,
 			CustomerEmail: emails[order.CustomerID],
 			Books:         books,
 		}

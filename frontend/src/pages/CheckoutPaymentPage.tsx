@@ -189,6 +189,7 @@ export default function CheckoutPaymentPage() {
       // ส่งชื่อผู้รับ ที่อยู่จัดส่ง บัญชีธนาคาร รายการหนังสือ ชื่อไฟล์สลิป และรหัสโปรโมชั่น (ถ้ามี)
       const order = await placeOrder({
         customerName: recipient,
+        customerPhone: mobile,
         bankId: selectedBankId,
         shippingAddress,
         items: lines.map((line) => ({ bookId: line.book.bookId, quantity: line.qty })),
