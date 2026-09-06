@@ -2,8 +2,10 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"bookstore-t03/internal/httpx"
 	"bookstore-t03/internal/model"
@@ -19,10 +21,88 @@ func (h *Handler) registerBookRoutes(register registrar) {
 	register("GET /api/categories", roleOffice, h.listCategories)
 	register("GET /api/books", roleOffice, h.listBooks)
 	register("GET /api/books/{id}", roleOffice, h.getBook)
+	register("GET /api/books/{id}/cover", roleOffice, h.getBookCover)
 	register("GET /api/books/{id}/change-logs", roleCatalogue, h.bookChangeLogs)
-	register("POST /api/books", roleCatalogue, h.createBook)                // Book.add()
-	register("PUT /api/books/{id}", roleCatalogue, h.updateBook)            // Book.update()
+	register("POST /api/books", roleCatalogue, h.createBook)     // Book.add()
+	register("PUT /api/books/{id}", roleCatalogue, h.updateBook) // Book.update()
+	register("POST /api/books/{id}/cover", roleCatalogue, h.uploadBookCover)
+	register("PUT /api/books/{id}/cover", roleCatalogue, h.uploadBookCover)
+	register("DELETE /api/books/{id}/cover", roleCatalogue, h.deleteBookCover)
 	register("POST /api/books/{id}/status", roleCatalogue, h.setBookStatus) // เปิด/ปิดการขาย
+}
+
+const maxCoverImageSize = 5 << 20
+
+func (h *Handler) getBookCover(w http.ResponseWriter, r *http.Request) {
+	id, err := httpx.PathInt(r, "id")
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	cover, err := h.books.GetCover(id)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", cover.MediaType)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Content-Length", strconv.Itoa(len(cover.Data)))
+	_, _ = w.Write(cover.Data)
+}
+
+func (h *Handler) uploadBookCover(w http.ResponseWriter, r *http.Request) {
+	id, err := httpx.PathInt(r, "id")
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxCoverImageSize+1)
+	file, _, err := r.FormFile("cover")
+	if err != nil {
+		file, _, err = r.FormFile("file")
+	}
+	if err != nil {
+		if err == http.ErrMissingFile {
+			httpx.Error(w, model.ErrCoverImageInvalid)
+			return
+		}
+		httpx.Error(w, model.ErrCoverImageTooLarge)
+		return
+	}
+	defer file.Close()
+
+	image, err := io.ReadAll(file)
+	if err != nil {
+		httpx.Error(w, model.ErrCoverImageInvalid)
+		return
+	}
+	if len(image) > maxCoverImageSize {
+		httpx.Error(w, model.ErrCoverImageTooLarge)
+		return
+	}
+	mediaType := http.DetectContentType(image)
+	if !strings.HasPrefix(mediaType, "image/") {
+		httpx.Error(w, model.ErrCoverImageInvalid)
+		return
+	}
+	if err := h.books.SetCover(id, image, mediaType); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.NoContent(w)
+}
+
+func (h *Handler) deleteBookCover(w http.ResponseWriter, r *http.Request) {
+	id, err := httpx.PathInt(r, "id")
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	if err := h.books.ClearCover(id); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.NoContent(w)
 }
 
 func (h *Handler) listCategories(w http.ResponseWriter, _ *http.Request) {

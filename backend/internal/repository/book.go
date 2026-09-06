@@ -31,7 +31,9 @@ type BookFilter struct {
 
 // List — ค้นหาหนังสือตาม Book.search() (ชื่อเรื่อง / ผู้แต่ง / ISBN แบบไม่สนตัวพิมพ์) + ตัวกรอง
 func (r *BookRepository) List(filter BookFilter) ([]model.Book, error) {
-	query := r.db.Model(&model.Book{}).Order("book_id")
+	query := r.db.Model(&model.Book{}).
+		Omit("cover_image", "cover_image_type").
+		Order("book_id")
 
 	if term := strings.TrimSpace(filter.Query); term != "" {
 		like := "%" + strings.ToLower(term) + "%"
@@ -92,13 +94,41 @@ func (r *BookRepository) ExistingIDs(bookIDs []int) (map[int]bool, error) {
 
 // Find — หนังสือหนึ่งเล่ม · รับ *gorm.DB เข้ามาเพื่อให้เรียกจากในทรานแซกชันได้
 func (r *BookRepository) Find(db *gorm.DB, bookID int) (*model.Book, error) {
-	return firstBook(db.Where("book_id = ?", bookID))
+	return firstBook(db.Omit("cover_image", "cover_image_type").Where("book_id = ?", bookID))
 }
 
 // FindForUpdate — อ่านพร้อมล็อกแถว ใช้ตอนแก้ไขเพื่อไม่ให้สองคนกดบันทึกพร้อมกัน
 // แล้วได้ประวัติการแก้ไขที่อ่านค่าเดิมคนละรอบ
 func (r *BookRepository) FindForUpdate(tx *gorm.DB, bookID int) (*model.Book, error) {
-	return firstBook(tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("book_id = ?", bookID))
+	return firstBook(tx.Omit("cover_image", "cover_image_type").Clauses(clause.Locking{Strength: "UPDATE"}).Where("book_id = ?", bookID))
+}
+
+// Cover — the image data and MIME type stored for a book.
+func (r *BookRepository) Cover(db *gorm.DB, bookID int) (*model.Book, error) {
+	var book model.Book
+	err := db.Select("book_id", "cover_image", "cover_image_type").
+		Where("book_id = ?", bookID).First(&book).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, model.ErrBookNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &book, nil
+}
+
+func (r *BookRepository) UpdateCover(tx *gorm.DB, bookID int, image []byte, imageType string) error {
+	return tx.Model(&model.Book{}).Where("book_id = ?", bookID).Updates(map[string]any{
+		"cover_image":      image,
+		"cover_image_type": imageType,
+	}).Error
+}
+
+func (r *BookRepository) ClearCover(tx *gorm.DB, bookID int) error {
+	return tx.Model(&model.Book{}).Where("book_id = ?", bookID).Updates(map[string]any{
+		"cover_image":      nil,
+		"cover_image_type": nil,
+	}).Error
 }
 
 func firstBook(query *gorm.DB) (*model.Book, error) {

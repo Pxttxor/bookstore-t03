@@ -533,6 +533,16 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
     `CASE` แยกสองกรณีนี้ในคำสั่งเดียว) · ข้อมูลตั้งต้นไม่มีใบ `CANCELLED` เลย ตัวเลขงบที่กรรมการเห็น
     จึงไม่เปลี่ยนจากเดิม
 
+32. **`book` เพิ่มสองคอลัมน์เก็บรูปปกเป็น blob** — `cover_image` (`bytea`) กับ `cover_image_type`
+    (`varchar(100)`) เพิ่มใน PR #18 (merge 6 ก.ย. 69) · class diagram มีแค่ attribute ตัวอักษรของ
+    `Book` ไม่มีรูปปก · ทั้งคู่ nullable เล่มที่ยังไม่มีปกเป็น NULL · endpoint แยกกลุ่ม
+    `GET /api/books/{id}/cover` (roleOffice, สตรีมไบต์ตรง ไม่ใช่ JSON) กับ
+    `POST/PUT/DELETE /api/books/{id}/cover` (roleCatalogue, multipart `cover`/`file` ≤ 5 MB
+    ตรวจชนิดด้วย `http.DetectContentType`) · `BookRepository.List`/`Find`/`FindForUpdate` ใส่
+    `Omit("cover_image","cover_image_type")` กันโหลด blob ตอนอ่านรายการ — query อื่นที่ยังดึงทั้งแถว
+    (`BooksByID` · `FindByISBN` · `Preload("Books.Book")` ของผู้จัดจำหน่าย · รีวิว) โหลด blob มาด้วย
+    ยอมรับได้เพราะข้อมูลชุดสาธิตเล็ก · **`Book` เป็นคลาสของวุฒิภัทร ต้องตกลงกับเจ้าของคลาสก่อนรวมงาน**
+
 ---
 
 ## ตรวจงาน

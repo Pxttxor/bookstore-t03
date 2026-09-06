@@ -39,6 +39,11 @@ type StatusInput struct {
 	Status model.BookStatus `json:"status"`
 }
 
+type CoverImage struct {
+	Data      []byte
+	MediaType string
+}
+
 // ── อ่าน ────────────────────────────────────────────────────────────────
 
 func (s *BookService) Categories() ([]model.Category, error) {
@@ -69,6 +74,31 @@ func (s *BookService) Get(bookID int) (*BookView, error) {
 		return nil, err
 	}
 	return s.view(*book)
+}
+
+func (s *BookService) GetCover(bookID int) (*CoverImage, error) {
+	book, err := s.books.Cover(s.db, bookID)
+	if err != nil {
+		return nil, err
+	}
+	if len(book.CoverImage) == 0 || book.CoverImageType == "" {
+		return nil, model.ErrCoverImageNotFound
+	}
+	return &CoverImage{Data: book.CoverImage, MediaType: book.CoverImageType}, nil
+}
+
+func (s *BookService) SetCover(bookID int, image []byte, imageType string) error {
+	if _, err := s.books.Find(s.db, bookID); err != nil {
+		return err
+	}
+	return s.books.UpdateCover(s.db, bookID, image, imageType)
+}
+
+func (s *BookService) ClearCover(bookID int) error {
+	if _, err := s.books.Find(s.db, bookID); err != nil {
+		return err
+	}
+	return s.books.ClearCover(s.db, bookID)
 }
 
 // ChangeLogs — ประวัติการแก้ไขของหนังสือเล่มหนึ่ง (แท็บประวัติในหน้ารายละเอียด)
