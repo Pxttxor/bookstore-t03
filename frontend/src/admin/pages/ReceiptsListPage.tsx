@@ -37,7 +37,11 @@ export default function ReceiptsListPage() {
     return display === 'CONFIRMED' || display === 'RECEIVED_PARTIAL'
   })
 
-  const history = [...receipts].sort((a, b) => b.receivedDate.localeCompare(a.receivedDate))
+  // receivedDate เป็นวันที่ระดับวัน ใบที่รับวันเดียวกันจึงเสมอกัน — ต้องตัดสินด้วยเลขที่ใบ
+  // ไม่งั้น stable sort จะคืนลำดับเดิมจากเซิร์ฟเวอร์ (gr_id ASC) ในตารางที่เรียงจากใหม่ไปเก่า
+  const history = [...receipts].sort(
+    (a, b) => b.receivedDate.localeCompare(a.receivedDate) || b.grId - a.grId,
+  )
 
   if (!mayReceive) {
     return (
