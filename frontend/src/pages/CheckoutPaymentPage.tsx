@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import Icon from '../components/Icon'
 import { formatPrice } from '../data/money'
+import {
+  SHOP_PROMPTPAY_ID,
+  SHOP_PROMPTPAY_NAME,
+  buildPromptPayPayload,
+  formatPromptPayId,
+} from '../data/promptpay'
 import { useCart } from '../cart/CartContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import { usePayments } from '../admin/payments/PaymentContext'
@@ -19,35 +26,6 @@ interface ShippingState {
 // ข้อจำกัดของไฟล์สลิป ตรงกับที่หน้าจอเขียนไว้ว่า "Supports JPG, PNG, PDF (Max 5MB)"
 const MAX_SLIP_BYTES = 5 * 1024 * 1024
 const SLIP_PATTERN = /\.(jpe?g|png|pdf)$/i
-
-// Placeholder graphic only, this is not a scannable payment code.
-function QrPlaceholder() {
-  const cells = 21
-  const filled = (r: number, c: number) => ((r * 7 + c * 13 + r * c) % 3 === 0)
-  return (
-    <svg className="pay__qr-svg" viewBox="0 0 21 21" role="img" aria-label="รหัสคิวอาร์สำหรับชำระเงิน">
-      <rect width="21" height="21" fill="#fff" />
-      {Array.from({ length: cells }).map((_, r) =>
-        Array.from({ length: cells }).map((_, c) =>
-          filled(r, c) ? (
-            <rect key={`${r}-${c}`} x={c} y={r} width="1" height="1" fill="#1a1c1c" />
-          ) : null,
-        ),
-      )}
-      {[
-        [0, 0],
-        [14, 0],
-        [0, 14],
-      ].map(([x, y], i) => (
-        <g key={i}>
-          <rect x={x} y={y} width="7" height="7" fill="#1a1c1c" />
-          <rect x={x + 1} y={y + 1} width="5" height="5" fill="#fff" />
-          <rect x={x + 2} y={y + 2} width="3" height="3" fill="#1a1c1c" />
-        </g>
-      ))}
-    </svg>
-  )
-}
 
 export default function CheckoutPaymentPage() {
   const navigate = useNavigate()
@@ -100,6 +78,15 @@ export default function CheckoutPaymentPage() {
   const totalDiscount = Math.min(subtotal, discount + rewardDiscount)
   const netAmount = Math.max(0, subtotal - totalDiscount)
   const amount = netAmount
+
+  // ยอดที่ล็อกไว้ในรหัสคิวอาร์ ต้องเป็นยอดเดียวกับที่โชว์ให้ลูกค้าเห็น
+  // ตะกร้าว่างจะยังไม่มียอด จึงยังไม่ล็อกยอดลงในรหัส
+  const qrAmount = lines.length ? amount : 0
+  // สร้างรหัสใหม่ทุกครั้งที่ยอดเปลี่ยน เช่น ตอนใช้โปรโมชั่นหรือโค้ดส่วนลด
+  const qrPayload = useMemo(
+    () => buildPromptPayPayload(SHOP_PROMPTPAY_ID, qrAmount),
+    [qrAmount],
+  )
 
   const handleApplyCoupon = async (e?: React.SyntheticEvent) => {
     if (e) {
@@ -245,9 +232,39 @@ export default function CheckoutPaymentPage() {
       <div className="pay__grid">
         <section className="pay__card pay__scan">
           <div className="pay__qr">
-            <QrPlaceholder />
+            {qrPayload ? (
+              <QRCodeSVG
+                className="pay__qr-svg"
+                value={qrPayload}
+                size={200}
+                level="M"
+                marginSize={1}
+                bgColor="#ffffff"
+                fgColor="#1a1c1c"
+                title={
+                  qrAmount > 0
+                    ? `รหัสคิวอาร์พร้อมเพย์ ยอด ${formatPrice(qrAmount)}`
+                    : 'รหัสคิวอาร์พร้อมเพย์'
+                }
+              />
+            ) : (
+              <p className="pay__qr-error" role="alert">
+                สร้างรหัสคิวอาร์ไม่สำเร็จ กรุณาโอนเข้าบัญชีธนาคารด้านขวาแทน
+              </p>
+            )}
           </div>
-          <p className="pay__scan-note">สแกนรหัสด้านบนด้วยแอปธนาคารเพื่อชำระเงิน</p>
+
+          <div className="pay__promptpay">
+            <span className="pay__promptpay-brand">พร้อมเพย์ (PromptPay)</span>
+            <strong>{SHOP_PROMPTPAY_NAME}</strong>
+            <span className="pay__promptpay-id">{formatPromptPayId(SHOP_PROMPTPAY_ID)}</span>
+          </div>
+
+          <p className="pay__scan-note">
+            {qrAmount > 0
+              ? `สแกนรหัสด้านบนด้วยแอปธนาคาร ยอด ${formatPrice(qrAmount)} จะถูกกรอกให้อัตโนมัติ`
+              : 'สแกนรหัสด้านบนด้วยแอปธนาคารเพื่อชำระเงิน'}
+          </p>
 
           {bestPromo && discount > 0 && (
             <div className="pay__promo-banner">
