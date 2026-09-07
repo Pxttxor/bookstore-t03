@@ -1,7 +1,6 @@
 import { lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import StorefrontLayout from './layouts/StorefrontLayout'
-import AuthLayout from './layouts/AuthLayout'
 import AdminLayout from './admin/AdminLayout'
 import RequireCan from './admin/components/RequireCan'
 import { can } from './admin/permissions'
@@ -18,8 +17,6 @@ const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'))
 const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const PromotionsPage = lazy(() => import('./pages/PromotionsPage'))
-const LoginPage = lazy(() => import('./pages/LoginPage'))
-const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 
 const DashboardPage = lazy(() => import('./admin/pages/DashboardPage'))
 const BookListPage = lazy(() => import('./admin/pages/BookListPage'))
@@ -62,11 +59,6 @@ const MemberRewardsPage = lazy(() => import('./pages/MemberRewardsPage'))
 export default function App() {
   return (
     <Routes>
-      <Route element={<AuthLayout />}>
-        <Route path="login" element={<LoginPage />} />
-        <Route path="signup" element={<SignUpPage />} />
-      </Route>
-
       {/* The Figma spec defines no URLs; these mirror its sitemap (§5). */}
       <Route path="admin" element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
@@ -158,6 +150,11 @@ export default function App() {
 
       <Route element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />
+        {/* /login และ /signup ไม่ใช่หน้าจริง — เรนเดอร์หน้าหลักเป็นฉากหลังแล้วให้
+            StorefrontLayout วาง AuthModal ทับตาม pathname เอง (สไตล์ mebmarket.com,
+            7 ก.ย. 69) การคง URL ไว้ทำให้ 6 จุดที่ redirect ไป /login ทั่วระบบไม่ต้องแก้ */}
+        <Route path="login" element={<HomePage />} />
+        <Route path="signup" element={<HomePage />} />
         <Route path="book/:bookId" element={<BookDetailPage />} />
         <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
         <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
