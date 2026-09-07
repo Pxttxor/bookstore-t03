@@ -1,0 +1,134 @@
+/* ป็อปอัปเมนูสมาชิกที่ห้อยจากไอคอนอวาตาร์บน TopNav — ทรงเดียวกับ
+   admin/components/NotificationBell.css (.notif__panel) เพราะเป็นแพทเทิร์นเดียวกันของบ้าน:
+   กล่องลอย absolutely-positioned ใต้ปุ่มไอคอนวงกลม ปิดด้วยคลิกนอกกล่อง/Escape */
+.user-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.user-menu__panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -8px;
+  z-index: 40;
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.user-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.user-menu__avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--mint);
+  color: var(--on-primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.user-menu__id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-menu__name {
+  color: var(--text-heading);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu__email {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu__list {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-body);
+  font-size: 14px;
+  text-align: start;
+  transition: background 0.15s ease;
+}
+.user-menu__item:hover {
+  background: var(--surface-alt);
+}
+
+.user-menu__item--soon {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.user-menu__item--soon:hover {
+  background: transparent;
+}
+
+.user-menu__soon {
+  margin-inline-start: auto;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-alt);
+  border-radius: var(--radius-pill);
+}
+
+.user-menu__signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  /* padding-bottom สูงกว่าด้านอื่นเจตนา — ปุ่มนี้เป็นแถวสุดท้ายชนขอบโค้งล่างของ .user-menu__panel
+     (radius-md) พอดี padding เท่ากันหมดแล้วดูตัวหนังสือชิดขอบเกินไป */
+  padding: 14px 16px 18px;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+  border-top: 1px solid var(--border-soft);
+  transition: background 0.15s ease;
+}
+.user-menu__signout:hover {
+  background: var(--surface-alt);
+}
+
+@media (max-width: 768px) {
+  .user-menu__panel {
+    width: min(280px, calc(100vw - 32px));
+    right: -4px;
+  }
+}

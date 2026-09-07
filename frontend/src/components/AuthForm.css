@@ -101,6 +101,20 @@
   color: var(--text-body);
 }
 
+/* invalid state — per-field errors render under the field itself (7 ก.ย. 69), replacing the old
+   single top banner for anything the client can validate on its own (see .auth-field__error) */
+.auth-input--invalid {
+  border-color: var(--danger);
+}
+.auth-input--invalid:focus-within {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+.auth-field__error {
+  font-size: 13px;
+  color: var(--danger);
+}
+
 /* feedback + submit */
 .auth-error {
   display: flex;

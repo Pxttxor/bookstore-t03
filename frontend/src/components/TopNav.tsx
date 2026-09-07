@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from './Icon'
+import UserMenu from './UserMenu'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
 import './TopNav.css'
@@ -14,13 +15,6 @@ const LINKS = [
   { label: 'Categories', to: '/?filter=categories' },
   { label: 'Deals', to: '/promotions' },
 ]
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
 
 export default function TopNav({ showSearch = false }: TopNavProps) {
   const { user } = useAuth()
@@ -97,14 +91,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
             {count > 0 && <span className="topnav__badge">{count}</span>}
           </Link>
           {user ? (
-            <Link
-              to="/profile"
-              className="topnav__icon-btn topnav__avatar"
-              aria-label="บัญชีของฉัน"
-              title={user.name}
-            >
-              {initialsOf(user.name)}
-            </Link>
+            <UserMenu user={user} />
           ) : (
             <Link
               to="/login"
