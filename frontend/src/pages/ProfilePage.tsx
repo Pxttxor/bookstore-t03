@@ -58,8 +58,11 @@ export default function ProfilePage() {
   if (!user) return <Navigate to="/login" replace state={{ from: '/profile' }} />
 
   const signOut = () => {
-    logout()
+    // navigate ก่อน logout() เสมอ — ถ้าสลับกัน `user` จะกลายเป็น null ขณะยังอยู่หน้านี้
+    // ทำให้ guard ข้างบน (`if (!user) return <Navigate to="/login" .../>`) มีโอกาสแทรกเข้ามา
+    // แทน แล้วเด้งไป /login ทั้งที่ตั้งใจกลับหน้าร้าน / — ลด (ไม่ได้ตัดขาด 100%) ช่องโหว่จังหวะนี้
     navigate('/', { replace: true })
+    logout()
   }
 
   const openEditModal = () => {

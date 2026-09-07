@@ -8,6 +8,12 @@ import './AuthForm.css'
 // แล้วต้อง POST /api/auth/verify-otp ก่อนจึงจะเข้าสู่ระบบได้
 type Step = 'form' | 'otp'
 
+// ช่องที่ตรวจฝั่งไคลเอนต์ได้เอง — ข้อความของช่องเหล่านี้ไปอยู่ "ใต้ช่องนั้น" ไม่ใช่แถบบนหัวฟอร์ม
+// (คำขอผู้ใช้ 7 ก.ย. 69) · `email` ไม่อยู่ในลิสต์โดยตั้งใจ: เรื่องอีเมลซ้ำ/รูปแบบผิดเป็นของ backend
+// ซึ่งส่งข้อความไทยมาให้อยู่แล้ว จึงยังขึ้นเป็นแถบด้านบนเหมือนเดิม
+type FieldKey = 'firstName' | 'lastName' | 'phone' | 'address' | 'password' | 'confirm'
+type FieldErrors = Partial<Record<FieldKey, string>>
+
 interface SignUpFormProps {
   onVerified: () => void
   onSwitchToLogin: () => void
@@ -33,22 +39,49 @@ export default function SignUpForm({
   const [confirm, setConfirm] = useState('')
   const [otp, setOtp] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // ตรวจทุกช่องรวดเดียวแล้วคืนมาทั้งชุด — เดิมเป็น `return setError(...)` ที่หยุดตั้งแต่ข้อแรก
+  // ซึ่งใช้ไม่ได้แล้วเมื่อข้อความไปอยู่ใต้ช่อง: ผู้ใช้ต้องเห็นทุกช่องที่ผิดในการกดครั้งเดียว
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {}
+    if (!firstName.trim()) next.firstName = 'กรุณากรอกชื่อ'
+    if (!lastName.trim()) next.lastName = 'กรุณากรอกนามสกุล'
+    if (!phone.trim()) next.phone = 'กรุณากรอกเบอร์โทรศัพท์'
+    if (!address.trim()) next.address = 'กรุณากรอกที่อยู่'
+    if (password.length < 6) next.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
+    if (password !== confirm) next.confirm = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'
+    return next
+  }
+
+  // ลบข้อความของช่องเดียวตอนผู้ใช้เริ่มพิมพ์แก้ — ช่องอื่นที่ยังผิดอยู่ต้องไม่หายตามไปด้วย
+  const clearFieldError = (...keys: FieldKey[]) => {
+    setFieldErrors((prev) => {
+      if (!keys.some((key) => prev[key])) return prev
+      const next = { ...prev }
+      for (const key of keys) delete next[key]
+      return next
+    })
+  }
 
   const submitForm = async (e: FormEvent) => {
     e.preventDefault()
     if (submitting) return
 
-    if (!firstName.trim()) return setError('กรุณากรอกชื่อ')
-    if (!lastName.trim()) return setError('กรุณากรอกนามสกุล')
-    if (!phone.trim()) return setError('กรุณากรอกเบอร์โทรศัพท์')
-    if (!address.trim()) return setError('กรุณากรอกที่อยู่')
-    if (password.length < 6) return setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')
-    if (password !== confirm) return setError('รหัสผ่านทั้งสองช่องไม่ตรงกัน')
+    // ล้างของเก่าก่อนตรวจเสมอ — ต้องอยู่เหนือ validate() ไม่งั้นแถบ error จากเซิร์ฟเวอร์รอบก่อน
+    // (เช่น อีเมลซ้ำ) จะค้างบนหัวฟอร์มพร้อมกับข้อความใต้ช่องชุดใหม่
+    setFieldErrors({})
+    setError('')
+
+    const invalid = validate()
+    if (Object.keys(invalid).length > 0) {
+      setFieldErrors(invalid)
+      return
+    }
 
     setSubmitting(true)
-    setError('')
     try {
       await register({ firstName, lastName, email, phone, address, password })
       setStep('otp')
@@ -135,6 +168,7 @@ export default function SignUpForm({
       </div>
 
       <form className="auth-form" onSubmit={submitForm} noValidate>
+        {/* แถบด้านบนเหลือไว้เฉพาะ error ที่ไม่ผูกกับช่องใดช่องหนึ่ง — ทั้งหมดมาจากเซิร์ฟเวอร์ */}
         {error && (
           <p className="auth-error" role="alert">
             <Icon name="help" size={18} />
@@ -144,7 +178,7 @@ export default function SignUpForm({
 
         <label className="auth-field">
           <span className="auth-label">ชื่อ</span>
-          <span className="auth-input">
+          <span className={'auth-input' + (fieldErrors.firstName ? ' auth-input--invalid' : '')}>
             <span className="auth-input__lead">
               <Icon name="user" size={18} />
             </span>
@@ -153,16 +187,25 @@ export default function SignUpForm({
               autoComplete="given-name"
               placeholder="กรอกชื่อจริง"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => {
+                setFirstName(e.target.value)
+                clearFieldError('firstName')
+              }}
+              aria-invalid={!!fieldErrors.firstName}
               autoFocus
               required
             />
           </span>
+          {fieldErrors.firstName && (
+            <span className="auth-field__error" role="alert">
+              {fieldErrors.firstName}
+            </span>
+          )}
         </label>
 
         <label className="auth-field">
           <span className="auth-label">นามสกุล</span>
-          <span className="auth-input">
+          <span className={'auth-input' + (fieldErrors.lastName ? ' auth-input--invalid' : '')}>
             <span className="auth-input__lead">
               <Icon name="user" size={18} />
             </span>
@@ -171,10 +214,19 @@ export default function SignUpForm({
               autoComplete="family-name"
               placeholder="กรอกนามสกุล"
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              onChange={(e) => {
+                setLastName(e.target.value)
+                clearFieldError('lastName')
+              }}
+              aria-invalid={!!fieldErrors.lastName}
               required
             />
           </span>
+          {fieldErrors.lastName && (
+            <span className="auth-field__error" role="alert">
+              {fieldErrors.lastName}
+            </span>
+          )}
         </label>
 
         <label className="auth-field">
@@ -196,7 +248,7 @@ export default function SignUpForm({
 
         <label className="auth-field">
           <span className="auth-label">เบอร์โทรศัพท์</span>
-          <span className="auth-input">
+          <span className={'auth-input' + (fieldErrors.phone ? ' auth-input--invalid' : '')}>
             <span className="auth-input__lead">
               <Icon name="phone" size={18} />
             </span>
@@ -205,15 +257,24 @@ export default function SignUpForm({
               autoComplete="tel"
               placeholder="08X-XXX-XXXX"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                clearFieldError('phone')
+              }}
+              aria-invalid={!!fieldErrors.phone}
               required
             />
           </span>
+          {fieldErrors.phone && (
+            <span className="auth-field__error" role="alert">
+              {fieldErrors.phone}
+            </span>
+          )}
         </label>
 
         <label className="auth-field">
           <span className="auth-label">ที่อยู่จัดส่ง</span>
-          <span className="auth-input">
+          <span className={'auth-input' + (fieldErrors.address ? ' auth-input--invalid' : '')}>
             <span className="auth-input__lead">
               <Icon name="map-pin" size={18} />
             </span>
@@ -222,15 +283,24 @@ export default function SignUpForm({
               autoComplete="street-address"
               placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => {
+                setAddress(e.target.value)
+                clearFieldError('address')
+              }}
+              aria-invalid={!!fieldErrors.address}
               required
             />
           </span>
+          {fieldErrors.address && (
+            <span className="auth-field__error" role="alert">
+              {fieldErrors.address}
+            </span>
+          )}
         </label>
 
         <label className="auth-field">
           <span className="auth-label">รหัสผ่าน</span>
-          <span className="auth-input">
+          <span className={'auth-input' + (fieldErrors.password ? ' auth-input--invalid' : '')}>
             <span className="auth-input__lead">
               <Icon name="lock" size={18} />
             </span>
@@ -239,7 +309,13 @@ export default function SignUpForm({
               autoComplete="new-password"
               placeholder="ตั้งรหัสผ่านอย่างน้อย 6 ตัวอักษร"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                // "ไม่ตรงกัน" เป็นข้อความของคู่รหัสผ่าน ไม่ใช่ของช่องยืนยันช่องเดียว —
+                // แก้ช่องบนแล้วข้อความใต้ช่องล่างต้องหายไปด้วย
+                clearFieldError('password', 'confirm')
+              }}
+              aria-invalid={!!fieldErrors.password}
               required
             />
             <button
@@ -251,11 +327,16 @@ export default function SignUpForm({
               <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} />
             </button>
           </span>
+          {fieldErrors.password && (
+            <span className="auth-field__error" role="alert">
+              {fieldErrors.password}
+            </span>
+          )}
         </label>
 
         <label className="auth-field">
           <span className="auth-label">ยืนยันรหัสผ่าน</span>
-          <span className="auth-input">
+          <span className={'auth-input' + (fieldErrors.confirm ? ' auth-input--invalid' : '')}>
             <span className="auth-input__lead">
               <Icon name="lock" size={18} />
             </span>
@@ -264,10 +345,19 @@ export default function SignUpForm({
               autoComplete="new-password"
               placeholder="กรอกรหัสผ่านอีกครั้ง"
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => {
+                setConfirm(e.target.value)
+                clearFieldError('confirm')
+              }}
+              aria-invalid={!!fieldErrors.confirm}
               required
             />
           </span>
+          {fieldErrors.confirm && (
+            <span className="auth-field__error" role="alert">
+              {fieldErrors.confirm}
+            </span>
+          )}
         </label>
 
         <button type="submit" className="btn btn-primary auth-submit" disabled={submitting}>
