@@ -23,7 +23,6 @@ import {
   type PromotionStatus,
   type PromotionType,
 } from '../promotions/promotions'
-import '../components/DataTable.css'
 import './PromotionListPage.css'
 
 type StatusFilter = PromotionStatus | 'ALL'

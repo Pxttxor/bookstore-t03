@@ -21,8 +21,6 @@ import {
   stockLevel,
   type StockLevel,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
-import '../components/Tabs.css'
 import './StockListPage.css'
 
 type Tab = 'ALL' | StockLevel

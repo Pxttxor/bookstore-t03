@@ -11,7 +11,6 @@ import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import { useSuppliers, type SupplierDraft } from '../suppliers/SupplierContext'
 import { formatSupplierCode } from '../suppliers/suppliers'
-import '../components/AdminForm.css'
 import './SupplierFormPage.css'
 
 type FieldName =

@@ -32,8 +32,6 @@ import {
   SHIPMENT_STATUS_LABELS,
   type OrderStatus,
 } from '../orders/orders'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './CustomerOrderDetailPage.css'
 
 const fmtDateTime = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)}`.trim()

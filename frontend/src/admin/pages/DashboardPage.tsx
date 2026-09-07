@@ -142,20 +142,16 @@ export default function DashboardPage() {
               icon="alert-triangle"
               tone={reportedCount > 0 ? 'danger' : 'default'}
               to="/admin/reviews/manage"
-              linkLabel="จัดการรีวิว"
             />
             <StatTile
               label="ตรวจสอบรีวิว"
               value={unrepliedCount}
               note={
-                unrepliedCount > 0
-                  ? `รอการตรวจสอบและตอบกลับ ${unrepliedCount} รายการ`
-                  : 'ไม่มีรีวิวค้างตรวจสอบ'
+                unrepliedCount > 0 ? `รอตอบกลับ ${unrepliedCount} รายการ` : 'ไม่มีรีวิวค้างตรวจสอบ'
               }
               icon="star"
               tone={unrepliedCount > 0 ? 'warning' : 'default'}
               to="/admin/reviews"
-              linkLabel="ตรวจสอบรีวิว"
             />
             <StatTile
               label="ใบสั่งซื้อรออนุมัติ"
@@ -164,15 +160,12 @@ export default function DashboardPage() {
               icon="file-text"
               tone={pending.length > 0 ? 'warning' : 'default'}
               to="/admin/purchasing"
-              linkLabel="เปิดกล่องงานรออนุมัติ"
             />
             <StatTile
               label="คำสั่งซื้อลูกค้า"
               value={customerOrders.length}
-              note="คำสั่งซื้อทั้งหมดในระบบ"
               icon="shopping-bag"
               to="/admin/orders"
-              linkLabel="ดูคำสั่งซื้อลูกค้า"
             />
             <StatTile
               label="รายการคืนเงิน"
@@ -185,7 +178,6 @@ export default function DashboardPage() {
               icon="dollar-sign"
               tone={pendingRefundOrders.length > 0 ? 'warning' : 'default'}
               to="/admin/refunds"
-              linkLabel="ดูรายการคืนเงิน"
             />
             <StatTile
               label="ผู้จัดจำหน่ายที่ใช้งานอยู่"
@@ -193,7 +185,6 @@ export default function DashboardPage() {
               note={`จากทั้งหมด ${suppliers.length} ราย`}
               icon="building"
               to="/admin/suppliers"
-              linkLabel="ดูรายการผู้จัดจำหน่าย"
             />
             <StatTile
               label="รายงานผลต่างรออนุมัติ"
@@ -202,7 +193,6 @@ export default function DashboardPage() {
               icon="alert-triangle"
               tone={pendingReports.length > 0 ? 'warning' : 'default'}
               to="/admin/stock/discrepancies"
-              linkLabel="เปิดรายงานผลต่าง"
             />
             <article className="dash__budget">
               <header className="dash__budget-head">
@@ -259,24 +249,20 @@ export default function DashboardPage() {
             <StatTile
               label="สินค้าถึงจุดสั่งซื้อ"
               value={belowReorder.length}
-              note="ยอดคงเหลือต่ำกว่าหรือเท่ากับจุดสั่งซื้อ"
+              note="ต่ำกว่าจุดสั่งซื้อ"
               icon="bell"
               tone={belowReorder.length > 0 ? 'danger' : 'default'}
               to="/admin/alerts"
-              linkLabel="ดูรายการแจ้งเตือน"
             />
             <StatTile
               label="คำสั่งซื้อลูกค้า"
               value={ordersToPack.length}
               note={
-                ordersToPack.length > 0
-                  ? `รอจัดเตรียมและแพ็กสินค้า ${ordersToPack.length} รายการ`
-                  : 'ไม่มีคำสั่งซื้อที่ต้องจัดเตรียม'
+                ordersToPack.length > 0 ? `รอแพ็ก ${ordersToPack.length} รายการ` : 'ไม่มีคำสั่งซื้อที่ต้องจัดเตรียม'
               }
               icon="shopping-bag"
               tone={ordersToPack.length > 0 ? 'accent' : 'default'}
               to="/admin/orders"
-              linkLabel="ดูคำสั่งซื้อลูกค้า"
             />
             <StatTile
               label="ใบสั่งซื้อรอส่ง"
@@ -285,43 +271,36 @@ export default function DashboardPage() {
               icon="mail"
               tone={awaitingSend.length > 0 ? 'warning' : 'default'}
               to="/admin/purchasing"
-              linkLabel="เปิดเอกสารจัดซื้อ"
             />
             <StatTile
               label="รอรับสินค้าเข้าคลัง"
               value={readyToReceive.length}
-              note="ผู้จัดจำหน่ายยืนยันแล้ว พร้อมตรวจรับ"
+              note="พร้อมตรวจรับ"
               icon="package"
               tone={readyToReceive.length > 0 ? 'accent' : 'default'}
               to="/admin/purchasing/receipts"
-              linkLabel="ไปหน้ารับสินค้า"
             />
             <StatTile
               label="ใบส่งคืนที่ยังไม่ปิด"
               value={openReturns.length}
-              note="อยู่ระหว่างติดตามการชดเชย"
+              note="รอการชดเชย"
               icon="truck"
               tone={openReturns.length > 0 ? 'warning' : 'default'}
               to="/admin/purchasing"
-              linkLabel="ดูเอกสารจัดซื้อ"
             />
             <StatTile
               label="หนังสือหมดสต็อก"
               value={outOfStock}
-              note="ยอดคงเหลือเป็น 0"
               icon="alert-triangle"
               tone={outOfStock > 0 ? 'danger' : 'default'}
               to="/admin/stock/low"
-              linkLabel="ดูรายงานหนังสือใกล้หมด"
             />
             <StatTile
               label="หนังสือใกล้หมด"
               value={lowStock}
-              note="เหลือน้อยแต่ยังไม่หมด"
               icon="trending-down"
               tone={lowStock > 0 ? 'warning' : 'default'}
               to="/admin/stock/low"
-              linkLabel="ดูรายงานหนังสือใกล้หมด"
             />
           </section>
 
@@ -380,7 +359,6 @@ export default function DashboardPage() {
             icon="shopping-bag"
             tone={salesPendingOrders.length > 0 ? 'warning' : 'default'}
             to="/admin/orders"
-            linkLabel="ดูคำสั่งซื้อลูกค้า"
           />
           <StatTile
             label="รายการคืนเงิน"
@@ -393,20 +371,16 @@ export default function DashboardPage() {
             icon="dollar-sign"
             tone={pendingRefundOrders.length > 0 ? 'warning' : 'default'}
             to="/admin/refunds"
-            linkLabel="ดูรายการคืนเงิน"
           />
           <StatTile
             label="ตรวจสอบรีวิว"
             value={unrepliedCount}
             note={
-              unrepliedCount > 0
-                ? `รอการตรวจสอบและตอบกลับ ${unrepliedCount} รายการ`
-                : 'ไม่มีรีวิวค้างตรวจสอบ'
+              unrepliedCount > 0 ? `รอตอบกลับ ${unrepliedCount} รายการ` : 'ไม่มีรีวิวค้างตรวจสอบ'
             }
             icon="star"
             tone={unrepliedCount > 0 ? 'warning' : 'default'}
             to="/admin/reviews"
-            linkLabel="ตรวจสอบรีวิว"
           />
           <StatTile
             label="ผู้จัดจำหน่ายที่ใช้งานอยู่"
@@ -414,23 +388,18 @@ export default function DashboardPage() {
             note={`จากทั้งหมด ${suppliers.length} ราย`}
             icon="building"
             to="/admin/suppliers"
-            linkLabel="ค้นหาผู้จัดจำหน่าย"
           />
           <StatTile
             label="รายการหนังสือในระบบ"
             value={books.length}
-            note="ใช้ตอบคำถามลูกค้าและแก้ไขข้อมูลหนังสือ"
             icon="book"
             to="/admin/books"
-            linkLabel="ดูรายการหนังสือ"
           />
           <StatTile
             label="ทำเนียบผู้ติดต่อ"
             value={suppliers.length}
-            note="ข้อมูลติดต่อผู้จัดจำหน่ายทั้งหมด"
             icon="mail"
             to="/admin/contacts"
-            linkLabel="เปิดศูนย์การติดต่อ"
           />
         </section>
       )}
@@ -446,7 +415,6 @@ export default function DashboardPage() {
             icon="truck"
             tone={deliveryReadyOrders.length > 0 ? 'accent' : 'default'}
             to="/admin/orders"
-            linkLabel="ดูคำสั่งซื้อที่ต้องจัดส่ง"
           />
           <StatTile
             label="รายงานสรุปพัสดุจัดส่ง"
@@ -459,7 +427,6 @@ export default function DashboardPage() {
             icon="file-text"
             tone="default"
             to="/admin/delivery-report"
-            linkLabel="เปิดรายงานสรุปพัสดุ"
           />
         </section>
       )}

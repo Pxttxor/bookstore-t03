@@ -15,7 +15,6 @@ import {
   STOCK_COUNT_STATUS_LABELS,
   STOCK_COUNT_STATUS_TONES,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './StockCountListPage.css'
 
 // The counting history — the record every round leaves behind.

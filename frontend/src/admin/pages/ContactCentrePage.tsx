@@ -12,8 +12,6 @@ import { useNotifications } from '../notifications/NotificationContext'
 import { can } from '../permissions'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatSupplierCode } from '../suppliers/suppliers'
-import '../components/Tabs.css'
-import '../components/DataTable.css'
 import './ContactCentrePage.css'
 
 type Tab = 'directory' | 'routing' | 'notifications'
@@ -108,9 +106,7 @@ export default function ContactCentrePage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">ศูนย์การติดต่อ &amp; การส่งเอกสาร</h1>
-          <p className="admin-page__subtitle">
-            รวมไว้ที่เดียวว่าต้องส่งเอกสารอะไร ให้ใคร ช่องทางไหน และจุดใดที่ระบบแจ้งเตือนอัตโนมัติ
-          </p>
+          <p className="admin-page__subtitle">เอกสาร · ผู้รับ · ช่องทาง · ทริกเกอร์</p>
         </div>
       </div>
 

@@ -17,7 +17,6 @@ import {
   promoDisplayStatus,
   type PromotionType,
 } from '../promotions/promotions'
-import '../components/AdminForm.css'
 import './PromotionFormPage.css'
 
 const TYPES: PromotionType[] = ['FESTIVAL_DISCOUNT', 'COUPON', 'BUY_X_QTY']

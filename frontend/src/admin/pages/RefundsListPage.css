@@ -16,6 +16,10 @@
   width: 100%;
 }
 
+.refunds-table__amount-col {
+  text-align: right;
+}
+
 .refunds-table__order-link {
   font-weight: 700;
   color: var(--primary, #2563eb);

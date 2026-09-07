@@ -15,7 +15,6 @@ import {
   SUPPLIER_STATUS_LABELS,
   type SupplierStatus,
 } from '../suppliers/suppliers'
-import '../components/DataTable.css'
 import './SupplierListPage.css'
 
 type StatusFilter = SupplierStatus | 'ALL'

@@ -1,0 +1,141 @@
+/* Shared "soft filled" control style for every back-office input/select/search box,
+   plus the .filter-bar shell every list screen's toolbar sits in. Loaded once by
+   AdminLayout.tsx so every admin route gets it — do NOT import this per-page, and do
+   NOT define a page-local competitor (a search box, a select) that duplicates it. */
+
+.admin-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  background-color: var(--control-fill);
+  font-family: var(--font-thai);
+  font-size: 15px;
+  outline: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-input:hover:not(:disabled) {
+  background-color: var(--control-fill-hover);
+}
+
+.admin-input:focus {
+  background-color: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--control-ring);
+}
+
+.admin-input--error {
+  border-color: var(--danger);
+}
+
+.admin-input--error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+/* Disabled must read as visibly different from the normal fill — per the role-permission
+   spec (§2.1), an action a role owns but can't do right now renders disabled with a title,
+   not hidden, so this state carries real meaning in the demo. Uses --page-bg (not
+   --control-fill) plus reduced opacity so it can never be confused with the resting state. */
+.admin-input:disabled {
+  background-color: var(--page-bg);
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+textarea.admin-input {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+/* Every <select> gets a hand-drawn chevron instead of the browser's own, so it matches
+   the text inputs. background-color (not the `background` shorthand) above is what keeps
+   this image intact — the shorthand would clear it. */
+select.admin-input,
+.filter-bar__select select,
+.pagination__size select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* Shared toolbar for list screens: a search box plus one or more selects. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.filter-bar__search {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding-inline: 14px;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  background-color: var(--control-fill);
+  color: var(--text-muted);
+  transition: background-color 0.15s ease;
+}
+
+.filter-bar__search:focus-within {
+  background-color: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--control-ring);
+}
+
+.filter-bar__search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 15px;
+  color: var(--text-heading);
+}
+
+.filter-bar__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.filter-bar__select > span {
+  white-space: nowrap;
+}
+
+.filter-bar__select select {
+  height: 42px;
+  min-width: 150px;
+  padding-left: 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  background-color: var(--control-fill);
+  color: var(--text-heading);
+}
+
+.filter-bar__select select:focus {
+  background-color: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--control-ring);
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .filter-bar__select,
+  .filter-bar__select select {
+    width: 100%;
+  }
+}

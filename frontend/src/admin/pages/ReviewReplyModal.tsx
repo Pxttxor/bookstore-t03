@@ -2,7 +2,6 @@ import { useState } from 'react'
 import Icon from '../../components/Icon'
 import Modal from '../components/Modal'
 import type { Review } from '../reviews/reviews'
-import '../components/AdminForm.css'
 
 interface ReviewReplyModalProps {
   review: Review

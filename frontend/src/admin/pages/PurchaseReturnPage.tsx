@@ -22,8 +22,6 @@ import {
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatSupplierCode } from '../suppliers/suppliers'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './PurchaseReturnPage.css'
 
 // Evidence photos travel as data URLs into a `text` column, so they have to stay small.

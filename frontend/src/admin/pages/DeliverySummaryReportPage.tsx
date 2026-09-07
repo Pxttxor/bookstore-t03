@@ -228,9 +228,7 @@ export default function DeliverySummaryReportPage() {
       <div className="delivery-report__head">
         <div className="delivery-report__title-wrap">
           <h1 className="admin-page__title">สรุปยอดการจัดส่งพัสดุ</h1>
-          <p className="admin-page__subtitle">
-            จัดทำรายงานสรุปบัญชีพัสดุจัดส่ง และสรุปยอดคัดแยกประเภทการส่งมอบพัสดุประจำวัน
-          </p>
+          <p className="admin-page__subtitle">สรุปพัสดุจัดส่งประจำวัน แยกตามผู้ให้บริการ</p>
         </div>
 
         {/* Top Bar Actions */}
@@ -443,7 +441,7 @@ export default function DeliverySummaryReportPage() {
               <Icon name="search" size={14} />
               <input
                 type="search"
-                placeholder="ค้นหา SO-, ลูกค้า หรือ Tracking..."
+                placeholder="ค้นหาเลข SO ลูกค้า หรือ Tracking"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value)

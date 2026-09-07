@@ -16,8 +16,6 @@ import {
   memberFullName,
   type MembershipTier,
 } from '../../membership/membership'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './MemberTierListPage.css'
 
 interface TierForm {
@@ -145,9 +143,7 @@ export default function MemberTierListPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">สมาชิกและแต้มสะสม</h1>
-          <p className="admin-page__subtitle">
-            กำหนดระดับสมาชิกและอัตราสะสมแต้ม พร้อมดูแต้มคงเหลือของสมาชิกทุกคน
-          </p>
+          <p className="admin-page__subtitle">ระดับสมาชิก อัตราสะสมแต้ม และแต้มคงเหลือ</p>
         </div>
         <div className="admin-page__actions">
           <button

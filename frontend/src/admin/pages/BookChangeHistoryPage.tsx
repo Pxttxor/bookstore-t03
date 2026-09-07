@@ -8,7 +8,6 @@ import LoadingState from '../components/LoadingState'
 import { useBooks } from '../books/BookContext'
 import { bookFieldLabel, type BookChangeLog } from '../books/books'
 import { formatBookCode } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './BookChangeHistoryPage.css'
 
 const whenText = (iso: string) => new Date(iso).toLocaleString('th-TH')
@@ -29,7 +28,7 @@ export default function BookChangeHistoryPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">ประวัติการแก้ไขหนังสือ</h1>
-          <p className="admin-page__subtitle">ตรวจสอบการเปลี่ยนแปลงข้อมูลหนังสือทั้งหมดโดยพนักงาน</p>
+          <p className="admin-page__subtitle">ประวัติการแก้ไขทุกเล่ม</p>
         </div>
       </div>
 

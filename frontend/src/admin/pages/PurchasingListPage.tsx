@@ -23,8 +23,6 @@ import {
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatBaht, formatSupplierCode } from '../suppliers/suppliers'
-import '../components/Tabs.css'
-import '../components/DataTable.css'
 import './PurchasingListPage.css'
 
 type Tab = 'ALL' | 'PENDING' | 'PR' | 'PO' | 'RECEIVING'

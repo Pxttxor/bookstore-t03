@@ -13,8 +13,6 @@ import { usePayments } from '../payments/PaymentContext'
 import { formatPaymentCode, paymentDate, summarise } from '../payments/payments'
 import { formatOrderCode } from '../orders/orders'
 import { useOrders } from '../orders/OrderContext'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './PaymentReportPage.css'
 
 const fmtDateTime = (iso: string) =>
@@ -103,9 +101,7 @@ export default function PaymentReportPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">รายงานสรุปรับชำระเงิน</h1>
-          <p className="admin-page__subtitle">
-            สรุปยอดรับชำระจริงตามช่วงเวลา นับเฉพาะรายการที่ตรวจสอบผ่านแล้ว
-          </p>
+          <p className="admin-page__subtitle">ยอดรับชำระที่ตรวจสอบผ่านแล้ว</p>
         </div>
       </div>
 

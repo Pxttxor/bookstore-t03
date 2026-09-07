@@ -14,8 +14,6 @@ import { useOrders } from '../orders/OrderContext'
 import { formatOrderCode } from '../orders/orders'
 import { useInventory, type AdjustLine } from '../inventory/InventoryContext'
 import { formatBookCode } from '../inventory/inventory'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './StockAdjustPage.css'
 
 interface Row {

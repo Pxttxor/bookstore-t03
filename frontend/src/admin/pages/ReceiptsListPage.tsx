@@ -18,7 +18,6 @@ import {
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatSupplierCode } from '../suppliers/suppliers'
-import '../components/DataTable.css'
 import './ReceiptsListPage.css'
 
 export default function ReceiptsListPage() {
