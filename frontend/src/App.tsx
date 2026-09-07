@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import StorefrontLayout from './layouts/StorefrontLayout'
+import AccountLayout from './layouts/AccountLayout'
 import AdminLayout from './admin/AdminLayout'
 import RequireCan from './admin/components/RequireCan'
 import { can } from './admin/permissions'
@@ -159,12 +160,15 @@ export default function App() {
         <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
         <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
         <Route path="order/:id" element={<OrderTrackingPage />} />
-        <Route path="orders" element={<OrderHistoryPage />} />
-        <Route path="profile" element={<ProfilePage />} />
         <Route path="promotions" element={<PromotionsPage />} />
         <Route path="deals" element={<PromotionsPage />} />
-        <Route path="member/points" element={<MemberPointsPage />} />
-        <Route path="member/rewards" element={<MemberRewardsPage />} />
+        {/* หน้าบัญชี — เมนูซ้ายค้างอยู่ทุกหน้า ดู layouts/AccountLayout.tsx (7 ก.ย. 69) */}
+        <Route element={<AccountLayout />}>
+          <Route path="orders" element={<OrderHistoryPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="member/points" element={<MemberPointsPage />} />
+          <Route path="member/rewards" element={<MemberRewardsPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -18,7 +18,8 @@ export default function OrderHistoryPage() {
   const { user } = useAuth()
   const { orders, loading, error, reload } = useOrders()
 
-  // Only signed-in members have an order history to show.
+  // AccountLayout already redirects a signed-out visitor before this page mounts —
+  // kept here only to narrow `user` for TypeScript below.
   if (!user) return <Navigate to="/login" replace state={{ from: '/orders' }} />
 
   // Orders are tagged with the buyer's email/id; newest first.
@@ -37,7 +38,7 @@ export default function OrderHistoryPage() {
     .sort((a, b) => b.orderId - a.orderId)
 
   return (
-    <div className="history page-shell">
+    <div className="history">
       <header className="history__head">
         <h1 className="history__title">ประวัติการสั่งซื้อ</h1>
         <p className="history__subtitle">คำสั่งซื้อทั้งหมดของบัญชี {user.email}</p>

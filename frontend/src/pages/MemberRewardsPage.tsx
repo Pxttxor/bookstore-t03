@@ -34,12 +34,14 @@ export default function MemberRewardsPage() {
     })
   }
 
+  // AccountLayout กันคนไม่ล็อกอินไว้ก่อนแล้ว — เหลือไว้แค่ narrow ชนิด `user` ให้ TS
   if (!user) return <Navigate to="/login" replace state={{ from: '/member/rewards' }} />
+  // เฉพาะบัญชีลูกค้าเท่านั้นที่แลกของรางวัลได้ — AccountLayout เช็คแค่ล็อกอิน ไม่เช็ค role
   if (user.role !== 'customer') return <Navigate to="/" replace />
 
   if (loading) {
     return (
-      <div className="rewards page-shell">
+      <div className="rewards">
         <section className="rewards__panel">
           <LoadingState label="กำลังโหลดของรางวัล…" />
         </section>
@@ -49,7 +51,7 @@ export default function MemberRewardsPage() {
 
   if (loadError || !member) {
     return (
-      <div className="rewards page-shell">
+      <div className="rewards">
         <section className="rewards__panel">
           <ErrorState
             message={loadError ?? 'ไม่พบข้อมูลสมาชิกของบัญชีนี้'}
@@ -87,7 +89,7 @@ export default function MemberRewardsPage() {
   )
 
   return (
-    <div className="rewards page-shell">
+    <div className="rewards">
       <header className="rewards__head">
         <div>
           <h1 className="rewards__title">แลกของรางวัล</h1>

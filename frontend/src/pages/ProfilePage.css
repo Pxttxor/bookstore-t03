@@ -1,77 +1,43 @@
+/* หัว "ข้อมูลสมาชิก" — อวาตาร์/ชื่อ/อีเมล/ป้าย BookHaven Member ย้ายไปหัวแถบเมนูซ้ายแล้ว
+   (ดู components/AccountNav.css) หน้านี้เหลือแค่หัวข้อสั้น ๆ + การ์ดข้อมูลบัญชีใบเดียว */
 .profile {
-  padding-block: 40px 64px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
-/* hero */
-.profile__hero {
+.profile__title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  margin-bottom: 8px;
+}
+
+/* card */
+.profile__card {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 24px;
   padding: 32px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
-.profile__avatar {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 88px;
-  height: 88px;
-  border-radius: var(--radius-pill);
-  background: var(--mint);
-  color: var(--on-primary);
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-.profile__id {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.profile__name {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-}
-.profile__email {
-  color: var(--text-muted);
-}
-.profile__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  margin-top: 4px;
-  padding: 4px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary-deep);
-  background: var(--surface-alt);
-  border-radius: var(--radius-pill);
+@media (max-width: 768px) {
+  .profile__card {
+    padding: 24px;
+  }
 }
 
-/* cards */
-.profile__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
-.profile__card {
+.profile__card-head {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 28px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-soft);
 }
+
 .profile__card-title {
   display: flex;
   align-items: center;
@@ -92,8 +58,8 @@
 .profile__row {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 0;
+  gap: 24px;
+  padding-block: 18px;
   border-bottom: 1px solid var(--border-soft);
 }
 .profile__row:last-child {
@@ -110,85 +76,11 @@
   text-align: right;
   word-break: break-word;
 }
-.profile__edit {
-  align-self: flex-start;
-}
 
-/* quick links */
-.profile__links {
-  display: flex;
-  flex-direction: column;
-}
-.profile__link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 0;
-  color: var(--text-body);
-  border-bottom: 1px solid var(--border-soft);
-  transition: color 0.15s ease;
-}
-.profile__link:hover {
-  color: var(--primary-deep);
-}
-.profile__link span {
-  flex: 1;
-  font-weight: 500;
-}
-.profile__link svg:first-child {
-  color: var(--primary-deep);
-}
-
-/* not-yet-available rows (wishlist / saved addresses) — kept visible but inert */
-.profile__link--soon,
-.profile__link--soon:hover {
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-.profile__link--soon svg:first-child {
-  color: var(--text-muted);
-}
-.profile__soon {
-  font-size: 12px;
-  font-weight: 600;
-  font-style: normal;
-  color: var(--text-muted);
-  background: var(--surface-alt);
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-}
-
-.profile__signout {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 4px;
-  padding: 14px;
-  font-weight: 600;
-  color: var(--danger);
-  background: var(--surface);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-sm);
-  transition: background 0.15s ease;
-}
-.profile__signout:hover {
-  background: rgba(220, 38, 38, 0.06);
-}
-
-@media (max-width: 860px) {
-  .profile__grid {
-    grid-template-columns: 1fr;
-  }
-}
-@media (max-width: 560px) {
-  .profile__hero {
+@media (max-width: 480px) {
+  .profile__card-head {
     flex-direction: column;
-    text-align: center;
-    align-items: center;
-  }
-  .profile__id {
-    align-items: center;
+    align-items: flex-start;
   }
 }
 
@@ -197,9 +89,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #059669;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: var(--status-success);
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success);
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   font-size: 13px;
@@ -252,15 +144,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  color: var(--status-danger);
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger);
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   font-size: 14px;
 }
-.text-danger {
-  color: #dc2626;
+.profile-edit-form__required {
+  color: var(--danger);
 }
 @media (max-width: 480px) {
   .profile-edit-form__grid {

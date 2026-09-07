@@ -1,6 +1,5 @@
 .points {
   font-family: var(--font-thai);
-  padding-block: 40px 64px;
   display: flex;
   flex-direction: column;
   gap: 24px;
