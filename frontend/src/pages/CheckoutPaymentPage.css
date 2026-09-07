@@ -61,11 +61,43 @@
   width: 200px;
   height: 200px;
   display: block;
-  image-rendering: pixelated;
+}
+.pay__qr-error {
+  width: 200px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--danger);
+  text-align: center;
+}
+
+/* ปลายทางพร้อมเพย์ที่โชว์ใต้รหัส ให้ลูกค้าเทียบกับที่แอปธนาคารขึ้นให้ */
+.pay__promptpay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.pay__promptpay-brand {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.pay__promptpay strong {
+  font-size: 15px;
+  color: var(--text-heading);
+}
+.pay__promptpay-id {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
 }
 .pay__scan-note {
   color: var(--text-muted);
   font-size: 14px;
+  text-align: center;
 }
 .pay__amount {
   display: flex;
