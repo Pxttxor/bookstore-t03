@@ -26,8 +26,6 @@ import {
   STOCK_TXN_TYPE_TONES,
   stockLevel,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
-import '../components/Tabs.css'
 import './BookDetailPage.css'
 
 type Tab = 'changes' | 'movements'

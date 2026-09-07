@@ -20,7 +20,6 @@ import {
   orderItemCount,
   type OrderStatus,
 } from '../orders/orders'
-import '../components/DataTable.css'
 import './OrdersListPage.css'
 
 type StatusFilter = OrderStatus | 'ALL'

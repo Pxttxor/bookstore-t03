@@ -11,6 +11,14 @@ import { PurchasingProvider } from './purchasing/PurchasingContext'
 import { SupplierProvider } from './suppliers/SupplierContext'
 import { PromotionProvider } from './promotions/PromotionContext'
 import { ReviewProvider } from './reviews/ReviewContext'
+// Shared control/table/tab styles for the whole back office, loaded once here so every
+// /admin route gets them regardless of what that page's own .css imports — a page that
+// forgets one of these imports used to render unstyled instead of failing loudly (it did,
+// 12 times). Order matters for cascade: shared → layout → page.
+import './components/AdminControls.css'
+import './components/AdminForm.css'
+import './components/DataTable.css'
+import './components/Tabs.css'
 import './AdminLayout.css'
 
 export default function AdminLayout() {

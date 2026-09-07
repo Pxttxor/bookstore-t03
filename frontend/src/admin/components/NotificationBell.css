@@ -44,6 +44,11 @@
   text-align: center;
 }
 
+.notif__list {
+  display: flex;
+  flex-direction: column;
+}
+
 .notif__item {
   display: flex;
   flex-direction: column;

@@ -14,8 +14,6 @@ import { useToast } from '../components/ToastContext'
 import type { Book } from '../books/books'
 import { useInventory } from '../inventory/InventoryContext'
 import { computeVariance, formatBookCode } from '../inventory/inventory'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './StockCountFormPage.css'
 
 interface Row {
@@ -144,9 +142,7 @@ export default function StockCountFormPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">ตรวจนับหนังสือ</h1>
-          <p className="admin-page__subtitle">
-            เพิ่มหนังสือที่ต้องการนับ แล้วใส่จำนวนที่นับได้จริง ๆ ระบบจะเทียบกับยอดในระบบให้อัตโนมัติ
-          </p>
+          <p className="admin-page__subtitle">ใส่จำนวนที่นับได้จริง ระบบเทียบกับยอดในระบบให้</p>
         </div>
         <div className="admin-page__actions">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPicking(true)}>

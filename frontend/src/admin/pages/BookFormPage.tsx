@@ -19,7 +19,6 @@ import {
 import { formatBookCode } from '../inventory/inventory'
 import { useInventory } from '../inventory/InventoryContext'
 import BookCover from '../../components/BookCover'
-import '../components/AdminForm.css'
 import './BookFormPage.css'
 
 type Values = Record<BookField, string>

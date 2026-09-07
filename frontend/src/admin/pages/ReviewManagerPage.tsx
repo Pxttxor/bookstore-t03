@@ -246,7 +246,7 @@ export default function ReviewManagerPage() {
               <Icon name="search" size={16} />
               <input
                 type="search"
-                placeholder="ชื่อหนังสือ, ผู้ใช้, ISBN หรือข้อความ..."
+                placeholder="ค้นหาชื่อหนังสือ ผู้ใช้ หรือ ISBN"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value)

@@ -43,7 +43,7 @@ export default function BookPicker({
           type="search"
           autoFocus
           value={term}
-          placeholder="กรอกชื่อหนังสือที่ต้องการ ผู้แต่ง หรือ ISBN"
+          placeholder="ค้นหาชื่อหนังสือ ผู้แต่ง หรือ ISBN"
           onChange={(e) => setTerm(e.target.value)}
         />
       </label>

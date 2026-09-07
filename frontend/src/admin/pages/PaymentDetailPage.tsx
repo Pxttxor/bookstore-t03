@@ -23,7 +23,6 @@ import {
 } from '../payments/payments'
 import { useOrders } from '../orders/OrderContext'
 import { formatOrderCode, ORDER_STATUS_LABELS, ORDER_STATUS_TONES } from '../orders/orders'
-import '../components/AdminForm.css'
 import './PaymentDetailPage.css'
 
 const fmtDateTime = (iso?: string) => (iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)}` : '—')

@@ -31,8 +31,6 @@ import {
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatBaht, formatSupplierCode } from '../suppliers/suppliers'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './OrderDetailPage.css'
 
 // Position on รออนุมัติ → อนุมัติ → ส่ง → ยืนยัน → รับ.

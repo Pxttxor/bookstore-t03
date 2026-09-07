@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Icon from '../../components/Icon'
 import Modal from '../components/Modal'
 import type { Review } from '../reviews/reviews'
-import '../components/AdminForm.css'
+import './ReportToManagerModal.css'
 
 interface ReportToManagerModalProps {
   review: Review
@@ -51,26 +51,16 @@ export default function ReportToManagerModal({
         </>
       }
     >
-      <div className="report-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div
-          style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px 14px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-start',
-          }}
-        >
-          <div style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }}>
+      <div className="report-modal-body">
+        <div className="report-modal-alert">
+          <div className="report-modal-alert__icon">
             <Icon name="alert-triangle" size={18} />
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: '#991b1b' }}>
+            <p className="report-modal-alert__title">
               รายงานรีวิวหนังสือ: {review.bookTitle}
             </p>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#b91c1c' }}>
+            <p className="report-modal-alert__meta">
               โดยคุณ {review.customerName} ({review.username || '@user'})
             </p>
           </div>
@@ -98,7 +88,7 @@ export default function ReportToManagerModal({
             rows={3}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
-            placeholder="อธิบายเหตุผลหรือข้อมูลบริบทเพิ่มเติมเพื่อให้ผู้จัดการพิจารณา..."
+            placeholder="เหตุผลหรือข้อมูลเพิ่มเติมสำหรับผู้จัดการ"
           />
         </label>
       </div>

@@ -196,37 +196,33 @@ export default function ReviewModerationPage() {
       </section>
 
       {/* Search & Filter */}
-      <section className="review-filter-bar-sales">
-        <div className="search-input-wrap-sales">
+      <section className="filter-bar">
+        <label className="filter-bar__search">
           <Icon name="search" size={18} />
           <input
             type="search"
             value={term}
-            placeholder="ค้นหาชื่อหนังสือ, ชื่อผู้ใช้ หรือ ISBN..."
+            placeholder="ค้นหาชื่อหนังสือ ผู้ใช้ หรือ ISBN"
             onChange={(e) => { setTerm(e.target.value); setPage(1) }}
           />
-        </div>
-        <div className="filter-select-group-sales">
-          <div className="select-pill-sales">
-            <Icon name="filter" size={16} />
-            <span>สถานะ:</span>
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as FilterStatus); setPage(1) }}>
-              <option value="ALL">ทั้งหมด</option>
-              <option value="UNREPLIED">รอตอบกลับ</option>
-              <option value="REPLIED">ตอบกลับแล้ว</option>
-              <option value="REPORTED">รายงานผู้จัดการแล้ว</option>
-            </select>
-          </div>
-          <div className="select-pill-sales">
-            <Icon name="sort" size={16} />
-            <span>เรียงตาม:</span>
-            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortOrder); setPage(1) }}>
-              <option value="LATEST">ล่าสุด</option>
-              <option value="RATING_HIGH">คะแนนสูงสุด</option>
-              <option value="RATING_LOW">คะแนนต่ำสุด</option>
-            </select>
-          </div>
-        </div>
+        </label>
+        <label className="filter-bar__select">
+          <span>สถานะ</span>
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as FilterStatus); setPage(1) }}>
+            <option value="ALL">ทั้งหมด</option>
+            <option value="UNREPLIED">รอตอบกลับ</option>
+            <option value="REPLIED">ตอบกลับแล้ว</option>
+            <option value="REPORTED">รายงานผู้จัดการแล้ว</option>
+          </select>
+        </label>
+        <label className="filter-bar__select">
+          <span>เรียงตาม</span>
+          <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortOrder); setPage(1) }}>
+            <option value="LATEST">ล่าสุด</option>
+            <option value="RATING_HIGH">คะแนนสูงสุด</option>
+            <option value="RATING_LOW">คะแนนต่ำสุด</option>
+          </select>
+        </label>
       </section>
 
       {/* Review Cards */}

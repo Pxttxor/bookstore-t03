@@ -12,7 +12,6 @@ import {
   poDisplayStatus,
 } from '../purchasing/purchasing'
 import { DEACTIVATION_REASONS, formatBaht, type Supplier } from '../suppliers/suppliers'
-import '../components/AdminForm.css'
 import './DeactivateSupplierModal.css'
 
 interface DeactivateSupplierModalProps {

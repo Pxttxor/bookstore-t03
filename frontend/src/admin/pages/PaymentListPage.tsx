@@ -21,7 +21,6 @@ import {
 } from '../payments/payments'
 import { formatOrderCode } from '../orders/orders'
 import { useOrders } from '../orders/OrderContext'
-import '../components/DataTable.css'
 import './PaymentListPage.css'
 
 type StatusFilter = PaymentStatus | 'ALL'

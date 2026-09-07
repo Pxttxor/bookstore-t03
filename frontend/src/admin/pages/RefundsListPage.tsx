@@ -16,7 +16,6 @@ import {
   formatOrderDate,
   type CustomerOrder,
 } from '../orders/orders'
-import '../components/DataTable.css'
 import './RefundsListPage.css'
 
 type RefundFilter = 'ALL' | 'PENDING' | 'REFUNDED'
@@ -133,9 +132,7 @@ export default function RefundsListPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">รายการคืนเงินลูกค้า (Refund Management)</h1>
-          <p className="admin-page__subtitle">
-            จัดการและบันทึกการโอนเงินคืนสำหรับคำสั่งซื้อที่ถูกยกเลิก ({refundOrders.length} รายการ)
-          </p>
+          <p className="admin-page__subtitle">คำสั่งซื้อที่ยกเลิกแล้ว {refundOrders.length} รายการ</p>
         </div>
       </div>
 
@@ -168,7 +165,7 @@ export default function RefundsListPage() {
             <Icon name="search" size={16} />
             <input
               type="search"
-              placeholder="ค้นหาตามรหัสคำสั่งซื้อ, ลูกค้า, ธนาคาร, เลขที่บัญชี, ชื่อบัญชี…"
+              placeholder="ค้นหารหัสคำสั่งซื้อ ลูกค้า หรือบัญชีธนาคาร"
               value={term}
               onChange={(e) => {
                 setTerm(e.target.value)
@@ -177,10 +174,10 @@ export default function RefundsListPage() {
             />
           </label>
 
-          <div className="filter-bar__tabs">
+          <div className="admin-tabs">
             <button
               type="button"
-              className={`filter-bar__tab ${filter === 'ALL' ? 'is-active' : ''}`}
+              className={'admin-tabs__tab' + (filter === 'ALL' ? ' admin-tabs__tab--active' : '')}
               onClick={() => {
                 setFilter('ALL')
                 setPage(1)
@@ -190,7 +187,7 @@ export default function RefundsListPage() {
             </button>
             <button
               type="button"
-              className={`filter-bar__tab ${filter === 'PENDING' ? 'is-active' : ''}`}
+              className={'admin-tabs__tab' + (filter === 'PENDING' ? ' admin-tabs__tab--active' : '')}
               onClick={() => {
                 setFilter('PENDING')
                 setPage(1)
@@ -200,7 +197,7 @@ export default function RefundsListPage() {
             </button>
             <button
               type="button"
-              className={`filter-bar__tab ${filter === 'REFUNDED' ? 'is-active' : ''}`}
+              className={'admin-tabs__tab' + (filter === 'REFUNDED' ? ' admin-tabs__tab--active' : '')}
               onClick={() => {
                 setFilter('REFUNDED')
                 setPage(1)
@@ -223,7 +220,7 @@ export default function RefundsListPage() {
           />
         ) : (
           <>
-            <div className="data-table-wrapper">
+            <div className="table-wrap">
               <table className="data-table refunds-table">
                 <thead>
                   <tr>
@@ -232,9 +229,9 @@ export default function RefundsListPage() {
                     <th>ลูกค้า</th>
                     <th>เหตุผลที่ยกเลิก</th>
                     <th>ข้อมูลบัญชีรับเงินคืน</th>
-                    <th className="cell-number">ยอดเงินคืน</th>
+                    <th className="refunds-table__amount-col">ยอดเงินคืน</th>
                     <th>สถานะ</th>
-                    <th className="cell-actions">การทำงาน</th>
+                    <th className="data-table__actions">การทำงาน</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,7 +243,7 @@ export default function RefundsListPage() {
 
                     return (
                       <tr key={order.orderId} className={isRefunded ? 'row--refunded' : ''}>
-                        <td className="cell-code">
+                        <td className="data-table__code">
                           <Link
                             to={`/admin/orders/${order.orderId}`}
                             className="refunds-table__order-link"
@@ -311,7 +308,7 @@ export default function RefundsListPage() {
                             </span>
                           )}
                         </td>
-                        <td className="cell-number">
+                        <td className="refunds-table__amount-col">
                           <span className="refunds-table__amount">
                             ฿ {formatPrice(order.netAmount)}
                           </span>
@@ -323,7 +320,7 @@ export default function RefundsListPage() {
                             <StatusBadge tone="warning">ยกเลิกและรอคืนเงิน</StatusBadge>
                           )}
                         </td>
-                        <td className="cell-actions">
+                        <td className="data-table__actions">
                           {isRefunded ? (
                             <div className="refunds-table__done-info">
                               <span className="refunds-table__done-date">
@@ -443,7 +440,7 @@ export default function RefundsListPage() {
               <span>หมายเหตุเพิ่มเติม / รหัสอ้างอิงการโอนเงิน (ถ้ามี)</span>
               <input
                 type="text"
-                className="form-control"
+                className="admin-input"
                 placeholder="เช่น โอนคืนผ่าน K-Plus สลิปอ้างอิง 123456"
                 value={refundNote}
                 onChange={(e) => setRefundNote(e.target.value)}

@@ -23,6 +23,11 @@
   transform: translateY(-2px);
 }
 
+.tile--clickable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .tile--accent {
   --tile-accent: var(--primary-deep);
 }
@@ -60,20 +65,4 @@
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.5;
-}
-
-.tile__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: auto;
-  padding-top: 10px;
-  color: var(--primary-deep);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.tile__link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }

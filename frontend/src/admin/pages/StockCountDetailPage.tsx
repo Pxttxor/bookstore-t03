@@ -17,7 +17,6 @@ import {
   STOCK_COUNT_STATUS_LABELS,
   STOCK_COUNT_STATUS_TONES,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './StockCountDetailPage.css'
 
 export default function StockCountDetailPage() {
