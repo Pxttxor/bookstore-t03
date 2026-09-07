@@ -1,0 +1,55 @@
+/* Login/register popup, styled after mebmarket.com's login dialog (7 ก.ย. 69):
+   a white card floating over a dark backdrop, ✕ in the corner, centred
+   underlined title inside the card (see AuthForm.css). Not built on top of
+   admin/components/Modal.tsx — the storefront should not depend on back-office
+   files, and meb's chrome (no footer bar, corner-absolute close) doesn't match
+   .modal__head anyway. */
+
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 24, 0.45);
+}
+
+.auth-modal {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-thai);
+  /* ยังเลื่อนได้ตามปกติ (ล้อเมาส์/ทัช/คีย์บอร์ด) แค่ซ่อนแถบ scrollbar เอง —
+     ฟอร์มสมัครสมาชิกยาวกว่า 90vh จึงต้องเลื่อน แต่ไม่อยากให้เห็นแถบข้างกล่อง */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge รุ่นเก่า */
+}
+.auth-modal::-webkit-scrollbar {
+  display: none; /* Chromium / Brave / Safari */
+}
+
+.auth-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.auth-modal__close:hover {
+  background: var(--surface-alt);
+  color: var(--text-body);
+}

@@ -108,6 +108,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
           ) : (
             <Link
               to="/login"
+              state={{ back: location.pathname + location.search }}
               className="topnav__icon-btn"
               aria-label="เข้าสู่ระบบ"
             >

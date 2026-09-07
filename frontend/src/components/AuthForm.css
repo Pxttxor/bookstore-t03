@@ -1,42 +1,26 @@
-.auth-container {
-  width: 100%;
-  max-width: 460px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
+/* Shared styling for LoginForm / SignUpForm, rendered inside AuthModal.
+   Moved from pages/AuthPages.css when auth moved from full pages to a modal
+   (7 ก.ย. 69) — .auth-container / .auth-card stayed behind as the old full-page
+   shell and were dropped; AuthModal.css now owns the floating box + backdrop. */
 
-/* card */
-.auth-card {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 40px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
+/* head (title + subtitle) — always centred with an underline, meb-style */
 .auth-card__head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-.auth-card__head--center {
   align-items: center;
+  gap: 8px;
   text-align: center;
+  padding: 24px 32px 20px;
+  border-bottom: 1px solid var(--border-soft);
 }
 .auth-card__title {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
 }
 .auth-card__subtitle {
-  color: var(--text-body);
-  line-height: 1.5;
-}
-.auth-card__head--center .auth-card__subtitle {
   color: var(--nav-link);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* form */
@@ -44,6 +28,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 24px 32px 24px;
 }
 .auth-form--roomy {
   gap: 24px;
@@ -73,7 +58,7 @@
   text-decoration: underline;
 }
 
-/* input shell */
+/* input shell — flat rectangular box (meb style); no pill variant anymore */
 .auth-input {
   display: flex;
   align-items: center;
@@ -83,10 +68,6 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.auth-input--pill {
-  padding: 16px 24px;
-  border-radius: var(--radius-pill);
 }
 .auth-input:focus-within {
   border-color: var(--primary);
@@ -142,8 +123,12 @@
     0 4px 6px -4px rgba(0, 107, 90, 0.15);
 }
 
-/* alt link (bottom of card) */
+/* alt row (bottom of form) — plain text link, e.g. "กรอกอีเมลผิด? เริ่มใหม่"
+   นี่คือแถวล่างสุดของกล่อง และเป็นลูกโดยตรงของ .auth-modal (อยู่นอก <form>) —
+   padding-bottom ตรงนี้คือสิ่งเดียวที่กันมันจากขอบล่างการ์ด เพราะ index.css รีเซ็ต
+   `p { margin: 0 }` ไปแล้ว · ห้ามลบ ไม่งั้นข้อความจะกลับไปแปะขอบเหมือนเดิม */
 .auth-alt {
+  padding: 0 32px 32px;
   text-align: center;
   color: var(--text-body);
 }
@@ -157,8 +142,37 @@
   text-decoration: underline;
 }
 
+/* mode-switch button — outlined pill, e.g. meb's bordered "สมัครสมาชิก" at the
+   very bottom of the login box. Distinct from .auth-alt's plain text links:
+   this one flips the modal between login/signup. */
+.auth-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 20px;
+  margin-inline-start: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-deep);
+  background: var(--surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.auth-switch:hover {
+  border-color: var(--primary);
+  background: var(--surface-alt);
+  text-decoration: none;
+}
+
 @media (max-width: 520px) {
-  .auth-card {
-    padding: 28px 22px;
+  .auth-card__head {
+    padding: 20px 24px 16px;
+  }
+  .auth-form {
+    padding: 20px 24px 24px;
+  }
+  .auth-alt {
+    padding: 0 24px 24px;
   }
 }
