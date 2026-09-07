@@ -31,13 +31,14 @@ export default function MemberPointsPage() {
     reload,
   } = useMembership()
 
-  // เฉพาะบัญชีที่ล็อกอินแล้วเท่านั้นที่มีแต้มสะสมให้ดู
+  // AccountLayout กันคนไม่ล็อกอินไว้ก่อนแล้ว — เหลือไว้แค่ narrow ชนิด `user` ให้ TS
   if (!user) return <Navigate to="/login" replace state={{ from: '/member/points' }} />
+  // เฉพาะบัญชีลูกค้าเท่านั้นที่มีแต้มสะสม — AccountLayout เช็คแค่ล็อกอิน ไม่เช็ค role
   if (user.role !== 'customer') return <Navigate to="/" replace />
 
   if (loading) {
     return (
-      <div className="points page-shell">
+      <div className="points">
         <section className="points__panel">
           <LoadingState label="กำลังโหลดแต้มสะสม…" />
         </section>
@@ -47,7 +48,7 @@ export default function MemberPointsPage() {
 
   if (error || !member) {
     return (
-      <div className="points page-shell">
+      <div className="points">
         <section className="points__panel">
           <ErrorState
             message={error ?? 'ไม่พบข้อมูลสมาชิกของบัญชีนี้'}
@@ -74,7 +75,7 @@ export default function MemberPointsPage() {
   )
 
   return (
-    <div className="points page-shell">
+    <div className="points">
       <header className="points__head">
         <div>
           <h1 className="points__title">แต้มสะสมของฉัน</h1>

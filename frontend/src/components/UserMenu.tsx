@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { startTransition, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from './Icon'
+import { ACCOUNT_MENU, ACCOUNT_MENU_SOON_TITLE } from './accountMenu'
+import { initialsOf } from '../data/initials'
 import { useAuth, type AuthUser } from '../auth/AuthContext'
 import './UserMenu.css'
 
@@ -8,17 +10,10 @@ interface UserMenuProps {
   user: AuthUser
 }
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
 // ป็อปอัปเมนูสมาชิกที่ห้อยลงมาจากไอคอนอวาตาร์บน TopNav แทนการเด้งไปหน้า /profile ตรง ๆ
 // (สไตล์ mebmarket.com ตามภาพที่ผู้ใช้ส่งมา, คำขอ 7 ก.ย. 69) — หน้า /profile ยังอยู่ครบ
-// เป็นปลายทางของรายการ "ข้อมูลสมาชิก" รายการและป้ายไทยที่เหลือยกมาจาก "ทางลัด" ของ
-// ProfilePage ทุกตัว ไม่ได้เพิ่มของใหม่
+// เป็นปลายทางของรายการ "ข้อมูลสมาชิก" รายการและป้ายไทยที่เหลือมาจาก ACCOUNT_MENU
+// (แหล่งเดียวกับแถบเมนูซ้ายของหน้าบัญชี — ดู components/accountMenu.ts)
 export default function UserMenu({ user }: UserMenuProps) {
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -45,11 +40,17 @@ export default function UserMenu({ user }: UserMenuProps) {
 
   const signOut = () => {
     close()
-    // navigate ก่อน logout() เสมอ — ถ้าสลับกัน `user` จะกลายเป็น null ขณะเมนูนี้ยังลอยอยู่บน
-    // หน้าที่มี guard (เช่น ProfilePage, OrderHistoryPage) ทำให้ guard ของหน้านั้นแทรกเด้งไป
-    // /login ก่อนที่ navigate('/') ของเราจะมีผล — เจอจริงตอนทดสอบออกจากระบบจากหน้า /profile
-    navigate('/', { replace: true })
-    logout()
+    // navigate() ของ react-router ใช้ startTransition ภายในตัวเอง ทำให้การอัปเดต location
+    // ของมันมีลำดับความสำคัญต่ำกว่า setState ธรรมดา — ถ้าเรียก navigate('/') แล้ว logout()
+    // แยกกันเฉย ๆ (แม้ navigate มาก่อน) setUser(null) จาก logout() จะ commit render ก่อน
+    // ในขณะที่ location ยังเป็นหน้าเดิมอยู่ (ยืนยันด้วย console.log จริงในเบราว์เซอร์) ทำให้
+    // guard ของหน้าที่มี ProfilePage/OrderHistoryPage/AccountLayout แทรกเด้งไป /login แทนที่
+    // จะเป็น / ที่ตั้งใจ — ห่อทั้งคู่ด้วย startTransition เดียวกันให้ทั้งสอง state update
+    // commit พร้อมกันจึงแก้ได้จริง (ต่างจาก flushSync ซึ่งบังคับ transition ให้เป็น sync ไม่ได้)
+    startTransition(() => {
+      navigate('/', { replace: true })
+      logout()
+    })
   }
 
   return (
@@ -78,40 +79,25 @@ export default function UserMenu({ user }: UserMenuProps) {
           </div>
 
           <nav className="user-menu__list">
-            <Link to="/profile" className="user-menu__item" onClick={close}>
-              <Icon name="user" size={18} />
-              <span>ข้อมูลสมาชิก</span>
-            </Link>
-            <Link to="/orders" className="user-menu__item" onClick={close}>
-              <Icon name="clock" size={18} />
-              <span>ประวัติการสั่งซื้อ</span>
-            </Link>
-            <Link to="/member/points" className="user-menu__item" onClick={close}>
-              <Icon name="award" size={18} />
-              <span>แต้มสะสมของฉัน</span>
-            </Link>
-            <Link to="/member/rewards" className="user-menu__item" onClick={close}>
-              <Icon name="gift" size={18} />
-              <span>แลกของรางวัล</span>
-            </Link>
-            <span
-              className="user-menu__item user-menu__item--soon"
-              aria-disabled="true"
-              title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
-            >
-              <Icon name="heart" size={18} />
-              <span>รายการโปรดของฉัน</span>
-              <em className="user-menu__soon">เร็ว ๆ นี้</em>
-            </span>
-            <span
-              className="user-menu__item user-menu__item--soon"
-              aria-disabled="true"
-              title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
-            >
-              <Icon name="truck" size={18} />
-              <span>สมุดที่อยู่จัดส่ง</span>
-              <em className="user-menu__soon">เร็ว ๆ นี้</em>
-            </span>
+            {ACCOUNT_MENU.map((item) =>
+              item.to ? (
+                <Link key={item.label} to={item.to} className="user-menu__item" onClick={close}>
+                  <Icon name={item.icon} size={18} />
+                  <span>{item.label}</span>
+                </Link>
+              ) : (
+                <span
+                  key={item.label}
+                  className="user-menu__item user-menu__item--soon"
+                  aria-disabled="true"
+                  title={ACCOUNT_MENU_SOON_TITLE}
+                >
+                  <Icon name={item.icon} size={18} />
+                  <span>{item.label}</span>
+                  <em className="user-menu__soon">เร็ว ๆ นี้</em>
+                </span>
+              ),
+            )}
           </nav>
 
           <button type="button" className="user-menu__signout" onClick={signOut}>

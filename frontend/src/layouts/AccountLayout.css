@@ -1,0 +1,27 @@
+.account {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: start;
+  gap: 32px;
+  padding-block: 32px 64px;
+}
+
+.account__main {
+  min-width: 0;
+}
+
+.account--booting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+@media (max-width: 1024px) {
+  .account {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-block: 20px 48px;
+  }
+}

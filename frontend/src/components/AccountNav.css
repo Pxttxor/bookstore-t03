@@ -1,0 +1,211 @@
+/* AccountNav — แถบเมนูซ้ายของหน้าบัญชี ค้างอยู่ทุกหน้า (ดู layouts/AccountLayout.tsx)
+   ทรงเดียวกับ admin/components/AdminSidebar.css แต่ active state ใช้สีมิ้นต์ของหน้าร้าน */
+.account-nav {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  position: sticky;
+  top: 24px;
+  align-self: start;
+}
+
+.account-nav__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.account-nav__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--mint);
+  color: var(--on-primary);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.account-nav__name {
+  max-width: 100%;
+  color: var(--text-heading);
+  font-weight: 700;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-nav__email {
+  max-width: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-nav__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-deep);
+  background: var(--surface-alt);
+  border-radius: var(--radius-pill);
+}
+
+.account-nav__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-body);
+  font-size: 15px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.account-nav__link:hover {
+  background: var(--surface-alt);
+}
+.account-nav__link svg {
+  flex-shrink: 0;
+  color: var(--primary-deep);
+}
+
+.account-nav__link--active {
+  background: var(--status-info-bg);
+  color: var(--primary-deep);
+  font-weight: 600;
+}
+
+.account-nav__link--soon,
+.account-nav__link--soon:hover {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  background: transparent;
+}
+.account-nav__link--soon svg {
+  color: var(--text-muted);
+}
+.account-nav__link span {
+  flex: 1;
+}
+.account-nav__soon {
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
+  color: var(--text-muted);
+  background: var(--surface-alt);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.account-nav__signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--danger);
+  border-top: 1px solid var(--border-soft);
+  transition: background 0.15s ease;
+}
+.account-nav__signout:hover {
+  background: var(--surface-alt);
+}
+
+@media (max-width: 1024px) {
+  .account-nav {
+    width: 100%;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .account-nav__head {
+    flex-direction: row;
+    padding: 0 16px 0 0;
+    border-bottom: none;
+    border-right: 1px solid var(--border-soft);
+    text-align: left;
+  }
+
+  .account-nav__name,
+  .account-nav__email {
+    max-width: 140px;
+  }
+
+  .account-nav__badge {
+    display: none;
+  }
+
+  .account-nav__list {
+    flex: 1;
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+  }
+
+  .account-nav__link {
+    white-space: nowrap;
+  }
+
+  .account-nav__signout {
+    margin-top: 0;
+    padding: 10px 14px;
+    border-top: none;
+    border-left: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .account-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .account-nav__head {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 4px 0 14px;
+  }
+  .account-nav__badge {
+    display: inline-flex;
+  }
+  .account-nav__signout {
+    border-left: none;
+    border-top: 1px solid var(--border-soft);
+  }
+}
