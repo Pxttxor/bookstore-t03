@@ -105,11 +105,17 @@ func (r *InventoryRepository) applyStockChanges(
 		if clamp {
 			quantity = gorm.Expr("GREATEST(quantity_on_hand + ?, 0)", txn.QuantityChange)
 		}
-		err := tx.Model(&model.InventoryItem{}).
+		result := tx.Model(&model.InventoryItem{}).
 			Where("book_id = ?", txn.BookID).
-			Updates(map[string]any{"quantity_on_hand": quantity, "last_updated": now}).Error
-		if err != nil {
-			return err
+			Updates(map[string]any{"quantity_on_hand": quantity, "last_updated": now})
+		if result.Error != nil {
+			return result.Error
+		}
+		// เล่มนี้ไม่มีแถวสินค้าคงคลัง — แถว ledger เขียนไปแล้วแต่ยอดคงเหลือไม่ขยับ
+		// ปล่อยผ่านจะได้ ledger ที่ไม่มียอดคู่กันโดยไม่มีใครรู้ (Book ◆-- InventoryItem
+		// เป็น composition ทั้งสองอย่างต้องขยับพร้อมกันเสมอ) จึงล้มทั้งทรานแซกชันแทน
+		if result.RowsAffected == 0 {
+			return model.ErrInventoryNotFound
 		}
 	}
 	return nil
