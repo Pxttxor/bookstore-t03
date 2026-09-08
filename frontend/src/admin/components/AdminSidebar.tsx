@@ -52,7 +52,7 @@ const MENU: MenuGroup[] = [
         label: 'รายการคืนเงินลูกค้า',
         to: '/admin/refunds',
         icon: 'dollar-sign',
-        allowed: can.viewOrders,
+        allowed: can.viewRefunds,
       },
     ],
   },

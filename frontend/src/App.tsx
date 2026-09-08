@@ -66,7 +66,9 @@ export default function App() {
 
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
-        <Route path="refunds" element={<RefundsListPage />} />
+        <Route element={<RequireCan allowed={can.viewRefunds} />}>
+          <Route path="refunds" element={<RefundsListPage />} />
+        </Route>
 
         <Route path="payments" element={<Navigate to="/admin/orders" replace />} />
         <Route element={<RequireCan allowed={can.managePaymentReports} />}>

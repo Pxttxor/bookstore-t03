@@ -12,7 +12,6 @@ interface TopNavProps {
 const LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Bestsellers', to: '/?filter=bestsellers' },
-  { label: 'Categories', to: '/?filter=categories' },
   { label: 'Deals', to: '/promotions' },
 ]
 
@@ -83,7 +82,8 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
             <Icon name="heart" size={20} />
           </button>
           <Link
-            to="/checkout/shipping"
+            to={user ? '/checkout/shipping' : '/login'}
+            state={user ? undefined : { from: '/checkout/shipping', back: location.pathname + location.search }}
             className="topnav__icon-btn topnav__cart"
             aria-label="ตะกร้าสินค้า"
           >

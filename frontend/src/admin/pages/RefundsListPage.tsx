@@ -227,11 +227,9 @@ export default function RefundsListPage() {
                     <th>รหัสคำสั่งซื้อ</th>
                     <th>วันที่ยกเลิก / สั่งซื้อ</th>
                     <th>ลูกค้า</th>
-                    <th>เหตุผลที่ยกเลิก</th>
-                    <th>ข้อมูลบัญชีรับเงินคืน</th>
                     <th className="refunds-table__amount-col">ยอดเงินคืน</th>
                     <th>สถานะ</th>
-                    <th className="data-table__actions">การทำงาน</th>
+                    <th>การทำงาน</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -266,48 +264,6 @@ export default function RefundsListPage() {
                             )}
                           </div>
                         </td>
-                        <td>
-                          <span className="refunds-table__reason" title={order.cancelReason || '—'}>
-                            {order.cancelReason || '—'}
-                          </span>
-                        </td>
-                        <td>
-                          {hasBankDetails ? (
-                            <div className="refunds-table__bank-box">
-                              <span className="refunds-table__bank-name">
-                                {order.refundBankName}
-                              </span>
-                              <div className="refunds-table__acc-row">
-                                <span className="refunds-table__acc-no">
-                                  {order.refundAccountNo}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="refunds-table__copy-btn"
-                                  title="คัดลอกเลขบัญชี"
-                                  onClick={() =>
-                                    handleCopy(order.orderId, order.refundAccountNo || '')
-                                  }
-                                >
-                                  <Icon
-                                    name={copiedAccount === order.orderId ? 'check' : 'clipboard'}
-                                    size={13}
-                                  />
-                                  {copiedAccount === order.orderId ? 'คัดลอกแล้ว' : 'คัดลอก'}
-                                </button>
-                              </div>
-                              {order.refundAccountName && (
-                                <span className="refunds-table__acc-owner">
-                                  ชื่อ: {order.refundAccountName}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="refunds-table__no-bank">
-                              <Icon name="clock" size={13} /> รอลูกค้าระบุข้อมูล
-                            </span>
-                          )}
-                        </td>
                         <td className="refunds-table__amount-col">
                           <span className="refunds-table__amount">
                             ฿ {formatPrice(order.netAmount)}
@@ -316,39 +272,33 @@ export default function RefundsListPage() {
                         <td>
                           {isRefunded ? (
                             <StatusBadge tone="success">คืนเงินแล้ว</StatusBadge>
+                          ) : hasBankDetails ? (
+                            <StatusBadge tone="warning">รอคืนเงิน (พร้อมโอน)</StatusBadge>
                           ) : (
-                            <StatusBadge tone="warning">ยกเลิกและรอคืนเงิน</StatusBadge>
+                            <StatusBadge tone="neutral">รอลูกค้าระบุบัญชี</StatusBadge>
                           )}
                         </td>
-                        <td className="data-table__actions">
-                          {isRefunded ? (
-                            <div className="refunds-table__done-info">
-                              <span className="refunds-table__done-date">
-                                {order.refundedAt
-                                  ? new Date(order.refundedAt).toLocaleDateString('th-TH')
-                                  : 'โอนคืนแล้ว'}
-                              </span>
-                              {order.refundedBy && (
-                                <span className="refunds-table__done-by">
-                                  โดย {order.refundedBy}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
+                        <td>
+                          <div className="data-table__actions">
                             <button
                               type="button"
-                              className="btn btn-primary btn-sm refunds-table__action-btn"
+                              className="icon-btn"
+                              title="ดูรายละเอียดการคืนเงิน"
                               onClick={() => handleOpenRefundModal(order)}
-                              disabled={!hasBankDetails}
-                              title={
-                                !hasBankDetails
-                                  ? 'รอลูกค้าระบุบัญชีก่อนทำรายการ'
-                                  : 'บันทึกยืนยันการคืนเงิน'
-                              }
                             >
-                              <Icon name="check" size={14} /> คืนเงินแล้ว
+                              <Icon name="eye" size={17} />
                             </button>
-                          )}
+                            {!isRefunded && hasBankDetails && (
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm refunds-table__action-btn"
+                                onClick={() => handleOpenRefundModal(order)}
+                                title="บันทึกยืนยันการคืนเงิน"
+                              >
+                                <Icon name="check" size={14} /> คืนเงิน
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -372,98 +322,263 @@ export default function RefundsListPage() {
         )}
       </section>
 
-      {/* Modal ยืนยันว่าคืนเงินลูกค้าแล้ว */}
+      {/* Modal ดูรายละเอียดและบันทึกการคืนเงินลูกค้า */}
       {selectedOrder && (
         <Modal
-          title={`บันทึกการคืนเงินคำสั่งซื้อ ${formatOrderCode(selectedOrder.orderId)}`}
+          title={
+            selectedOrder.refundStatus === 'REFUNDED'
+              ? `รายละเอียดการคืนเงิน — ${formatOrderCode(selectedOrder.orderId)}`
+              : `รายละเอียดและบันทึกการคืนเงิน — ${formatOrderCode(selectedOrder.orderId)}`
+          }
           onClose={() => setSelectedOrder(null)}
         >
-          <form className="refund-modal__form" onSubmit={(e) => void handleConfirmRefundSubmit(e)}>
-            <div className="refund-modal__alert">
-              <Icon name="dollar-sign" size={20} />
-              <span>
-                กรุณาตรวจสอบข้อมูลบัญชีของลูกค้าและดำเนินการโอนเงินให้เรียบร้อยก่อนกดยืนยัน
-              </span>
-            </div>
-
-            <div className="refund-modal__summary-card">
-              <div className="refund-modal__row">
-                <span className="refund-modal__label">ลูกค้า:</span>
-                <span className="refund-modal__val">{selectedOrder.customerName}</span>
-              </div>
-              <div className="refund-modal__row">
-                <span className="refund-modal__label">ยอดเงินที่ต้องโอนคืน:</span>
-                <span className="refund-modal__val refund-modal__val--amount">
-                  ฿ {formatPrice(selectedOrder.netAmount)}
-                </span>
-              </div>
-              <div className="refund-modal__row">
-                <span className="refund-modal__label">ธนาคาร:</span>
-                <span className="refund-modal__val">{selectedOrder.refundBankName || '—'}</span>
-              </div>
-              <div className="refund-modal__row">
-                <span className="refund-modal__label">เลขที่บัญชี:</span>
-                <span className="refund-modal__val refund-modal__val--acc">
-                  {selectedOrder.refundAccountNo || '—'}
-                  {selectedOrder.refundAccountNo && (
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm refund-modal__copy-btn"
-                      onClick={() =>
-                        handleCopy(selectedOrder.orderId, selectedOrder.refundAccountNo || '')
-                      }
-                    >
-                      <Icon
-                        name={copiedAccount === selectedOrder.orderId ? 'check' : 'clipboard'}
-                        size={13}
-                      />
-                      {copiedAccount === selectedOrder.orderId ? 'คัดลอกแล้ว' : 'คัดลอก'}
-                    </button>
+          {selectedOrder.refundStatus === 'REFUNDED' ? (
+            <div className="refund-modal__view">
+              <div className="refund-modal__alert refund-modal__alert--success">
+                <Icon name="check-circle" size={20} />
+                <div>
+                  <strong>คืนเงินเรียบร้อยแล้ว</strong>
+                  {selectedOrder.refundedAt && (
+                    <span className="refund-modal__alert-sub">
+                      {' '}เมื่อ {formatOrderDate(selectedOrder.refundedAt)}
+                    </span>
                   )}
-                </span>
+                  {selectedOrder.refundedBy && (
+                    <span className="refund-modal__alert-sub">
+                      {' '}โดย {selectedOrder.refundedBy}
+                    </span>
+                  )}
+                </div>
               </div>
-              {selectedOrder.refundAccountName && (
+
+              <div className="refund-modal__summary-card">
                 <div className="refund-modal__row">
-                  <span className="refund-modal__label">ชื่อบัญชีผู้รับ:</span>
-                  <span className="refund-modal__val">{selectedOrder.refundAccountName}</span>
+                  <span className="refund-modal__label">รหัสคำสั่งซื้อ:</span>
+                  <span className="refund-modal__val">
+                    <Link
+                      to={`/admin/orders/${selectedOrder.orderId}`}
+                      className="refunds-table__order-link"
+                      onClick={() => setSelectedOrder(null)}
+                    >
+                      {formatOrderCode(selectedOrder.orderId)}
+                    </Link>
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">ลูกค้า:</span>
+                  <span className="refund-modal__val">
+                    {selectedOrder.customerName}
+                    {selectedOrder.customerEmail ? ` (${selectedOrder.customerEmail})` : ''}
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">วันที่สั่งซื้อ:</span>
+                  <span className="refund-modal__val">
+                    {formatOrderDate(selectedOrder.orderDate)}
+                  </span>
+                </div>
+                {selectedOrder.cancelReason && (
+                  <div className="refund-modal__row">
+                    <span className="refund-modal__label">เหตุผลที่ยกเลิก:</span>
+                    <span className="refund-modal__val refund-modal__val--reason">
+                      {selectedOrder.cancelReason}
+                    </span>
+                  </div>
+                )}
+                <div className="refund-modal__divider" />
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">ยอดเงินที่คืน:</span>
+                  <span className="refund-modal__val refund-modal__val--amount">
+                    ฿ {formatPrice(selectedOrder.netAmount)}
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">ธนาคาร / ช่องทาง:</span>
+                  <span className="refund-modal__val">
+                    {selectedOrder.refundBankName || '—'}
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">เลขที่บัญชี:</span>
+                  <span className="refund-modal__val refund-modal__val--acc">
+                    {selectedOrder.refundAccountNo || '—'}
+                    {selectedOrder.refundAccountNo && (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm refund-modal__copy-btn"
+                        onClick={() =>
+                          handleCopy(selectedOrder.orderId, selectedOrder.refundAccountNo || '')
+                        }
+                      >
+                        <Icon
+                          name={copiedAccount === selectedOrder.orderId ? 'check' : 'clipboard'}
+                          size={13}
+                        />
+                        {copiedAccount === selectedOrder.orderId ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                      </button>
+                    )}
+                  </span>
+                </div>
+                {selectedOrder.refundAccountName && (
+                  <div className="refund-modal__row">
+                    <span className="refund-modal__label">ชื่อบัญชีผู้รับ:</span>
+                    <span className="refund-modal__val">{selectedOrder.refundAccountName}</span>
+                  </div>
+                )}
+                {selectedOrder.refundNote && (
+                  <div className="refund-modal__row">
+                    <span className="refund-modal__label">หมายเหตุการโอน:</span>
+                    <span className="refund-modal__val">{selectedOrder.refundNote}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="refund-modal__actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setSelectedOrder(null)}
+                >
+                  ปิด
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              className="refund-modal__form"
+              onSubmit={(e) => void handleConfirmRefundSubmit(e)}
+            >
+              {selectedOrder.refundBankName && selectedOrder.refundAccountNo ? (
+                <div className="refund-modal__alert refund-modal__alert--info">
+                  <Icon name="dollar-sign" size={20} />
+                  <span>
+                    กรุณาตรวจสอบข้อมูลบัญชีของลูกค้าและดำเนินการโอนเงินให้เรียบร้อยก่อนกดยืนยัน
+                  </span>
+                </div>
+              ) : (
+                <div className="refund-modal__alert refund-modal__alert--warning">
+                  <Icon name="alert-triangle" size={20} />
+                  <span>
+                    ลูกค้ารายนี้ยังไม่ได้ระบุข้อมูลบัญชีธนาคารสำหรับรับเงินคืน กรุณาติดต่อลูกค้าหรือรอลูกค้าระบุข้อมูล
+                  </span>
                 </div>
               )}
-              {selectedOrder.cancelReason && (
+
+              <div className="refund-modal__summary-card">
                 <div className="refund-modal__row">
-                  <span className="refund-modal__label">เหตุผลที่ยกเลิก:</span>
-                  <span className="refund-modal__val">{selectedOrder.cancelReason}</span>
+                  <span className="refund-modal__label">รหัสคำสั่งซื้อ:</span>
+                  <span className="refund-modal__val">
+                    <Link
+                      to={`/admin/orders/${selectedOrder.orderId}`}
+                      className="refunds-table__order-link"
+                      onClick={() => setSelectedOrder(null)}
+                    >
+                      {formatOrderCode(selectedOrder.orderId)}
+                    </Link>
+                  </span>
                 </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">ลูกค้า:</span>
+                  <span className="refund-modal__val">
+                    {selectedOrder.customerName}
+                    {selectedOrder.customerEmail ? ` (${selectedOrder.customerEmail})` : ''}
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">วันที่สั่งซื้อ:</span>
+                  <span className="refund-modal__val">
+                    {formatOrderDate(selectedOrder.orderDate)}
+                  </span>
+                </div>
+                {selectedOrder.cancelReason && (
+                  <div className="refund-modal__row">
+                    <span className="refund-modal__label">เหตุผลที่ยกเลิก:</span>
+                    <span className="refund-modal__val refund-modal__val--reason">
+                      {selectedOrder.cancelReason}
+                    </span>
+                  </div>
+                )}
+                <div className="refund-modal__divider" />
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">ยอดเงินที่ต้องโอนคืน:</span>
+                  <span className="refund-modal__val refund-modal__val--amount">
+                    ฿ {formatPrice(selectedOrder.netAmount)}
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">ธนาคาร:</span>
+                  <span className="refund-modal__val">
+                    {selectedOrder.refundBankName || (
+                      <span className="refund-modal__pending-text">รอลูกค้าระบุข้อมูล</span>
+                    )}
+                  </span>
+                </div>
+                <div className="refund-modal__row">
+                  <span className="refund-modal__label">เลขที่บัญชี:</span>
+                  <span className="refund-modal__val refund-modal__val--acc">
+                    {selectedOrder.refundAccountNo ? (
+                      <>
+                        {selectedOrder.refundAccountNo}
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm refund-modal__copy-btn"
+                          onClick={() =>
+                            handleCopy(selectedOrder.orderId, selectedOrder.refundAccountNo || '')
+                          }
+                        >
+                          <Icon
+                            name={copiedAccount === selectedOrder.orderId ? 'check' : 'clipboard'}
+                            size={13}
+                          />
+                          {copiedAccount === selectedOrder.orderId ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                        </button>
+                      </>
+                    ) : (
+                      <span className="refund-modal__pending-text">รอลูกค้าระบุข้อมูล</span>
+                    )}
+                  </span>
+                </div>
+                {selectedOrder.refundAccountName && (
+                  <div className="refund-modal__row">
+                    <span className="refund-modal__label">ชื่อบัญชีผู้รับ:</span>
+                    <span className="refund-modal__val">{selectedOrder.refundAccountName}</span>
+                  </div>
+                )}
+              </div>
+
+              {selectedOrder.refundBankName && selectedOrder.refundAccountNo && (
+                <label className="refund-modal__input-label">
+                  <span>หมายเหตุเพิ่มเติม / รหัสอ้างอิงการโอนเงิน (ถ้ามี)</span>
+                  <input
+                    type="text"
+                    className="admin-input"
+                    placeholder="เช่น โอนคืนผ่าน K-Plus สลิปอ้างอิง 123456"
+                    value={refundNote}
+                    onChange={(e) => setRefundNote(e.target.value)}
+                  />
+                </label>
               )}
-            </div>
 
-            <label className="refund-modal__input-label">
-              <span>หมายเหตุเพิ่มเติม / รหัสอ้างอิงการโอนเงิน (ถ้ามี)</span>
-              <input
-                type="text"
-                className="admin-input"
-                placeholder="เช่น โอนคืนผ่าน K-Plus สลิปอ้างอิง 123456"
-                value={refundNote}
-                onChange={(e) => setRefundNote(e.target.value)}
-              />
-            </label>
+              {modalError && <p className="refund-modal__error">{modalError}</p>}
 
-            {modalError && <p className="refund-modal__error">{modalError}</p>}
-
-            <div className="refund-modal__actions">
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={confirming}
-                onClick={() => setSelectedOrder(null)}
-              >
-                ยกเลิก
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={confirming}>
-                <Icon name="check-circle" size={16} />
-                {confirming ? 'กำลังบันทึก…' : 'ยืนยันว่าคืนเงินลูกค้าแล้ว'}
-              </button>
-            </div>
-          </form>
+              <div className="refund-modal__actions">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={confirming}
+                  onClick={() => setSelectedOrder(null)}
+                >
+                  {selectedOrder.refundBankName && selectedOrder.refundAccountNo ? 'ยกเลิก' : 'ปิด'}
+                </button>
+                {selectedOrder.refundBankName && selectedOrder.refundAccountNo && (
+                  <button type="submit" className="btn btn-primary" disabled={confirming}>
+                    <Icon name="check-circle" size={16} />
+                    {confirming ? 'กำลังบันทึก…' : 'ยืนยันว่าคืนเงินลูกค้าแล้ว'}
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
         </Modal>
       )}
     </div>

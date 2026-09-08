@@ -77,8 +77,25 @@ export default function AuthModal({ mode }: AuthModalProps) {
     navigate('/login', { state, replace: true })
   }
 
+  const mouseDownTargetRef = useRef<EventTarget | null>(null)
+
+  const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    mouseDownTargetRef.current = e.target
+  }
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (mouseDownTargetRef.current === e.currentTarget && e.target === e.currentTarget) {
+      close()
+    }
+    mouseDownTargetRef.current = null
+  }
+
   return (
-    <div className="auth-modal-backdrop" onClick={close}>
+    <div
+      className="auth-modal-backdrop"
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
+    >
       <div
         ref={boxRef}
         className="auth-modal"

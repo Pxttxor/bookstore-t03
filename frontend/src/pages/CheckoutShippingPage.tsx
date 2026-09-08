@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import OrderSummary from '../components/OrderSummary'
 import LoadingState from '../admin/components/LoadingState'
@@ -89,12 +89,16 @@ const EMPTY_FORM: Record<FieldName, string> = {
 // จะทำงานก่อนแล้วจับ `undefined` ฟอร์มจึงเปิดมาว่างถาวร (กฎใน frontend/CLAUDE.md
 // หัวข้อ deviations · แพตเทิร์นเดียวกับ BookFormPage / ReceiveGoodsPage)
 export default function CheckoutShippingPage() {
-  const { user } = useAuth()
+  const { user, initialising } = useAuth()
   const isCustomer = user?.role === 'customer'
 
-  // เส้นทาง /checkout/* ไม่มี route guard — แขกที่ยังไม่ล็อกอินเข้ามาได้
-  // จึงต้องปิดคำขอด้วย `enabled` ไม่งั้นทุกคนที่เปิดหน้านี้จะได้ 401 เปล่า ๆ
   const { data: profile, loading } = useResource(loadMyProfile, isCustomer)
+
+  if (initialising) return null
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: '/checkout/shipping', back: '/' }} replace />
+  }
 
   if (isCustomer && loading) return <LoadingState label="กำลังโหลดข้อมูลผู้รับ…" />
 
