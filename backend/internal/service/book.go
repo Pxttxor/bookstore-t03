@@ -157,7 +157,7 @@ func (s *BookService) notifyBookUpdated(
 	for _, log := range logs {
 		fields = append(fields, model.BookFieldLabels[model.BookField(log.ChangedField)])
 	}
-	body := fmt.Sprintf("หนังสือ %d · แก้ไข %s · ผู้แก้ไข %s",
+	body := fmt.Sprintf("BK%d · แก้ไข%s · ผู้แก้ไข %s",
 		bookID, strings.Join(fields, ", "), by)
 	return pushBothChannels(tx, s.notifications, model.RoleManager,
 		model.NotifyBookUpdated, "ข้อมูลหนังสือถูกแก้ไข", body,
