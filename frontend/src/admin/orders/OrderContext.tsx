@@ -71,6 +71,33 @@ interface OrderValue {
   ) => Promise<CustomerOrder>
   /** พนักงานบันทึกยืนยันว่าคืนเงินลูกค้าแล้ว */
   confirmRefund: (orderId: number, note?: string) => Promise<CustomerOrder>
+  /** พนักงานแจ้งสินค้าหมดสต็อก */
+  markOutOfStock: (
+    orderId: number,
+    note: string,
+    restockEstimate?: string,
+    restockDate?: string,
+  ) => Promise<CustomerOrder>
+  /** ลูกค้าหรือพนักงานบันทึกการตัดสินใจกรณีสินค้าหมด (รอของ / เปลี่ยนสินค้า / ยกเลิก) */
+  submitCustomerChoice: (
+    orderId: number,
+    choice: 'WAIT_RESTOCK' | 'CHANGE_PRODUCT' | 'CANCEL',
+    opts?: {
+      replacementBookId?: number
+      note?: string
+      refundBankName?: string
+      refundAccountNo?: string
+      refundAccountName?: string
+    },
+  ) => Promise<CustomerOrder>
+  /** พนักงานอนุมัติการเปลี่ยนหนังสือในคำสั่งซื้อ */
+  approveExchange: (
+    orderId: number,
+    replacementBookId: number,
+    note?: string,
+  ) => Promise<CustomerOrder>
+  /** พนักงานยืนยันว่าสินค้าเข้าสต็อกแล้ว */
+  confirmRestocked: (orderId: number) => Promise<CustomerOrder>
 }
 
 const OrderContext = createContext<OrderValue | null>(null)
@@ -87,6 +114,9 @@ const STATUS_ROUTES: Record<OrderStatus, string | null> = {
   SHIPPED: 'ship',
   DELIVERED: 'deliver',
   CANCELLED: 'cancel',
+  OUT_OF_STOCK: 'out-of-stock',
+  WAITING_RESTOCK: 'customer-choice',
+  EXCHANGE_REQUESTED: 'customer-choice',
   // สถานะตั้งต้นเกิดตอนสร้างใบ ไม่มีเส้นทางให้ย้อนกลับมา
   PENDING_CONFIRM: null,
 }
@@ -192,6 +222,67 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       return updated
     }
 
+    const markOutOfStock = async (
+      orderId: number,
+      note: string,
+      restockEstimate?: string,
+      restockDate?: string,
+    ) => {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${orderId}/out-of-stock`, {
+        note: note.trim(),
+        restockEstimate: restockEstimate?.trim() || undefined,
+        restockDate: restockDate || undefined,
+      })
+      apply((prev) => prev.map((o) => (o.orderId === orderId ? updated : o)))
+      await refresh()
+      return updated
+    }
+
+    const submitCustomerChoice = async (
+      orderId: number,
+      choice: 'WAIT_RESTOCK' | 'CHANGE_PRODUCT' | 'CANCEL',
+      opts?: {
+        replacementBookId?: number
+        note?: string
+        refundBankName?: string
+        refundAccountNo?: string
+        refundAccountName?: string
+      },
+    ) => {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${orderId}/customer-choice`, {
+        choice,
+        replacementBookId: opts?.replacementBookId,
+        note: opts?.note?.trim() || undefined,
+        refundBankName: opts?.refundBankName?.trim() || undefined,
+        refundAccountNo: opts?.refundAccountNo?.trim() || undefined,
+        refundAccountName: opts?.refundAccountName?.trim() || undefined,
+      })
+      apply((prev) => prev.map((o) => (o.orderId === orderId ? updated : o)))
+      await refresh()
+      return updated
+    }
+
+    const approveExchange = async (
+      orderId: number,
+      replacementBookId: number,
+      note?: string,
+    ) => {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${orderId}/approve-exchange`, {
+        replacementBookId,
+        note: note?.trim() || undefined,
+      })
+      apply((prev) => prev.map((o) => (o.orderId === orderId ? updated : o)))
+      await refresh()
+      return updated
+    }
+
+    const confirmRestocked = async (orderId: number) => {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${orderId}/confirm-restocked`, {})
+      apply((prev) => prev.map((o) => (o.orderId === orderId ? updated : o)))
+      await refresh()
+      return updated
+    }
+
     return {
       orders,
       loading,
@@ -203,6 +294,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       updateStatus,
       updateRefundInfo,
       confirmRefund,
+      markOutOfStock,
+      submitCustomerChoice,
+      approveExchange,
+      confirmRestocked,
     }
   }, [data, loading, error, reload, reloadNotifications, apply])
 

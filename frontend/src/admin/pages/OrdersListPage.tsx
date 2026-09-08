@@ -36,6 +36,9 @@ const STATUS_OPTIONS: OrderStatus[] = [
   'DELIVERED',
   'CANCELLED',
   'REJECTED',
+  'OUT_OF_STOCK',
+  'WAITING_RESTOCK',
+  'EXCHANGE_REQUESTED',
 ]
 
 export default function OrdersListPage() {
@@ -72,7 +75,13 @@ export default function OrdersListPage() {
   const waitingCount = useMemo(() => {
     const mine: Partial<Record<OrderStatus, boolean>> =
       role === 'sales'
-        ? { PENDING_CONFIRM: true, STOCK_CONFIRMED: true, VERIFYING_PAYMENT: true }
+        ? {
+            PENDING_CONFIRM: true,
+            STOCK_CONFIRMED: true,
+            VERIFYING_PAYMENT: true,
+            WAITING_RESTOCK: true,
+            EXCHANGE_REQUESTED: true,
+          }
         : role === 'warehouse'
           ? { PAID: true, PACKING: true }
           : role === 'delivery'

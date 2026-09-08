@@ -13,6 +13,7 @@ func TestOrderDTOCancellationMatchesStateMachine(t *testing.T) {
 		model.OrderStatusPaid, model.OrderStatusPacking, model.OrderStatusReadyToShip,
 		model.OrderStatusShipped, model.OrderStatusDelivered,
 		model.OrderStatusCancelled, model.OrderStatusRejected,
+		model.OrderStatusOutOfStock, model.OrderStatusWaitingRestock, model.OrderStatusExchange,
 	} {
 		t.Run(string(status), func(t *testing.T) {
 			order := model.Order{Status: status}

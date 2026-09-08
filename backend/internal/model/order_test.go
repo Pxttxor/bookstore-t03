@@ -156,6 +156,9 @@ func TestOrderLabelsMatchFrontend(t *testing.T) {
 		OrderStatusDelivered:        "ส่งถึงแล้ว",
 		OrderStatusCancelled:        "ยกเลิก",
 		OrderStatusRejected:         "ปฏิเสธ",
+		OrderStatusOutOfStock:       "สินค้าหมด (รอลูกค้าตัดสินใจ)",
+		OrderStatusWaitingRestock:   "รอสินค้าเติมสต็อก",
+		OrderStatusExchange:         "รอดำเนินการเปลี่ยนสินค้า",
 	}
 	if len(OrderStatuses()) != len(want) {
 		t.Fatalf("สถานะมี %d ค่า ต้องการ %d", len(OrderStatuses()), len(want))
@@ -282,3 +285,46 @@ func TestOrderCancellationAndRefundFields(t *testing.T) {
 		t.Errorf("RefundNote ควรเป็น 'คืนเงินลูกค้าไปแล้ว' ได้ %s", order.RefundNote)
 	}
 }
+
+func TestOrderOutOfStockChangeProductAndCancel(t *testing.T) {
+	// 1. ตรวจสอบการเปลี่ยนสถานะจาก OUT_OF_STOCK ไป CANCELLED
+	order := sampleOrder()
+	order.Status = OrderStatusOutOfStock
+
+	if !order.CanTransitionTo(OrderStatusCancelled) {
+		t.Errorf("OrderStatusOutOfStock ต้องสามารถเปลี่ยนสถานะไป OrderStatusCancelled ได้")
+	}
+
+	at := time.Now().UTC()
+	err := order.UpdateStatus(OrderStatusCancelled, "customer", "ลูกค้าขอเปลี่ยนสินค้า (ยกเลิกรายการทั้งหมดเพื่อคืนเงิน)", at)
+	if err != nil {
+		t.Fatalf("UpdateStatus ไป OrderStatusCancelled ไม่สำเร็จ: %v", err)
+	}
+	if order.Status != OrderStatusCancelled {
+		t.Errorf("สถานะต้องเป็น CANCELLED ได้ %s", order.Status)
+	}
+
+	// 2. ตรวจสอบเงื่อนไขการคืนสิทธิ์โค้ดส่วนลดจากการแลกแต้ม (Redemption)
+	usedTime := at.Add(-time.Hour)
+	orderID := 1001
+	redemption := Redemption{
+		RedemptionID: 1,
+		MemberID:     1,
+		RewardID:     1,
+		PointsUsed:   5,
+		CouponCode:   "RWD00001",
+		OrderID:      &orderID,
+		UsedDate:     &usedTime,
+	}
+	if !redemption.IsUsed() {
+		t.Errorf("คูปองที่ผูกกับ order และ used_date ต้องถือว่าถูกใช้แล้ว")
+	}
+
+	// จำลองการรีเซ็ตสิทธิ์โค้ดส่วนลดเมื่อออร์เดอร์ถูกยกเลิก
+	redemption.OrderID = nil
+	redemption.UsedDate = nil
+	if redemption.IsUsed() {
+		t.Errorf("คูปองที่ถูกรีเซ็ต (order_id=nil, used_date=nil) ต้องถือว่ายังไม่ได้ใช้ เพื่อให้ลูกค้าใช้ซ้ำได้")
+	}
+}
+

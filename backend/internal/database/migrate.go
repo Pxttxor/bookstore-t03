@@ -124,6 +124,19 @@ func Migrate(db *gorm.DB) error {
 	if err := db.Exec(backfillCustomerPhone).Error; err != nil {
 		return fmt.Errorf("เติมค่า customer_phone ใน customer_order ไม่สำเร็จ: %w", err)
 	}
+	orderColumns := []string{
+		`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS out_of_stock_note text`,
+		`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS restock_estimate varchar(100)`,
+		`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS restock_date date`,
+		`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS customer_choice varchar(50)`,
+		`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS replacement_book_id integer`,
+		`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS replacement_note text`,
+	}
+	for _, stmt := range orderColumns {
+		if err := db.Exec(stmt).Error; err != nil {
+			return fmt.Errorf("เพิ่มคอลัมน์ใน customer_order ไม่สำเร็จ (%s): %w", stmt, err)
+		}
+	}
 	return applyViews(db)
 }
 
@@ -254,6 +267,7 @@ var foreignKeys = []foreignKey{
 	{"stock_discrepancy_report", "book_id", "book", "book_id"},
 	{"customer_order", "customer_id", "customer", "customer_id"},
 	{"customer_order", "promotion_id", "promotion", "promotion_id"},
+	{"customer_order", "replacement_book_id", "book", "book_id"},
 	{"customer_order_item", "book_id", "book", "book_id"},
 	{"payment", "order_id", "customer_order", "order_id"},
 	{"payment", "bank_id", "bank", "bank_id"},

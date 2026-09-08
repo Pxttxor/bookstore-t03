@@ -6,7 +6,7 @@ import LoadingState from '../admin/components/LoadingState'
 import { useAuth } from '../auth/AuthContext'
 import { formatPrice } from '../data/money'
 import { useMembership } from '../membership/MembershipContext'
-import { REWARD_TYPE_LABELS, type Redemption } from '../membership/membership'
+import { type Redemption } from '../membership/membership'
 import './MemberRewardsPage.css'
 
 export default function MemberRewardsPage() {
@@ -70,19 +70,21 @@ export default function MemberRewardsPage() {
       setJustRedeemed(redemption)
       setError('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'แลกของรางวัลไม่สำเร็จ')
+      setError(e instanceof Error ? e.message : 'แลกคูปองส่วนลดไม่สำเร็จ')
       setJustRedeemed(null)
     } finally {
       setRedeemingId(null)
     }
   }
 
-  // ของรางวัลที่แลกได้ด้วยแต้มปัจจุบันขึ้นก่อน แล้วเรียงตามแต้มที่ใช้
-  const catalogue = [...rewards].sort(
-    (a, b) =>
-      Number(b.pointCost <= member.pointBalance) - Number(a.pointCost <= member.pointBalance) ||
-      a.pointCost - b.pointCost,
-  )
+  // คัดกรองเฉพาะประเภทส่วนลด (DISCOUNT) และเรียงตามแต้มที่แลกได้
+  const catalogue = rewards
+    .filter((r) => r.type === 'DISCOUNT')
+    .sort(
+      (a, b) =>
+        Number(b.pointCost <= member.pointBalance) - Number(a.pointCost <= member.pointBalance) ||
+        a.pointCost - b.pointCost,
+    )
 
   const myCoupons = [...redemptions].sort((a, b) =>
     b.redeemedDate.localeCompare(a.redeemedDate),
@@ -92,9 +94,9 @@ export default function MemberRewardsPage() {
     <div className="rewards">
       <header className="rewards__head">
         <div>
-          <h1 className="rewards__title">แลกของรางวัล</h1>
+          <h1 className="rewards__title">แลกแต้มส่วนลด</h1>
           <p className="rewards__subtitle">
-            ใช้แต้มสะสมแลกส่วนลดและของรางวัลจาก BookHaven
+            ใช้แต้มสะสมแลกคูปองส่วนลดจาก BookHaven
           </p>
         </div>
         <div className="rewards__balance">
@@ -126,13 +128,11 @@ export default function MemberRewardsPage() {
               className={'rewards__card' + (affordable ? '' : ' is-locked')}
             >
               <span className="rewards__type">
-                <Icon name={reward.type === 'DISCOUNT' ? 'credit-card' : 'gift'} size={16} />
-                {REWARD_TYPE_LABELS[reward.type]}
+                <Icon name="tag" size={16} />
+                ส่วนลด
               </span>
               <h2 className="rewards__name">{reward.name}</h2>
-              {reward.type === 'DISCOUNT' && (
-                <p className="rewards__value">มูลค่า {formatPrice(reward.discountValue)}</p>
-              )}
+              <p className="rewards__value">มูลค่าส่วนลด {formatPrice(reward.discountValue)}</p>
               <p className="rewards__cost">
                 <strong>{reward.pointCost.toLocaleString('th-TH')}</strong> แต้ม
               </p>
@@ -151,9 +151,9 @@ export default function MemberRewardsPage() {
       </section>
 
       <section className="rewards__panel">
-        <h2 className="rewards__panel-title">คูปองของฉัน</h2>
+        <h2 className="rewards__panel-title">คูปองส่วนลดของฉัน</h2>
         {myCoupons.length === 0 ? (
-          <p className="rewards__empty">ยังไม่เคยแลกของรางวัล — เลือกจากรายการด้านบนได้เลย</p>
+          <p className="rewards__empty">ยังไม่เคยแลกคูปองส่วนลด — เลือกแลกจากรายการด้านบนได้เลย</p>
         ) : (
           <ul className="rewards__coupons">
             {myCoupons.map((redemption) => (

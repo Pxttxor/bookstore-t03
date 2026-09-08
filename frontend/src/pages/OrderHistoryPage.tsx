@@ -84,6 +84,21 @@ export default function OrderHistoryPage() {
                         <Icon name="alert-triangle" size={14} /> สลิปไม่ผ่าน{order.cancelReason ? `: ${order.cancelReason}` : ''} (คลิกเพื่อแนบใหม่)
                       </span>
                     )}
+                    {order.status === 'OUT_OF_STOCK' && (
+                      <span className="history__cancel-reason history__cancel-reason--rejected">
+                        <Icon name="alert-triangle" size={14} /> สินค้าหมดชั่วคราว — รอลูกค้าตัดสินใจ (คลิกเพื่อเลือกวิธีดำเนินการ)
+                      </span>
+                    )}
+                    {order.status === 'WAITING_RESTOCK' && (
+                      <span className="history__cancel-reason" style={{ color: '#0e7490', backgroundColor: '#ecfeff', borderColor: '#a5f3fc' }}>
+                        <Icon name="clock" size={14} /> อยู่ระหว่างรอสินค้าเติมสต็อก
+                      </span>
+                    )}
+                    {order.status === 'EXCHANGE_REQUESTED' && (
+                      <span className="history__cancel-reason" style={{ color: '#7e22ce', backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }}>
+                        <Icon name="edit" size={14} /> รอดำเนินการเปลี่ยนสินค้า
+                      </span>
+                    )}
                   </div>
                   <div className="history__card-side">
                     <StatusBadge tone={getOrderStatusTone(order)}>

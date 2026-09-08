@@ -59,6 +59,9 @@ var OrderStatusLabels = map[OrderStatus]string{
 	OrderStatusDelivered:        "ส่งถึงแล้ว",
 	OrderStatusCancelled:        "ยกเลิก",
 	OrderStatusRejected:         "ปฏิเสธ",
+	OrderStatusOutOfStock:       "สินค้าหมด (รอลูกค้าตัดสินใจ)",
+	OrderStatusWaitingRestock:   "รอสินค้าเติมสต็อก",
+	OrderStatusExchange:         "รอดำเนินการเปลี่ยนสินค้า",
 }
 
 var OrderChannelLabels = map[OrderChannel]string{

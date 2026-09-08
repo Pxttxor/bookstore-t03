@@ -6,6 +6,7 @@ import LoadingState from '../admin/components/LoadingState'
 import { useResource } from '../api/useResource'
 import { ApiError } from '../api/client'
 import { loadMyProfile, saveMyAddress, type MyProfile } from '../data/profile'
+import { formatPhoneNumber } from '../data/phone'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
 import './CheckoutShippingPage.css'
@@ -15,6 +16,7 @@ function Field({
   placeholder,
   required,
   type = 'text',
+  maxLength,
   value,
   onChange,
   error,
@@ -23,6 +25,7 @@ function Field({
   placeholder?: string
   required?: boolean
   type?: string
+  maxLength?: number
   value?: string
   onChange?: (value: string) => void
   error?: string
@@ -36,6 +39,7 @@ function Field({
         className={'field__input' + (error ? ' field__input--error' : '')}
         type={type}
         placeholder={placeholder}
+        maxLength={maxLength}
         value={value}
         aria-invalid={error ? true : undefined}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
@@ -113,7 +117,7 @@ function ShippingForm({ profile }: { profile: MyProfile | undefined }) {
   const [form, setForm] = useState<Record<FieldName, string>>(() => ({
     ...EMPTY_FORM,
     fullName: profile?.name ?? '',
-    mobile: profile?.phone ?? '',
+    mobile: formatPhoneNumber(profile?.phone ?? ''),
   }))
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
 
@@ -125,7 +129,8 @@ function ShippingForm({ profile }: { profile: MyProfile | undefined }) {
   const [submitting, setSubmitting] = useState(false)
 
   const set = (key: FieldName) => (value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    const formatted = key === 'mobile' ? formatPhoneNumber(value) : value
+    setForm((prev) => ({ ...prev, [key]: formatted }))
     setErrors((prev) => ({ ...prev, [key]: undefined }))
   }
 
@@ -137,8 +142,8 @@ function ShippingForm({ profile }: { profile: MyProfile | undefined }) {
       if (!form[field].trim()) found[field] = `กรุณากรอก${LABELS[field]}`
     }
     const digits = form.mobile.replace(/\D/g, '')
-    if (!found.mobile && (digits.length < 9 || digits.length > 10)) {
-      found.mobile = 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง'
+    if (!found.mobile && digits.length !== 10) {
+      found.mobile = 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก'
     }
     if (!useSaved && !found.postalCode && !/^\d{5}$/.test(form.postalCode.trim())) {
       found.postalCode = 'รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก'
@@ -218,6 +223,8 @@ function ShippingForm({ profile }: { profile: MyProfile | undefined }) {
               <Field
                 label={LABELS.mobile}
                 placeholder="081-234-5678"
+                type="tel"
+                maxLength={12}
                 required
                 value={form.mobile}
                 onChange={set('mobile')}

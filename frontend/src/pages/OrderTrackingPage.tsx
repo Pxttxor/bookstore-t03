@@ -6,6 +6,7 @@ import BookCover from '../components/BookCover'
 import LoadingState from '../admin/components/LoadingState'
 import ErrorState from '../admin/components/ErrorState'
 import EmptyState from '../admin/components/EmptyState'
+import Modal from '../admin/components/Modal'
 import { apiGet, apiPost, apiDelete, ApiError } from '../api/client'
 import { formatPrice } from '../data/money'
 import { useAuth } from '../auth/AuthContext'
@@ -294,7 +295,7 @@ export default function OrderTrackingPage() {
 
 function RealOrderView({ order }: { order: CustomerOrder }) {
   const { user } = useAuth()
-  const { updateRefundInfo, reload } = useOrders()
+  const { updateRefundInfo, submitCustomerChoice, reload } = useOrders()
   const { banks } = usePayments()
   const [reviews, setReviews] = useState<CustomerReview[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
@@ -302,6 +303,78 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
 
   const [localOrder, setLocalOrder] = useState<CustomerOrder | null>(null)
   const currentOrder = localOrder && localOrder.orderId === order.orderId ? localOrder : order
+
+  // Out of stock customer decision state
+  const [choiceLoading, setChoiceLoading] = useState(false)
+  const [choiceError, setChoiceError] = useState('')
+  const [choiceSuccess, setChoiceSuccess] = useState('')
+
+  // Change product modal state
+  const [showExchangeModal, setShowExchangeModal] = useState(false)
+  const [exchangeNote, setExchangeNote] = useState('')
+
+  // Cancel modal state
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelNote, setCancelNote] = useState('')
+
+  const handleWaitRestock = async () => {
+    if (choiceLoading) return
+    setChoiceLoading(true)
+    setChoiceError('')
+    setChoiceSuccess('')
+    try {
+      const updated = await submitCustomerChoice(currentOrder.orderId, 'WAIT_RESTOCK')
+      setLocalOrder(updated)
+      setChoiceSuccess('บันทึกความประสงค์รอสินค้าเติมสต็อกเรียบร้อยแล้ว เมื่อสินค้าเข้าสต็อกทางร้านจะจัดส่งให้ทันที')
+      await reload()
+    } catch (err) {
+      setChoiceError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setChoiceLoading(false)
+    }
+  }
+
+  const handleConfirmExchange = async () => {
+    if (choiceLoading) return
+    setChoiceLoading(true)
+    setChoiceError('')
+    setChoiceSuccess('')
+    try {
+      const updated = await submitCustomerChoice(currentOrder.orderId, 'CHANGE_PRODUCT', {
+        note: exchangeNote.trim() || undefined,
+      })
+      setLocalOrder(updated)
+      setShowExchangeModal(false)
+      setChoiceSuccess('ยกเลิกคำสั่งซื้อเพื่อเปลี่ยนสินค้าเรียบร้อยแล้ว กรุณากรอกข้อมูลบัญชีรับเงินคืนด้านล่าง ทางร้านจะดำเนินการคืนเงินให้ท่านเต็มจำนวน')
+      await reload()
+    } catch (err) {
+      setChoiceError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกคำสั่งซื้อเพื่อเปลี่ยนสินค้าได้')
+    } finally {
+      setChoiceLoading(false)
+    }
+  }
+
+  const handleConfirmCancel = async () => {
+    if (choiceLoading) return
+    setChoiceLoading(true)
+    setChoiceError('')
+    setChoiceSuccess('')
+    try {
+      const updated = await submitCustomerChoice(currentOrder.orderId, 'CANCEL', {
+        note: cancelNote.trim() || undefined,
+      })
+      setLocalOrder(updated)
+      setShowCancelModal(false)
+      setChoiceSuccess('ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว กรุณากรอกข้อมูลบัญชีธนาคารด้านล่างเพื่อรับเงินคืน')
+      await reload()
+    } catch (err) {
+      setChoiceError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกคำสั่งซื้อได้')
+    } finally {
+      setChoiceLoading(false)
+    }
+  }
+
+
 
   // Re-upload slip states for REJECTED orders
   const [newSlip, setNewSlip] = useState<File | null>(null)
@@ -505,6 +578,9 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
   const isCancelled = currentOrder.status === 'CANCELLED'
   const isRejected = currentOrder.status === 'REJECTED'
   const isVerifying = currentOrder.status === 'VERIFYING_PAYMENT'
+  const isOutOfStock = currentOrder.status === 'OUT_OF_STOCK'
+  const isWaitingRestock = currentOrder.status === 'WAITING_RESTOCK'
+  const isExchangeRequested = currentOrder.status === 'EXCHANGE_REQUESTED'
 
   const trackingNumber = currentOrder.shipment?.trackingNumber?.trim() || ''
   const carrier = currentOrder.shipment?.carrier || 'รอจัดส่ง'
@@ -567,6 +643,14 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 <strong>เหตุผลที่ยกเลิก:</strong> {currentOrder.cancelReason}
               </p>
             )}
+            {currentOrder.discountCode && (
+              <div className="track__discount-reset-banner" style={{ marginTop: '10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontSize: '13px' }}>
+                <Icon name="tag" size={16} />
+                <span>
+                  <strong>คืนสิทธิ์โค้ดส่วนลดเรียบร้อย:</strong> รหัส <strong>{currentOrder.discountCode}</strong> ได้รับการรีเซ็ตให้สามารถนำกลับไปใช้สั่งซื้อใหม่ได้แล้ว
+                </span>
+              </div>
+            )}
           </div>
         ) : isRejected ? (
           <div className="track__rejected-box">
@@ -586,6 +670,73 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
                 <strong>เหตุผลที่ปฏิเสธจากทางร้าน:</strong> {currentOrder.cancelReason}
               </p>
             )}
+          </div>
+        ) : isOutOfStock ? (
+          <div className="track__oos-box">
+            <div className="track__oos-header">
+              <Icon name="alert-triangle" size={24} />
+              <div>
+                <p className="track__oos-title">สินค้าหมดสต็อกชั่วคราว (รอลูกค้าตัดสินใจ)</p>
+                <p className="track__oos-desc">
+                  ขออภัยในความไม่สะดวก ทางร้านได้ตรวจสอบแล้วพบว่าสินค้าหมดสต็อกชั่วคราว ท่านสามารถเลือกวิธีการดำเนินการต่อได้ 3 รูปแบบตามที่สะดวกในกล่องด้านล่าง
+                </p>
+              </div>
+            </div>
+            {currentOrder.outOfStockNote && (
+              <p className="track__oos-note">
+                <strong>ข้อความจากทางร้าน:</strong> {currentOrder.outOfStockNote}
+              </p>
+            )}
+            {(currentOrder.restockEstimate || currentOrder.restockDate) && (
+              <div className="track__oos-estimate">
+                <Icon name="clock" size={16} />
+                <span>
+                  <strong>ประมาณการสินค้าเข้า:</strong>{' '}
+                  {currentOrder.restockEstimate || (currentOrder.restockDate ? new Date(currentOrder.restockDate).toLocaleDateString('th-TH') : '')}
+                </span>
+              </div>
+            )}
+          </div>
+        ) : isWaitingRestock ? (
+          <div className="track__waiting-box">
+            <div className="track__waiting-header">
+              <Icon name="clock" size={24} />
+              <div>
+                <p className="track__waiting-title">อยู่ระหว่างรอสินค้าเติมสต็อก</p>
+                <p className="track__waiting-desc">
+                  ท่านได้เลือก: <strong>ยินดีรอสินค้าเติมสต็อก</strong>{' '}
+                  {currentOrder.restockEstimate || (currentOrder.restockDate ? `(คาดว่าเข้า: ${currentOrder.restockEstimate || new Date(currentOrder.restockDate).toLocaleDateString('th-TH')})` : '')}
+                </p>
+                <p className="track__waiting-sub">
+                  เมื่อสินค้าเข้าสต็อกแล้ว เจ้าหน้าที่จะดำเนินการยืนยันสต็อกและจัดส่งให้ท่านโดยเร็วที่สุด
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : isExchangeRequested ? (
+          <div className="track__exchange-box">
+            <div className="track__exchange-header">
+              <Icon name="edit" size={24} />
+              <div>
+                <p className="track__exchange-title">อยู่ระหว่างรอดำเนินการเปลี่ยนสินค้า</p>
+                <p className="track__exchange-desc">
+                  ท่านได้เลือก: <strong>ขอเปลี่ยนสินค้าเป็นเล่มอื่น</strong>
+                  {currentOrder.replacementBookTitle ? (
+                    <span> (เล่มที่เลือก: <strong>{currentOrder.replacementBookTitle}</strong>)</span>
+                  ) : currentOrder.replacementBookId ? (
+                    <span> (รหัสเล่มที่เลือก: <strong>#{currentOrder.replacementBookId}</strong>)</span>
+                  ) : null}
+                </p>
+                {currentOrder.replacementNote && (
+                  <p className="track__exchange-note">
+                    <strong>หมายเหตุ:</strong> {currentOrder.replacementNote}
+                  </p>
+                )}
+                <p className="track__exchange-sub">
+                  อยู่ระหว่างรอเจ้าหน้าที่ฝ่ายขายตรวจสอบและปรับปรุงรายการคำสั่งซื้อให้ท่าน
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="track__steps">
@@ -621,6 +772,144 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
           </div>
         )}
       </section>
+
+      {/* ── Card เลือกดำเนินการกรณีสินค้าหมด ── */}
+      {isOutOfStock && (
+        <section className="track__oos-card">
+          <div className="track__oos-card-head">
+            <Icon name="help" size={24} />
+            <div>
+              <h3 className="track__oos-card-title">กรุณาเลือกวิธีการดำเนินการต่อ</h3>
+              <p className="track__oos-card-subtitle">
+                เพื่อความสะดวกของท่าน ท่านสามารถเลือกได้ 3 รูปแบบตามที่สะดวก
+              </p>
+            </div>
+          </div>
+
+          {choiceError && (
+            <div className="track__choice-error">
+              <Icon name="alert-triangle" size={16} />
+              <span>{choiceError}</span>
+            </div>
+          )}
+
+          {choiceSuccess && (
+            <div className="track__choice-success">
+              <Icon name="check-circle" size={16} />
+              <span>{choiceSuccess}</span>
+            </div>
+          )}
+
+          <div className="track__oos-card-grid">
+            {/* 1. รอสินค้า */}
+            <div className="track__oos-choice-item is-wait">
+              <div className="track__oos-choice-icon is-wait">
+                <Icon name="clock" size={26} />
+              </div>
+              <div className="track__oos-choice-body">
+                <h4 className="track__oos-choice-title">1. รอสินค้าเติมสต็อก</h4>
+                <p className="track__oos-choice-desc">
+                  ยินดีรอสินค้าตามกำหนดการที่ร้านแจ้ง{' '}
+                  {currentOrder.restockEstimate || (currentOrder.restockDate ? `(${currentOrder.restockEstimate || new Date(currentOrder.restockDate).toLocaleDateString('th-TH')})` : '')}
+                  {' '}เมื่อของเข้าสต็อก ทางร้านจะรีบจัดส่งให้ทันที
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary track__oos-choice-btn"
+                disabled={choiceLoading}
+                onClick={() => void handleWaitRestock()}
+              >
+                <Icon name="check" size={16} /> ยืนยันรอสินค้า
+              </button>
+            </div>
+
+            {/* 2. เปลี่ยนสินค้า */}
+            <div className="track__oos-choice-item is-exchange">
+              <div className="track__oos-choice-icon is-exchange">
+                <Icon name="book" size={26} />
+              </div>
+              <div className="track__oos-choice-body">
+                <h4 className="track__oos-choice-title">2. ต้องการเปลี่ยนสินค้า</h4>
+                <p className="track__oos-choice-desc">
+                  ยกเลิกคำสั่งซื้อนี้ทั้งหมดและดำเนินการคืนเงิน เพื่อให้ท่านสามารถเลือกสั่งซื้อหนังสือเล่มใหม่ตามต้องการ
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary track__oos-choice-btn"
+                disabled={choiceLoading}
+                onClick={() => {
+                  setExchangeNote('')
+                  setShowExchangeModal(true)
+                }}
+              >
+                <Icon name="book" size={16} /> เปลี่ยนสินค้า (ยกเลิกและคืนเงิน)
+              </button>
+            </div>
+
+            {/* 3. ยกเลิกคำสั่งซื้อ */}
+            <div className="track__oos-choice-item is-cancel">
+              <div className="track__oos-choice-icon is-cancel">
+                <Icon name="close" size={26} />
+              </div>
+              <div className="track__oos-choice-body">
+                <h4 className="track__oos-choice-title">3. ขอยกเลิกคำสั่งซื้อ</h4>
+                <p className="track__oos-choice-desc">
+                  ยกเลิกคำสั่งซื้อนี้ และกรอกข้อมูลเลขบัญชีธนาคารเพื่อรับเงินคืนเต็มจำนวน
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline-danger track__oos-choice-btn"
+                disabled={choiceLoading}
+                onClick={() => {
+                  setCancelNote('')
+                  setShowCancelModal(true)
+                }}
+              >
+                <Icon name="close" size={16} /> ยกเลิกคำสั่งซื้อ
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── ตัวเลือกเปลี่ยนใจสำหรับสถานะ WAITING_RESTOCK หรือ EXCHANGE_REQUESTED ── */}
+      {(isWaitingRestock || isExchangeRequested) && (
+        <section className="track__oos-secondary-bar">
+          <span className="track__oos-secondary-label">
+            <Icon name="help" size={16} /> ต้องการเปลี่ยนตัวเลือกการดำเนินการ?
+          </span>
+          <div className="track__oos-secondary-btns">
+
+            {isExchangeRequested && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                disabled={choiceLoading}
+                onClick={() => {
+                  setExchangeNote(currentOrder.replacementNote || '')
+                  setShowExchangeModal(true)
+                }}
+              >
+                <Icon name="book" size={14} /> ต้องการเปลี่ยนสินค้า (ยกเลิกและคืนเงิน)
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-outline-danger btn-sm"
+              disabled={choiceLoading}
+              onClick={() => {
+                setCancelNote('')
+                setShowCancelModal(true)
+              }}
+            >
+              <Icon name="close" size={14} /> ขอยกเลิกคำสั่งซื้อเพื่อรับเงินคืน
+            </button>
+          </div>
+        </section>
+      )}
 
       {isRejected && (
         <section className="track__reupload-card">
@@ -1118,6 +1407,128 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
           )}
         </div>
       </div>
+
+      {/* ── Modal เลือกสินค้าเปลี่ยน ── */}
+      {showExchangeModal && (
+        <Modal
+          title="ยืนยันยกเลิกคำสั่งซื้อเพื่อเปลี่ยนสินค้า"
+          onClose={() => setShowExchangeModal(false)}
+          footer={
+            <div className="track__modal-foot">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowExchangeModal(false)}
+              >
+                ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                disabled={choiceLoading}
+                onClick={() => void handleConfirmExchange()}
+              >
+                <Icon name="check" size={16} />
+                {choiceLoading ? 'กำลังดำเนินการ…' : 'ยืนยันยกเลิกรายการและขอคืนเงิน'}
+              </button>
+            </div>
+          }
+        >
+          <div className="track__cancel-modal-body">
+            <div className="track__cancel-modal-alert">
+              <Icon name="alert-triangle" size={24} />
+              <div>
+                <p className="track__cancel-modal-warn">
+                  ยกเลิกคำสั่งซื้อ <strong>{formatOrderCode(currentOrder.orderId)}</strong> เพื่อเปลี่ยนสินค้าใหม่
+                </p>
+                <p className="track__cancel-modal-desc">
+                  เนื่องจากสินค้าหมดสต็อก ระบบจะทำการ<strong>ยกเลิกคำสั่งซื้อนี้ทั้งหมด</strong> และ<strong>คืนเงินให้ท่านเต็มจำนวน</strong> เพื่อให้ท่านสามารถเลือกสั่งซื้อหนังสือเล่มใหม่ตามต้องการได้ทันที
+                </p>
+              </div>
+            </div>
+
+            {currentOrder.discountCode && (
+              <div className="track__modal-discount-info" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px', margin: '12px 0', display: 'flex', alignItems: 'center', gap: '8px', color: '#166534', fontSize: '13px' }}>
+                <Icon name="tag" size={18} />
+                <span>
+                  <strong>คืนสิทธิ์โค้ดส่วนลด:</strong> คำสั่งซื้อนี้มีการใช้โค้ด <strong>{currentOrder.discountCode}</strong> เมื่อกดยืนยันแล้ว ระบบจะคืนสิทธิ์ให้ท่านนำไปใช้สั่งซื้อใหม่ได้ทันที
+                </span>
+              </div>
+            )}
+
+            <label className="track__modal-note-label">
+              <span>ระบุหมายเหตุหรือหนังสือที่ต้องการเปลี่ยน (ไม่บังคับ)</span>
+              <textarea
+                rows={2}
+                placeholder="เช่น ต้องการเปลี่ยนเป็นหนังสือ... หรือเหตุผลเพิ่มเติม"
+                value={exchangeNote}
+                onChange={(e) => setExchangeNote(e.target.value)}
+              />
+            </label>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal ยืนยันการยกเลิกคำสั่งซื้อ ── */}
+      {showCancelModal && (
+        <Modal
+          title="ยืนยันการยกเลิกคำสั่งซื้อ"
+          onClose={() => setShowCancelModal(false)}
+          footer={
+            <div className="track__modal-foot">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowCancelModal(false)}
+              >
+                ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                disabled={choiceLoading}
+                onClick={() => void handleConfirmCancel()}
+              >
+                <Icon name="close" size={16} />
+                {choiceLoading ? 'กำลังดำเนินการ…' : 'ยืนยันยกเลิกคำสั่งซื้อ'}
+              </button>
+            </div>
+          }
+        >
+          <div className="track__cancel-modal-body">
+            <div className="track__cancel-modal-alert">
+              <Icon name="alert-triangle" size={24} />
+              <div>
+                <p className="track__cancel-modal-warn">
+                  ท่านกำลังจะยกเลิกคำสั่งซื้อ <strong>{formatOrderCode(currentOrder.orderId)}</strong>
+                </p>
+                <p className="track__cancel-modal-desc">
+                  เมื่อกดยืนยันแล้ว คำสั่งซื้อจะถูกยกเลิก และท่านสามารถกรอกข้อมูลเลขที่บัญชีธนาคารเพื่อรับเงินคืนเต็มจำนวนได้ทันที
+                </p>
+              </div>
+            </div>
+
+            {currentOrder.discountCode && (
+              <div className="track__modal-discount-info" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px', margin: '12px 0', display: 'flex', alignItems: 'center', gap: '8px', color: '#166534', fontSize: '13px' }}>
+                <Icon name="tag" size={18} />
+                <span>
+                  <strong>คืนสิทธิ์โค้ดส่วนลด:</strong> คำสั่งซื้อนี้มีการใช้โค้ด <strong>{currentOrder.discountCode}</strong> เมื่อกดยืนยันยกเลิกแล้ว ระบบจะคืนสิทธิ์ให้ท่านนำไปใช้สั่งซื้อใหม่ได้ทันที
+                </span>
+              </div>
+            )}
+
+            <label className="track__modal-note-label">
+              <span>เหตุผลหรือข้อความเพิ่มเติม (ไม่บังคับ)</span>
+              <textarea
+                rows={2}
+                placeholder="ระบุเหตุผลในการยกเลิก..."
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+              />
+            </label>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

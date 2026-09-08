@@ -237,7 +237,7 @@ func (r *MembershipRepository) PointTransactions(memberID int) ([]model.PointTra
 
 func (r *MembershipRepository) ListRewards(db *gorm.DB) ([]model.Reward, error) {
 	var rewards []model.Reward
-	err := db.Order("point_cost, reward_id").Find(&rewards).Error
+	err := db.Where("type = ?", model.RewardTypeDiscount).Order("point_cost, reward_id").Find(&rewards).Error
 	return rewards, err
 }
 
@@ -326,3 +326,28 @@ func (r *MembershipRepository) MarkRedemptionUsed(tx *gorm.DB, redemptionID int,
 			"used_date": at,
 		}).Error
 }
+
+// ResetRedemptionUsed — คืนสิทธิ์การใช้งานคูปองส่วนลดจากการแลกแต้มเมื่อคำสั่งซื้อถูกยกเลิก
+func (r *MembershipRepository) ResetRedemptionUsed(tx *gorm.DB, orderID int) error {
+	return tx.Model(&model.Redemption{}).
+		Where("order_id = ?", orderID).
+		Updates(map[string]any{
+			"order_id":  nil,
+			"used_date": nil,
+		}).Error
+}
+
+// ResetRedemptionByCode — คืนสิทธิ์การใช้งานคูปองส่วนลดด้วยรหัสคูปอง
+func (r *MembershipRepository) ResetRedemptionByCode(tx *gorm.DB, code string) error {
+	trimmed := strings.TrimSpace(code)
+	if trimmed == "" {
+		return nil
+	}
+	return tx.Model(&model.Redemption{}).
+		Where("UPPER(coupon_code) = UPPER(?)", trimmed).
+		Updates(map[string]any{
+			"order_id":  nil,
+			"used_date": nil,
+		}).Error
+}
+
