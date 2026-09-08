@@ -63,11 +63,18 @@ type orderDTO struct {
 	RefundStatus      string             `json:"refundStatus,omitempty"`
 	RefundStatusLabel string             `json:"refundStatusLabel,omitempty"`
 	RefundNote        string             `json:"refundNote,omitempty"`
-	RefundedAt        *time.Time         `json:"refundedAt,omitempty"`
-	RefundedBy        string             `json:"refundedBy,omitempty"`
-	Items             []orderItemDTO     `json:"items"`
-	Timeline          []orderHistoryDTO  `json:"timeline"`
-	Shipment          *orderShipmentDTO  `json:"shipment,omitempty"`
+	RefundedAt           *time.Time         `json:"refundedAt,omitempty"`
+	RefundedBy           string             `json:"refundedBy,omitempty"`
+	OutOfStockNote       string             `json:"outOfStockNote,omitempty"`
+	RestockEstimate      string             `json:"restockEstimate,omitempty"`
+	RestockDate          *model.Date        `json:"restockDate,omitempty"`
+	CustomerChoice       string             `json:"customerChoice,omitempty"`
+	ReplacementBookID    *int               `json:"replacementBookId,omitempty"`
+	ReplacementBookTitle string             `json:"replacementBookTitle,omitempty"`
+	ReplacementNote      string             `json:"replacementNote,omitempty"`
+	Items                []orderItemDTO     `json:"items"`
+	Timeline             []orderHistoryDTO  `json:"timeline"`
+	Shipment             *orderShipmentDTO  `json:"shipment,omitempty"`
 }
 
 type promotionDTO struct {
@@ -173,12 +180,19 @@ func toOrderDTO(view service.OrderView) orderDTO {
 		RefundStatus:      order.RefundStatus,
 		RefundStatusLabel: refundStatusLabel,
 		RefundNote:        order.RefundNote,
-		RefundedAt:        order.RefundedAt,
-		RefundedBy:        order.RefundedBy,
-		ItemCount:         order.ItemCount(),
-		Closed:            order.IsClosed(),
-		Items:             items,
-		Timeline:          timeline,
+		RefundedAt:           order.RefundedAt,
+		RefundedBy:           order.RefundedBy,
+		OutOfStockNote:       order.OutOfStockNote,
+		RestockEstimate:      order.RestockEstimate,
+		RestockDate:          order.RestockDate,
+		CustomerChoice:       order.CustomerChoice,
+		ReplacementBookID:    order.ReplacementBookID,
+		ReplacementBookTitle: view.ReplacementBookTitle,
+		ReplacementNote:      order.ReplacementNote,
+		ItemCount:            order.ItemCount(),
+		Closed:               order.IsClosed(),
+		Items:                items,
+		Timeline:             timeline,
 	}
 	if view.Promotion != nil {
 		dto.PromotionName = view.Promotion.Name

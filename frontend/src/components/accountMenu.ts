@@ -17,7 +17,7 @@ export const ACCOUNT_MENU: AccountMenuItem[] = [
   { label: 'ข้อมูลสมาชิก', icon: 'user', to: '/profile' },
   { label: 'ประวัติการสั่งซื้อ', icon: 'clock', to: '/orders' },
   { label: 'แต้มสะสมของฉัน', icon: 'award', to: '/member/points' },
-  { label: 'แลกของรางวัล', icon: 'gift', to: '/member/rewards' },
+  { label: 'แลกแต้มส่วนลด', icon: 'tag', to: '/member/rewards' },
   { label: 'รายการโปรดของฉัน', icon: 'heart' },
   { label: 'สมุดที่อยู่จัดส่ง', icon: 'truck' },
 ]

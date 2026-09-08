@@ -51,11 +51,11 @@ func (h *Handler) registerPurchasingRoutes(register registrar) {
 	register("GET /api/purchasing/budget", rolePurchasing, h.budget) // U7 · แถบงบบน SCR-23
 }
 
-// registerNotificationRoutes — SCR-27 ศูนย์ติดต่อและการแจ้งเตือน
+// registerNotificationRoutes — SCR-27 ศูนย์ติดต่อและการแจ้งเตือน (พนักงานและลูกค้า)
 func (h *Handler) registerNotificationRoutes(register registrar) {
-	register("GET /api/notifications", roleStaff, h.listNotifications)
-	register("POST /api/notifications/{id}/read", roleStaff, h.markNotificationRead)
-	register("POST /api/notifications/read-all", roleStaff, h.markAllNotificationsRead)
+	register("GET /api/notifications", roleAnyUser, h.listNotifications)
+	register("POST /api/notifications/{id}/read", roleAnyUser, h.markNotificationRead)
+	register("POST /api/notifications/read-all", roleAnyUser, h.markAllNotificationsRead)
 }
 
 // ── สินค้าคงคลัง (U5) ───────────────────────────────────────────────────
@@ -502,7 +502,12 @@ func (h *Handler) listNotifications(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	notifications, err := h.notifications.ListFor(current.Role)
+	var notifications []model.Notification
+	if current.IsCustomer() {
+		notifications, err = h.notifications.ListForCustomer(current.CustomerID)
+	} else {
+		notifications, err = h.notifications.ListFor(current.Role)
+	}
 	if err != nil {
 		httpx.Error(w, err)
 		return
@@ -516,7 +521,17 @@ func (h *Handler) markNotificationRead(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, err)
 		return
 	}
-	if err := h.notifications.MarkRead(id); err != nil {
+	current, err := identity(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	if current.IsCustomer() {
+		err = h.notifications.MarkReadForCustomer(id, current.CustomerID)
+	} else {
+		err = h.notifications.MarkRead(id)
+	}
+	if err != nil {
 		httpx.Error(w, err)
 		return
 	}
@@ -529,7 +544,12 @@ func (h *Handler) markAllNotificationsRead(w http.ResponseWriter, r *http.Reques
 		httpx.Error(w, err)
 		return
 	}
-	if err := h.notifications.MarkAllRead(current.Role); err != nil {
+	if current.IsCustomer() {
+		err = h.notifications.MarkAllReadForCustomer(current.CustomerID)
+	} else {
+		err = h.notifications.MarkAllRead(current.Role)
+	}
+	if err != nil {
 		httpx.Error(w, err)
 		return
 	}

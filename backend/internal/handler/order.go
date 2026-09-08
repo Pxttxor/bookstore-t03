@@ -31,6 +31,10 @@ func (h *Handler) registerOrderRoutes(register registrar) {
 	register("POST /api/orders/{id}/cancel", roleOrderAdmin, h.cancelCustomerOrder)   // can.cancelOrder
 	register("POST /api/orders/{id}/refund-bank", roleAnyUser, h.setRefundBank)       // บันทึกข้อมูลบัญชีคืนเงิน
 	register("POST /api/orders/{id}/refund-confirm", roleOrderAdmin, h.confirmRefund) // พนักงานยืนยันการคืนเงิน
+	register("POST /api/orders/{id}/out-of-stock", roleSales, h.notifyOutOfStock)     // แจ้งสินค้าหมด
+	register("POST /api/orders/{id}/customer-choice", roleAnyUser, h.customerChoice)  // ลูกค้าเลือกทางออก
+	register("POST /api/orders/{id}/approve-exchange", roleSales, h.approveExchange)  // เปลี่ยนสินค้า
+	register("POST /api/orders/{id}/confirm-restocked", roleSales, h.confirmRestocked)// สินค้าเข้าแล้ว
 }
 
 // registerPromotionRoutes — โปรโมชั่น (StoreManager.managePromotion)
@@ -238,6 +242,51 @@ func (h *Handler) confirmRefund(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.OK(w, toOrderDTO(*view))
+}
+
+func (h *Handler) notifyOutOfStock(w http.ResponseWriter, r *http.Request) {
+	h.advanceOrder(w, r, func(id int, by string, r *http.Request) (*service.OrderView, error) {
+		var body service.OutOfStockInput
+		if err := httpx.Decode(r, &body); err != nil {
+			return nil, err
+		}
+		return h.orders.NotifyOutOfStock(id, body, by)
+	})
+}
+
+func (h *Handler) customerChoice(w http.ResponseWriter, r *http.Request) {
+	current, id, err := currentAndID(r)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	var body service.CustomerChoiceInput
+	if err := httpx.Decode(r, &body); err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	view, err := h.orders.CustomerDecision(id, body, *current)
+	if err != nil {
+		httpx.Error(w, err)
+		return
+	}
+	httpx.OK(w, toOrderDTO(*view))
+}
+
+func (h *Handler) approveExchange(w http.ResponseWriter, r *http.Request) {
+	h.advanceOrder(w, r, func(id int, by string, r *http.Request) (*service.OrderView, error) {
+		var body service.ApproveExchangeInput
+		if err := httpx.Decode(r, &body); err != nil {
+			return nil, err
+		}
+		return h.orders.ApproveExchange(id, body, by)
+	})
+}
+
+func (h *Handler) confirmRestocked(w http.ResponseWriter, r *http.Request) {
+	h.advanceOrder(w, r, func(id int, by string, _ *http.Request) (*service.OrderView, error) {
+		return h.orders.ConfirmRestocked(id, by)
+	})
 }
 
 // advanceOrder — โครงร่วมของ handler ที่เปลี่ยนสถานะคำสั่งซื้อหนึ่งใบ

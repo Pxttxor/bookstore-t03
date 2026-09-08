@@ -29,21 +29,21 @@ var seedTiers = []model.MembershipTier{
 		Benefits: "ได้แต้มเพิ่มเท่าตัว · ส่งฟรีทุกคำสั่งซื้อ"},
 }
 
-// seedRewards — ของรางวัลที่แลกด้วยแต้ม ครอบทั้งสองชนิดของ RewardType
+// seedRewards — ของรางวัลที่แลกด้วยแต้ม ทุกใบเป็นคูปองส่วนลด
 //
 // ใบที่ถูกที่สุดตั้งไว้ 5 แต้มโดยตั้งใจ ให้ลูกค้าที่เพิ่งซื้อครั้งเดียวแลกได้จริง
 // (cmd/smoke พึ่งข้อนี้ — คำสั่งซื้อหนึ่งใบให้แต้มหลักหน่วยเท่านั้น)
 var seedRewards = []model.Reward{
 	{RewardID: 1, Name: "คูปองส่วนลด 20 บาท", Type: model.RewardTypeDiscount,
 		PointCost: 5, DiscountValue: 20},
-	{RewardID: 2, Name: "ที่คั่นหนังสือ BookHaven", Type: model.RewardTypeGift,
-		PointCost: 8, DiscountValue: 0},
+	{RewardID: 2, Name: "คูปองส่วนลด 30 บาท", Type: model.RewardTypeDiscount,
+		PointCost: 8, DiscountValue: 30},
 	{RewardID: 3, Name: "คูปองส่วนลด 50 บาท", Type: model.RewardTypeDiscount,
 		PointCost: 12, DiscountValue: 50},
 	{RewardID: 4, Name: "คูปองส่วนลด 100 บาท", Type: model.RewardTypeDiscount,
 		PointCost: 20, DiscountValue: 100},
-	{RewardID: 5, Name: "ถุงผ้า BookHaven", Type: model.RewardTypeGift,
-		PointCost: 30, DiscountValue: 0},
+	{RewardID: 5, Name: "คูปองส่วนลด 150 บาท", Type: model.RewardTypeDiscount,
+		PointCost: 30, DiscountValue: 150},
 }
 
 // seedMemberRow — สมาชิกหนึ่งรายที่ผูกกับลูกค้าตั้งต้นด้วยอีเมล

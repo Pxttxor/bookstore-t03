@@ -108,6 +108,9 @@ const (
 	OrderStatusDelivered        OrderStatus = "DELIVERED"
 	OrderStatusCancelled        OrderStatus = "CANCELLED"
 	OrderStatusRejected         OrderStatus = "REJECTED"
+	OrderStatusOutOfStock       OrderStatus = "OUT_OF_STOCK"
+	OrderStatusWaitingRestock   OrderStatus = "WAITING_RESTOCK"
+	OrderStatusExchange         OrderStatus = "EXCHANGE_REQUESTED"
 )
 
 // OrderStatuses — ทุกค่าเรียงตามลำดับใน class diagram (ใช้ตอนสร้าง CHECK constraint)
@@ -117,6 +120,7 @@ func OrderStatuses() []OrderStatus {
 		OrderStatusVerifyingPayment, OrderStatusPaid, OrderStatusPacking,
 		OrderStatusReadyToShip, OrderStatusShipped, OrderStatusDelivered,
 		OrderStatusCancelled, OrderStatusRejected,
+		OrderStatusOutOfStock, OrderStatusWaitingRestock, OrderStatusExchange,
 	}
 }
 

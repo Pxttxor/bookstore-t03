@@ -84,6 +84,15 @@ func demoOrderPath(target model.OrderStatus) []model.OrderStatus {
 	if target == model.OrderStatusRejected {
 		return append(path[:4:4], target)
 	}
+	if target == model.OrderStatusOutOfStock {
+		return []model.OrderStatus{model.OrderStatusPendingConfirm, model.OrderStatusOutOfStock}
+	}
+	if target == model.OrderStatusWaitingRestock {
+		return []model.OrderStatus{model.OrderStatusPendingConfirm, model.OrderStatusOutOfStock, model.OrderStatusWaitingRestock}
+	}
+	if target == model.OrderStatusExchange {
+		return []model.OrderStatus{model.OrderStatusPendingConfirm, model.OrderStatusOutOfStock, model.OrderStatusExchange}
+	}
 	for i, status := range path {
 		if target == status {
 			return path[:i+1]
@@ -334,10 +343,12 @@ func seedDemoWarehouse(tx *gorm.DB, at time.Time) error {
 			return err
 		}
 	}
+	demoCustID := 1
 	notifications := []model.Notification{
 		{To: model.RoleSales, Kind: model.NotifyOrderPlaced, Title: "มีคำสั่งซื้อรอยืนยัน", Body: "SO-1001 รอตรวจสอบสต็อก (ข้อมูลสาธิต)", Link: "/admin/orders/1001"},
 		{To: model.RoleDelivery, Kind: model.NotifyOrderReadyToShip, Title: "มีคำสั่งซื้อพร้อมจัดส่ง", Body: "SO-1002 แพ็กเรียบร้อยแล้ว (ข้อมูลสาธิต)", Link: "/admin/orders/1002"},
 		{To: model.RoleManager, Kind: model.NotifyStockDiscrepancy, Title: "มีรายงานผลต่างรออนุมัติ", Body: "รอตรวจสอบผลต่างการนับสต็อกสาธิต", Link: "/admin/stock/discrepancies"},
+		{To: model.RoleCustomer, CustomerID: &demoCustID, Kind: model.NotifyOrderPlaced, Title: "คำสั่งซื้อได้รับการบันทึกแล้ว", Body: "SO-1001 อยู่ระหว่างดำเนินการจัดเตรียม (ข้อมูลสาธิต)", Link: "/orders/1001"},
 	}
 	for _, notification := range notifications {
 		for _, channel := range []model.NotificationChannel{model.ChannelInApp, model.ChannelEmail} {

@@ -51,3 +51,24 @@ func (s *PurchasingService) notifyInApp(tx *gorm.DB, to model.Role, kind model.N
 		{To: to, Kind: kind, Title: title, Body: body, Link: link, Channel: model.ChannelInApp},
 	})
 }
+
+// pushCustomerNotification — แจ้งเตือนไปยังลูกค้าเฉพาะราย (in-app)
+func pushCustomerNotification(
+	tx *gorm.DB, notifications *repository.NotificationRepository,
+	customerID int, kind model.NotificationKind, title, body, link string,
+) error {
+	if notifications == nil || customerID <= 0 {
+		return nil
+	}
+	return notifications.Push(tx, []model.Notification{
+		{
+			To:         model.RoleCustomer,
+			CustomerID: &customerID,
+			Kind:       kind,
+			Title:      title,
+			Body:       body,
+			Link:       link,
+			Channel:    model.ChannelInApp,
+		},
+	})
+}

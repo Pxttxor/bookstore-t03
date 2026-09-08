@@ -36,13 +36,22 @@ func (d Date) Before(other Date) bool { return d.Time.Before(other.Time) }
 
 func (d Date) After(other Date) bool { return d.Time.After(other.Time) }
 
-// ParseDate — อ่านค่าจาก body ของ request
+// ParseDate — อ่านค่าจาก body ของ request (รองรับทั้ง YYYY-MM-DD, DD/MM/YYYY และ ISO)
 func ParseDate(value string) (Date, error) {
-	t, err := time.Parse(DateLayout, strings.TrimSpace(value))
-	if err != nil {
-		return Date{}, fmt.Errorf("รูปแบบวันที่ต้องเป็น YYYY-MM-DD: %q", value)
+	v := strings.TrimSpace(value)
+	for _, layout := range []string{
+		DateLayout,
+		"2006/01/02",
+		"02/01/2006",
+		"02-01-2006",
+		"2006-1-2",
+		"2-1-2006",
+	} {
+		if t, err := time.Parse(layout, v); err == nil {
+			return NewDate(t), nil
+		}
 	}
-	return Date{t}, nil
+	return Date{}, fmt.Errorf("รูปแบบวันที่ต้องเป็น YYYY-MM-DD: %q", value)
 }
 
 func (d Date) String() string { return d.Format(DateLayout) }

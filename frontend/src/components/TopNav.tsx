@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from './Icon'
 import UserMenu from './UserMenu'
+import CustomerNotificationBell from './CustomerNotificationBell'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
 import './TopNav.css'
@@ -90,6 +91,7 @@ export default function TopNav({ showSearch = false }: TopNavProps) {
             <Icon name="cart" size={20} />
             {count > 0 && <span className="topnav__badge">{count}</span>}
           </Link>
+          {user && <CustomerNotificationBell />}
           {user ? (
             <UserMenu user={user} />
           ) : (

@@ -11,6 +11,7 @@ import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import { useSuppliers, type SupplierDraft } from '../suppliers/SupplierContext'
 import { formatSupplierCode } from '../suppliers/suppliers'
+import { formatPhoneNumber } from '../../data/phone'
 import './SupplierFormPage.css'
 
 type FieldName =
@@ -98,7 +99,7 @@ function SupplierForm({ id }: { id?: string }) {
   const [values, setValues] = useState<Record<FieldName, string>>({
     companyName: existing?.companyName ?? '',
     contactName: existing?.contactName ?? '',
-    phone: existing?.phone ?? '',
+    phone: formatPhoneNumber(existing?.phone ?? ''),
     email: existing?.email ?? '',
     address: existing?.address ?? '',
     tradeTerms: existing?.tradeTerms ?? '',
@@ -179,6 +180,10 @@ function SupplierForm({ id }: { id?: string }) {
     const found: Partial<Record<FieldName, string>> = {}
     for (const field of REQUIRED) {
       if (!values[field].trim()) found[field] = `กรุณากรอก${LABELS[field]}`
+    }
+    const phoneDigits = values.phone.replace(/\D/g, '')
+    if (!found.phone && phoneDigits.length !== 10) {
+      found.phone = 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก'
     }
     if (values.email.trim() && !EMAIL_PATTERN.test(values.email.trim())) {
       found.email = 'รูปแบบอีเมลไม่ถูกต้อง'
@@ -311,9 +316,11 @@ function SupplierForm({ id }: { id?: string }) {
                 {LABELS.phone} <em>*</em>
               </span>
               <input
+                type="tel"
                 className={'admin-input' + (errors.phone ? ' admin-input--error' : '')}
                 value={values.phone}
-                onChange={(e) => setField('phone', e.target.value)}
+                maxLength={12}
+                onChange={(e) => setField('phone', formatPhoneNumber(e.target.value))}
                 placeholder="081-234-5678"
               />
               {errors.phone && <span className="admin-field__error">{errors.phone}</span>}
