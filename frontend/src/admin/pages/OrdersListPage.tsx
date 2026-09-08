@@ -95,7 +95,7 @@ export default function OrdersListPage() {
         </div>
       </div>
 
-      <section className="admin-card orders-list">
+      <section className="admin-card admin-card--flush orders-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />

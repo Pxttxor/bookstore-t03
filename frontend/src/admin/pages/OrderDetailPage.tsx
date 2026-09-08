@@ -237,7 +237,7 @@ export default function OrderDetailPage() {
         </p>
       )}
 
-      <section className="admin-card">
+      <section className="admin-card admin-card--flush">
         <LineItemsTable lines={order.items} books={supplier?.books ?? []} readOnly />
       </section>
 

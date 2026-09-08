@@ -1,12 +1,7 @@
+/* การ์ดเป็น .admin-card--flush — หัวการ์ด/แท็บ/filter-bar/ตาราง/Pagination มีระยะของตัวเองแล้ว
+   ถ้าใส่ flex gap ตรงนี้จะเกิดช่องว่างแทรกระหว่างแถบที่ควรติดกัน */
 .receipts__section {
   margin-bottom: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.receipts__title {
-  font-size: 17px;
 }
 
 .receipts__num {

@@ -166,7 +166,7 @@ export default function PaymentListPage() {
         />
       </section>
 
-      <section className="admin-card payment-list">
+      <section className="admin-card admin-card--flush payment-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />

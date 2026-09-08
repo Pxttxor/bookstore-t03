@@ -290,7 +290,7 @@
 /* ── Carrier Tabs Filter Bar ────────────────────────────────────────── */
 .carrier-tabs-bar {
   border-bottom: 1px solid var(--border-soft);
-  padding-bottom: 14px;
+  padding-bottom: 8px;
   margin-bottom: 2px;
 }
 
@@ -299,7 +299,10 @@
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  /* overflow-x: auto บังคับให้ overflow-y เป็น auto ไปด้วย กล่องนี้จึงตัดขอบที่ padding box
+     ต้องเผื่อที่ให้ทั้ง translateY(-1px) ตอน hover ของ .carrier-tab และเงา box-shadow: 0 2px 5px
+     ของมัน ไม่งั้นเส้นขอบบนหนา 1.5px จะถูกตัดหายตอนเอาเมาส์ไปชี้ */
+  padding: 6px 2px 8px;
   scrollbar-width: thin;
 }
 

@@ -73,7 +73,7 @@ export default function StockCountListPage() {
         )}
       </div>
 
-      <section className="admin-card count-list">
+      <section className="admin-card admin-card--flush count-list">
         {loading ? (
           <LoadingState label="กำลังโหลดประวัติการตรวจนับ…" />
         ) : error ? (
