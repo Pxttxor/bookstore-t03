@@ -116,6 +116,12 @@ export const hasPendingReport = (r: Review): boolean =>
   !!r.report?.isReported && r.report.managerStatus === 'PENDING'
 
 /**
+ * รีวิวที่มีการกดส่งรายงานปัญหา — หน้าจัดการรีวิวที่มีปัญหาจะแสดงเฉพาะรีวิวกลุ่มนี้เท่านั้น
+ * หากฝ่ายขายตอบกลับเองโดยไม่ได้ส่งรายงาน จะอยู่เฉพาะหน้าตรวจสอบรีวิว
+ */
+export const isReportedReview = (r: Review): boolean => !!r.report?.isReported
+
+/**
  * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram
  *
  * **การติดธงเกิดฝั่งเซิร์ฟเวอร์แล้ว** (`Review.Submit` → `model.ProfanityFilter.CheckText`)

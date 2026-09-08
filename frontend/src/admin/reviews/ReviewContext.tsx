@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import { useOrders } from '../orders/OrderContext'
 import { ORDER_STATUS_LABELS, formatOrderCode } from '../orders/orders'
-import { hasPendingReport, salesBucketOf } from './reviews'
+import { hasPendingReport, isReportedReview, salesBucketOf } from './reviews'
 import type { ModerateAction, Review, ReviewReply, ReviewStatus } from './reviews'
 
 // ข้อมูลอยู่ในตาราง review / review_reply / review_report ของ PostgreSQL
@@ -172,13 +172,13 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       reload,
-      // คิวผู้จัดการ 3 แท็บต้องไม่ทับกัน (ผลรวม = จำนวนรีวิวทั้งหมด)
+      // คิวผู้จัดการ 3 แท็บต้องไม่ทับกัน (นับเฉพาะรีวิวที่มีการกดส่งรายงานมาเท่านั้น)
       // "รอตรวจสอบ" มาจากรายงานที่ฝ่ายขายส่งเท่านั้น — ไม่แตะ review.status อีกต่อไป
       pendingCount: reviews.filter(hasPendingReport).length,
       approvedCount: reviews.filter(
-        (r) => !hasPendingReport(r) && r.status !== 'HIDDEN' && r.status !== 'REMOVED'
+        (r) => isReportedReview(r) && !hasPendingReport(r) && r.status !== 'HIDDEN' && r.status !== 'REMOVED'
       ).length,
-      deletedCount: reviews.filter((r) => r.status === 'REMOVED' || r.status === 'HIDDEN')
+      deletedCount: reviews.filter((r) => isReportedReview(r) && (r.status === 'REMOVED' || r.status === 'HIDDEN'))
         .length,
       // ช่องฝ่ายขาย 3 ช่องก็ต้องไม่ทับกันเช่นกัน — ใช้ salesBucketOf ตัวเดียวกับตัวกรอง
       unrepliedCount: reviews.filter((r) => salesBucketOf(r) === 'UNREPLIED').length,

@@ -14,6 +14,7 @@ import { useReviews } from '../reviews/ReviewContext'
 import {
   formatThaiRelativeTime,
   hasPendingReport,
+  isReportedReview,
   REPORT_DECISION_LABELS,
   type Review,
 } from '../reviews/reviews'
@@ -61,6 +62,10 @@ export default function ReviewManagerPage() {
     const needle = searchTerm.trim().toLowerCase()
 
     let result = reviews.filter((r) => {
+      // หน้าจัดการรีวิวที่มีปัญหา — แสดงเฉพาะรีวิวที่มีการกดส่งรายงานมาเท่านั้น
+      // รีวิวปกติที่ฝ่ายขายตอบกลับเองจะอยู่เฉพาะหน้า "ตรวจสอบรีวิว" ไม่แสดงในหน้านี้
+      if (!isReportedReview(r)) return false
+
       // Tab filter — ต้องตรงกับ pendingCount/approvedCount/deletedCount ใน ReviewContext เป๊ะ ๆ
       // "รอตรวจสอบ" มาจากรายงานที่ฝ่ายขายส่งเท่านั้น ไม่ใช่ review.status === 'PENDING'
       // (สถานะนั้นไม่มีทางเกิดผ่าน API และไม่ได้แปลว่ามีรายงานค้างอยู่จริง)
