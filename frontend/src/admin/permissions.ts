@@ -46,6 +46,7 @@ export const can = {
   // sales handle intake and payment, warehouse packs, delivery ships and confirms.
   viewOrders: (role: Role) =>
     role === 'sales' || role === 'warehouse' || role === 'manager' || role === 'delivery',
+  viewRefunds: (role: Role) => role === 'sales' || role === 'manager',
   confirmStock: (role: Role) => role === 'sales',
   verifyPayment: (role: Role) => role === 'sales',
   packOrder: (role: Role) => role === 'warehouse',

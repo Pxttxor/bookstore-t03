@@ -33,6 +33,7 @@ export default function AuthModal({ mode }: AuthModalProps) {
   const state = (location.state ?? {}) as AuthModalState
   const { from, back } = state
   const boxRef = useRef<HTMLDivElement>(null)
+  const mouseDownTargetRef = useRef<EventTarget | null>(null)
 
   // สลับ login/signup แล้วความสูงเนื้อหาต่างกันมาก (ฟอร์มสมัคร 7 ช่อง vs ล็อกอิน 2 ช่อง) —
   // รีเซ็ต scroll ในกล่องทุกครั้งที่โหมดเปลี่ยน กัน scroll ค้างจากฟอร์มก่อนหน้า
@@ -77,8 +78,23 @@ export default function AuthModal({ mode }: AuthModalProps) {
     navigate('/login', { state, replace: true })
   }
 
+  const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    mouseDownTargetRef.current = e.target
+  }
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (mouseDownTargetRef.current === e.currentTarget && e.target === e.currentTarget) {
+      close()
+    }
+    mouseDownTargetRef.current = null
+  }
+
   return (
-    <div className="auth-modal-backdrop" onClick={close}>
+    <div
+      className="auth-modal-backdrop"
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
+    >
       <div
         ref={boxRef}
         className="auth-modal"

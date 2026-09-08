@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import Icon from '../components/Icon'
 import RatingStars from '../components/RatingStars'
 import QuantityStepper from '../components/QuantityStepper'
@@ -10,6 +10,7 @@ import { useResource } from '../api/useResource'
 import { loadCatalogueBook, type CatalogueDetail, type CatalogueReview } from '../data/catalogue'
 import { formatPrice } from '../data/money'
 import { useCart } from '../cart/CartContext'
+import { useAuth } from '../auth/AuthContext'
 import './BookDetailPage.css'
 
 // initialsOf — อักษรย่อบนการ์ดรีวิว · ตาราง review เก็บแต่ชื่อเต็มของลูกค้า
@@ -60,6 +61,8 @@ export default function BookDetailPage() {
 // (แพตเทิร์นเดียวกับ BookFormPage / ReceiveGoodsPage ของหลังร้าน)
 function BookDetailView({ book }: { book: CatalogueDetail }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
   const { addItem, qtyInCart } = useCart()
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
@@ -82,6 +85,12 @@ function BookDetailView({ book }: { book: CatalogueDetail }) {
   }
   const buyNow = () => {
     if (addItem(book, safeQty) === 0) return
+    if (!user) {
+      navigate('/login', {
+        state: { from: '/checkout/shipping', back: location.pathname + location.search },
+      })
+      return
+    }
     navigate('/checkout/shipping')
   }
 
