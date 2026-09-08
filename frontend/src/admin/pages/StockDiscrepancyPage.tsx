@@ -116,7 +116,7 @@ export default function StockDiscrepancyPage() {
         </div>
       </div>
 
-      <section className="admin-card discrepancy">
+      <section className="admin-card admin-card--flush discrepancy">
         <div className="discrepancy__tabs">
           <div className="admin-tabs">
             <button

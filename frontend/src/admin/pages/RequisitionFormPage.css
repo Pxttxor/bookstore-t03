@@ -5,7 +5,8 @@
 }
 
 .pr-form__stepper {
-  padding-block: 18px;
+  /* เขียนครบสองแกน ไม่พึ่งลำดับโหลด CSS ที่ทับ padding ของ .admin-card */
+  padding: 18px var(--card-pad-x);
 }
 
 .pr-form__header {

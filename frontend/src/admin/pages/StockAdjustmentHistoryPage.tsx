@@ -101,7 +101,7 @@ export default function StockAdjustmentHistoryPage() {
         </div>
       </div>
 
-      <section className="admin-card adjustment-history">
+      <section className="admin-card admin-card--flush adjustment-history">
         <div className="adjustment-history__summary">
           <span className="adjustment-history__count">ทั้งหมด {transactions.length} รายการ</span>
           <div className="admin-tabs">

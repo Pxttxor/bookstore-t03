@@ -1,3 +1,9 @@
+/* แผงในแท็บที่ไม่ใช่ตาราง — การ์ดเป็น .admin-card--flush เพื่อให้ตารางเส้นทางเอกสาร
+   กินเต็มขอบ แผงอื่นจึงต้องมี inset ของตัวเอง */
+.contacts__panel {
+  padding: 18px var(--card-pad-x) var(--card-pad-y);
+}
+
 .contacts__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

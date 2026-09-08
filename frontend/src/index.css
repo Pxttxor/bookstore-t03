@@ -52,6 +52,14 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
 
+  /* Card spacing — the one place to retune every back-office card's inset.
+     --card-inset matches .filter-bar, .data-table cells and .pagination, so a
+     full-bleed list card (.admin-card--flush) lines its rows up with the text
+     inside an ordinary padded card. */
+  --card-pad-y: 22px;
+  --card-pad-x: 24px;
+  --card-inset: 20px;
+
   /* Typography */
   --font-sans: 'Inter', 'Sarabun', system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-thai: 'Sarabun', 'Inter', system-ui, sans-serif;

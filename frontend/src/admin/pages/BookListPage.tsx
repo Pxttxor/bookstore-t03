@@ -80,7 +80,7 @@ export default function BookListPage() {
         )}
       </div>
 
-      <section className="admin-card book-list">
+      <section className="admin-card admin-card--flush book-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />

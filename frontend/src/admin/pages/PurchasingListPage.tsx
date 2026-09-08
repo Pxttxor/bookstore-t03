@@ -188,8 +188,8 @@ export default function PurchasingListPage() {
         )}
       </div>
 
-      <section className="admin-card">
-        <div className="admin-tabs" role="tablist">
+      <section className="admin-card admin-card--flush">
+        <div className="admin-tabs admin-tabs--inset" role="tablist">
           {TABS.map((entry) => (
             <button
               key={entry.key}

@@ -50,11 +50,31 @@
   gap: 12px;
 }
 
+/* การ์ดมี padding โดยปริยาย — การ์ดที่ต้องการให้เนื้อหากินเต็มขอบต้องประกาศ .admin-card--flush เอง
+   (กลับด้านจากของเดิมที่ไม่มี padding เลย แล้วให้ทุกหน้าไปใส่กันเอง จนค่าเพี้ยนกัน 30+ แบบ) */
 .admin-card {
+  padding: var(--card-pad-y) var(--card-pad-x);
   background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+}
+
+/* การ์ดตาราง: .filter-bar / .data-table / .pagination มี inset ของตัวเองอยู่แล้ว
+   และเส้นคั่นแถวต้องพาดถึงขอบการ์ด */
+.admin-card--flush {
+  padding: 0;
+}
+
+/* หัวข้อบนการ์ดแบบ --flush ให้ inset เท่าหัวตาราง — ไม่ใส่ padding-bottom เพราะ
+   .admin-card__title มี margin-bottom ของตัวเองอยู่แล้ว */
+.admin-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px var(--card-pad-x) 0;
 }
 
 .admin-card__title {

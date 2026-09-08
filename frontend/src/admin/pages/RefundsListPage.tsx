@@ -159,7 +159,7 @@ export default function RefundsListPage() {
         />
       </section>
 
-      <section className="admin-card refunds-list">
+      <section className="admin-card admin-card--flush refunds-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={16} />

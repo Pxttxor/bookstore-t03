@@ -110,8 +110,8 @@ export default function ContactCentrePage() {
         </div>
       </div>
 
-      <section className="admin-card">
-        <div className="admin-tabs" role="tablist">
+      <section className="admin-card admin-card--flush">
+        <div className="admin-tabs admin-tabs--inset" role="tablist">
           {tabs.map((entry) => (
             <button
               key={entry.key}
@@ -127,7 +127,7 @@ export default function ContactCentrePage() {
         </div>
 
         {tab === 'directory' && (
-          <>
+          <div className="contacts__panel">
             <div className="contacts__grid">
               <ContactCard
                 icon="user"
@@ -176,7 +176,7 @@ export default function ContactCentrePage() {
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {tab === 'routing' && mayViewRouting && (
@@ -210,7 +210,7 @@ export default function ContactCentrePage() {
         )}
 
         {tab === 'notifications' && mayViewRouting && (
-          <>
+          <div className="contacts__panel">
             <p className="contacts__note">
               <Icon name="help" size={16} />
               รายการนี้แสดงทั้งการแจ้งเตือนในระบบและสำเนาอีเมลที่ระบบบันทึกไว้
@@ -251,7 +251,7 @@ export default function ContactCentrePage() {
                 ))}
               </ul>
             )}
-          </>
+          </div>
         )}
       </section>
     </div>

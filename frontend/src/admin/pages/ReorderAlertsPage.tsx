@@ -160,7 +160,7 @@ export default function ReorderAlertsPage() {
         </p>
       )}
 
-      <section className="admin-card">
+      <section className="admin-card admin-card--flush">
         {loading ? (
           <LoadingState label="กำลังโหลดรายการที่ถึงจุดสั่งซื้อ…" />
         ) : error ? (

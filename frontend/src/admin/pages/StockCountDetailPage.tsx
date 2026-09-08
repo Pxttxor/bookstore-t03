@@ -119,7 +119,7 @@ export default function StockCountDetailPage() {
         </div>
       </div>
 
-      <section className="admin-card count-detail">
+      <section className="admin-card admin-card--flush count-detail">
         <div className="table-wrap">
           <table className="data-table">
             <thead>

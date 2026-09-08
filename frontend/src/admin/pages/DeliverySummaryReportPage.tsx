@@ -403,9 +403,7 @@ export default function DeliverySummaryReportPage() {
                   />
                   <span className="carrier-tab__label">{tab.label}</span>
                   <span
-                    className={`carrier-tab__badge ${
-                      isSelected ? 'carrier-tab__badge--active' : ''
-                    }`}
+                    className="carrier-tab__badge"
                     style={
                       isSelected
                         ? {

@@ -49,7 +49,6 @@
 .order-detail__steps {
   display: flex;
   gap: 8px;
-  padding: 20px;
   margin-bottom: 16px;
 }
 
@@ -133,7 +132,6 @@
 }
 
 .order-detail__panel {
-  padding: 20px;
 }
 
 .order-detail__panel-title {
