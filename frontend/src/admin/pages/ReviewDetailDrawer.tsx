@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { coverFor } from '../../data/covers'
+import BookCover from '../../components/BookCover'
 import Icon from '../../components/Icon'
 import RatingStars from '../../components/RatingStars'
 import StatusBadge from '../components/StatusBadge'
@@ -19,9 +19,6 @@ export default function ReviewDetailDrawer({
 }: ReviewDetailDrawerProps) {
   const [replyText, setReplyText] = useState('')
   const [isReplying, setIsReplying] = useState(false)
-
-  // รูปปกอยู่ในโปรเจกต์ ไม่ใช่คอลัมน์ในตาราง book — ค้นจาก bookId ตรง ๆ
-  const coverFromCatalogue = coverFor(review.bookId)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -75,18 +72,7 @@ export default function ReviewDetailDrawer({
             </h3>
             <div className="drawer-book-card">
               <div className="drawer-book-cover">
-                {(review.coverUrl || coverFromCatalogue) ? (
-                  <img
-                    src={review.coverUrl || coverFromCatalogue}
-                    alt={review.bookTitle}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="drawer-book-cover-placeholder">
-                    <Icon name="book" size={32} />
-                  </div>
-                )}
+                <BookCover bookId={review.bookId} title={review.bookTitle} author={review.author} />
               </div>
               <div className="drawer-book-info">
                 <h4 className="drawer-book-title">{review.bookTitle}</h4>
@@ -206,7 +192,7 @@ export default function ReviewDetailDrawer({
                 <div className="drawer-reply-box-head">
                   <span className="drawer-reply-by">
                     <Icon name="user" size={15} />
-                    ฝ่ายขายตอบกลับ ({review.reply.repliedBy})
+                    ตอบกลับโดย {review.reply.repliedBy || 'ทีมงานร้าน'}
                   </span>
                   <span className="drawer-reply-date">
                     {new Date(review.reply.repliedDate).toLocaleString('th-TH', {

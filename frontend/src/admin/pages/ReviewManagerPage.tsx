@@ -9,10 +9,11 @@ import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import { useToast } from '../components/ToastContext'
-import { coverFor } from '../../data/covers'
+import BookCover from '../../components/BookCover'
 import { useReviews } from '../reviews/ReviewContext'
 import {
   formatThaiRelativeTime,
+  hasPendingReport,
   REPORT_DECISION_LABELS,
   type Review,
 } from '../reviews/reviews'
@@ -60,13 +61,14 @@ export default function ReviewManagerPage() {
     const needle = searchTerm.trim().toLowerCase()
 
     let result = reviews.filter((r) => {
-      // Tab filter
-      const isPending =
-        r.status === 'PENDING' || (r.report?.isReported && r.report?.managerStatus === 'PENDING')
+      // Tab filter — ต้องตรงกับ pendingCount/approvedCount/deletedCount ใน ReviewContext เป๊ะ ๆ
+      // "รอตรวจสอบ" มาจากรายงานที่ฝ่ายขายส่งเท่านั้น ไม่ใช่ review.status === 'PENDING'
+      // (สถานะนั้นไม่มีทางเกิดผ่าน API และไม่ได้แปลว่ามีรายงานค้างอยู่จริง)
+      const isPending = hasPendingReport(r)
       if (activeTab === 'PENDING') {
         if (!isPending) return false
       } else if (activeTab === 'APPROVED') {
-        if (isPending || r.status !== 'PUBLISHED') return false
+        if (isPending || r.status === 'HIDDEN' || r.status === 'REMOVED') return false
       } else if (activeTab === 'DELETED') {
         if (r.status !== 'REMOVED' && r.status !== 'HIDDEN') return false
       }
@@ -419,8 +421,6 @@ export default function ReviewManagerPage() {
           />
         ) : (
           rows.map((review) => {
-            // รูปปกอยู่ในโปรเจกต์ ไม่ใช่คอลัมน์ในตาราง book — ค้นจาก bookId ตรง ๆ
-            const bookCover = review.coverUrl || coverFor(review.bookId)
             const report = review.report
             const isSpam = report?.category === 'spam' || report?.reason?.includes('สแปม')
             const isService = report?.category === 'service' || report?.reason?.includes('บริการ') || report?.reason?.includes('ขนส่ง')
@@ -440,19 +440,12 @@ export default function ReviewManagerPage() {
                   title="คลิกเพื่อดูรายละเอียดสินค้าและคำสั่งซื้อ"
                 >
                   <div className="review-book-cover-frame">
-                    {bookCover ? (
-                      <img
-                        src={bookCover}
-                        alt={review.bookTitle}
-                        className="review-book-cover-img"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="review-book-cover-placeholder">
-                        <Icon name="book" size={32} />
-                      </div>
-                    )}
+                    <BookCover
+                      bookId={review.bookId}
+                      title={review.bookTitle}
+                      author={review.author}
+                      className="review-book-cover-img"
+                    />
                   </div>
                   <div className="review-book-meta">
                     <h3 className="review-book-title">{review.bookTitle}</h3>

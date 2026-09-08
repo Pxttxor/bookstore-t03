@@ -28,7 +28,7 @@ func (h *Handler) registerReviewRoutes(register registrar) {
 
 	register("POST /api/reviews/{id}/moderate", roleReviewStaff, h.moderateReview)
 	register("POST /api/reviews/{id}/replies", roleReviewStaff, h.replyToReview)
-	register("POST /api/reviews/{id}/report", roleReviewStaff, h.reportReview)
+	register("POST /api/reviews/{id}/report", roleReviewReporter, h.reportReview)
 
 	register("GET /api/review-reports", roleManager, h.listReviewReports)
 	register("GET /api/review-reports/{id}", roleManager, h.getReviewReport)

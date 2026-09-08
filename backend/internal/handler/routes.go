@@ -39,9 +39,13 @@ var (
 	// roleOrderIntake — ลูกค้าสั่งเอง หรือฝ่ายขายรับออร์เดอร์ทางโทรศัพท์/ข้อความแทน
 	roleOrderIntake = []model.Role{model.RoleCustomer, model.RoleSales}
 
-	// roleReviewStaff — ฝ่ายขายเป็นเจ้าของงานตรวจสอบรีวิว ผู้จัดการทำแทนได้
+	// roleReviewStaff — ฝ่ายขายเป็นเจ้าของงานตรวจสอบรีวิว ผู้จัดการทำแทนได้ (ตรวจสอบ/ตอบกลับ)
 	// (can.moderateReview) · ค่าเท่ากับ roleCatalogue แต่คนละเหตุผล เปลี่ยนแยกกันได้
 	roleReviewStaff = []model.Role{model.RoleSales, model.RoleManager}
+
+	// roleReviewReporter — เฉพาะฝ่ายขายที่ส่งรายงานขึ้นไปหาผู้จัดการได้
+	// ผู้จัดการเป็นปลายทางของรายงาน จึงไม่มีเหตุให้รายงานหาตัวเอง (can.reportReviewToManager)
+	roleReviewReporter = []model.Role{model.RoleSales}
 
 	// roleReviewAudience — คนที่เปิดดูรีวิวได้ · ลูกค้าเห็นเฉพาะของตัวเอง (service กรองให้)
 	roleReviewAudience = []model.Role{model.RoleSales, model.RoleManager, model.RoleCustomer}

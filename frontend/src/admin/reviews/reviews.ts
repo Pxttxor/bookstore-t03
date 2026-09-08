@@ -26,6 +26,8 @@ export interface ReviewReport {
   reportCount?: number
   category?: 'spam' | 'service' | 'inappropriate' | 'other'
   managerStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'
+  decidedBy?: string
+  decidedDate?: string
 }
 
 export interface Review {
@@ -93,8 +95,25 @@ export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
  */
 export const REPORT_DECISION_LABELS: Record<'APPROVED' | 'REJECTED', string> = {
   APPROVED: 'รายงานเป็นผล',
-  REJECTED: 'รายงานไม่เป็นผล',
+  REJECTED: 'พิจารณาแล้ว',
 }
+
+/**
+ * ช่องของหน้าฝ่ายขาย ("ตรวจสอบรีวิว") — รีวิวหนึ่งใบอยู่ได้ช่องเดียวเท่านั้น
+ * ลำดับความสำคัญ: รายงานผู้จัดการแล้ว > ตอบกลับแล้ว > รอตอบกลับ
+ * ใช้ทั้งตัวกรองและตัวนับ KPI เพื่อไม่ให้ผลรวมทับกันเอง
+ */
+export type SalesReviewBucket = 'REPORTED' | 'REPLIED' | 'UNREPLIED'
+
+export const salesBucketOf = (r: Review): SalesReviewBucket =>
+  r.report?.isReported ? 'REPORTED' : r.reply ? 'REPLIED' : 'UNREPLIED'
+
+/**
+ * ใบรายงานที่ฝ่ายขายส่งและผู้จัดการยังไม่ตัดสิน — คิว "รอตรวจสอบ" ของหน้าผู้จัดการ
+ * นับเฉพาะจากรายงานจริง ไม่แตะ `review.status` เพราะสถานะนั้นไม่ได้แปลว่ามีรายงานค้าง
+ */
+export const hasPendingReport = (r: Review): boolean =>
+  !!r.report?.isReported && r.report.managerStatus === 'PENDING'
 
 /**
  * คำต้องห้ามของ `ProfanityFilter` ตาม class diagram
