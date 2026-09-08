@@ -354,9 +354,11 @@ func seedDemoWarehouse(tx *gorm.DB, at time.Time) error {
 func seedDemoReports(tx *gorm.DB, now time.Time) error {
 	start, end := model.NewDate(now.AddDate(0, 0, -30)), model.NewDate(now)
 	var report model.PaymentReport
-	if err := tx.Model(&model.Payment{}).Where("status = ? AND verified_date >= ? AND verified_date < ?",
-		model.PaymentStatusSuccess, start.Time, end.Time.AddDate(0, 0, 1)).
-		Select("COALESCE(SUM(amount), 0) AS total_received, COUNT(*) AS item_count").Scan(&report).Error; err != nil {
+	if err := tx.Table("payment").
+		Joins("JOIN customer_order ON customer_order.order_id = payment.order_id").
+		Where("payment.status = ? AND customer_order.status NOT IN (?, ?) AND payment.verified_date >= ? AND payment.verified_date < ?",
+			model.PaymentStatusSuccess, model.OrderStatusCancelled, model.OrderStatusRejected, start.Time, end.Time.AddDate(0, 0, 1)).
+		Select("COALESCE(SUM(payment.amount), 0) AS total_received, COUNT(*) AS item_count").Scan(&report).Error; err != nil {
 		return err
 	}
 	report.PeriodStart, report.PeriodEnd = start, end

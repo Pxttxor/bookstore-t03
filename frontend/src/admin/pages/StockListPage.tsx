@@ -21,8 +21,6 @@ import {
   stockLevel,
   type StockLevel,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
-import '../components/Tabs.css'
 import './StockListPage.css'
 
 type Tab = 'ALL' | StockLevel
@@ -165,7 +163,7 @@ function StockList({ lowReport }: { lowReport: boolean }) {
         </p>
       )}
 
-      <section className="admin-card stock-list">
+      <section className="admin-card admin-card--flush stock-list">
         <div className="stock-list__tabs">
           <div className="admin-tabs">
             {TABS.map((entry) => (

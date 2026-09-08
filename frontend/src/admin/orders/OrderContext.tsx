@@ -14,12 +14,20 @@ const loadOrders = () => apiGet<CustomerOrder[]>('/api/orders')
 
 export interface OrderDraft {
   customerName?: string
+  customerPhone?: string
   shippingAddress: string
   /** รหัสหนังสือจากแคตตาล็อก — หน้าร้านกับฐานข้อมูลใช้รหัสเดียวกันแล้ว */
   items: { bookId: number; quantity: number }[]
   slipFileName?: string
   bankId?: number
   promotionId?: number
+  discountCode?: string
+}
+
+export interface DiscountValidation {
+  code: string
+  rewardName: string
+  discountAmount: number
 }
 
 export interface StatusChangeOpts {
@@ -27,6 +35,9 @@ export interface StatusChangeOpts {
   /** Required when moving to SHIPPED — the delivery staff records these. */
   tracking?: string
   carrierId?: number
+  refundBankName?: string
+  refundAccountNo?: string
+  refundAccountName?: string
 }
 
 interface OrderValue {
@@ -35,6 +46,8 @@ interface OrderValue {
   error: string | null
   reload: () => Promise<void>
   findOrder: (orderId: number) => CustomerOrder | undefined
+  /** ตรวจสอบโค้ดส่วนลดจากการแลกแต้มรางวัล */
+  validateDiscount: (code: string, subtotal: number) => Promise<DiscountValidation>
   /** Customer.placeOrder() — เซิร์ฟเวอร์คิดราคาจากตาราง book และแจ้งฝ่ายขายให้เอง */
   placeOrder: (draft: OrderDraft) => Promise<CustomerOrder>
   /**
@@ -49,6 +62,15 @@ interface OrderValue {
     next: OrderStatus,
     opts?: StatusChangeOpts,
   ) => Promise<void>
+  /** บันทึก/แก้ไขข้อมูลบัญชีธนาคารสำหรับรับเงินคืน */
+  updateRefundInfo: (
+    orderId: number,
+    bankName: string,
+    accountNo: string,
+    accountName: string,
+  ) => Promise<CustomerOrder>
+  /** พนักงานบันทึกยืนยันว่าคืนเงินลูกค้าแล้ว */
+  confirmRefund: (orderId: number, note?: string) => Promise<CustomerOrder>
 }
 
 const OrderContext = createContext<OrderValue | null>(null)
@@ -85,6 +107,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       await Promise.all([reload(), reloadNotifications()])
     }
 
+    const validateDiscount = async (code: string, subtotal: number) => {
+      return apiPost<DiscountValidation>('/api/orders/validate-discount', {
+        code: code.trim(),
+        subtotal,
+      })
+    }
+
     const placeOrder = async (draft: OrderDraft) => {
       // customerId / channel เซิร์ฟเวอร์เติมให้เองเมื่อผู้เรียกเป็นลูกค้าที่ล็อกอินอยู่
       // ยอดเงินก็คิดจากราคาในตาราง book ไม่ใช่ค่าที่หน้าจอส่งไป
@@ -95,6 +124,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         bankId: draft.bankId,
         items: draft.items,
         promotionId: draft.promotionId,
+        discountCode: draft.discountCode?.trim() || undefined,
       })
       apply((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)])
       await refresh()
@@ -122,7 +152,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           trackingNumber: opts.tracking?.trim() ?? '',
         }
       } else if (next === 'CANCELLED' || next === 'REJECTED') {
-        body = { note: opts.note ?? '' }
+        body = {
+          note: opts.note ?? '',
+          refundBankName: opts.refundBankName?.trim() || undefined,
+          refundAccountNo: opts.refundAccountNo?.trim() || undefined,
+          refundAccountName: opts.refundAccountName?.trim() || undefined,
+        }
       } else if (next === 'VERIFYING_PAYMENT') {
         const order = orders.find((row) => row.orderId === orderId)
         body = { slipFileName: opts.note?.trim() || order?.slipFileName || '' }
@@ -132,14 +167,42 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       await refresh()
     }
 
+    const updateRefundInfo = async (
+      orderId: number,
+      bankName: string,
+      accountNo: string,
+      accountName: string,
+    ) => {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${orderId}/refund-bank`, {
+        refundBankName: bankName.trim(),
+        refundAccountNo: accountNo.trim(),
+        refundAccountName: accountName.trim(),
+      })
+      apply((prev) => prev.map((o) => (o.orderId === orderId ? updated : o)))
+      await reloadNotifications()
+      return updated
+    }
+
+    const confirmRefund = async (orderId: number, note?: string) => {
+      const updated = await apiPost<CustomerOrder>(`/api/orders/${orderId}/refund-confirm`, {
+        note: note?.trim() || 'คืนเงินลูกค้าไปแล้ว',
+      })
+      apply((prev) => prev.map((o) => (o.orderId === orderId ? updated : o)))
+      await reloadNotifications()
+      return updated
+    }
+
     return {
       orders,
       loading,
       error,
       reload,
       findOrder: (orderId: number) => orders.find((o) => o.orderId === orderId),
+      validateDiscount,
       placeOrder,
       updateStatus,
+      updateRefundInfo,
+      confirmRefund,
     }
   }, [data, loading, error, reload, reloadNotifications, apply])
 

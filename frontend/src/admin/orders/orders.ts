@@ -54,6 +54,7 @@ export interface CustomerOrder {
   channel: OrderChannel
   orderDate: string
   customerName: string
+  customerPhone?: string
   /** Email of the signed-in customer who placed it — the key the storefront order-history
    *  page filters by. Optional: guest checkouts and seed orders leave it undefined. */
   customerEmail?: string
@@ -66,8 +67,18 @@ export interface CustomerOrder {
   netAmount: number
   promotionId?: number
   promotionName?: string
+  discountCode?: string
   /** Name of the payment slip the customer uploaded at checkout (simulated). */
   slipFileName?: string
+  cancelReason?: string
+  refundBankName?: string
+  refundAccountNo?: string
+  refundAccountName?: string
+  refundStatus?: 'PENDING' | 'REFUNDED' | string
+  refundStatusLabel?: string
+  refundNote?: string
+  refundedAt?: string
+  refundedBy?: string
   items: OrderItem[]
   timeline: OrderStatusHistory[]
   shipment?: Shipment
@@ -85,22 +96,41 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   READY_TO_SHIP: 'พร้อมจัดส่ง',
   SHIPPED: 'จัดส่งแล้ว',
   DELIVERED: 'ส่งถึงแล้ว',
-  CANCELLED: 'ยกเลิก',
-  REJECTED: 'ปฏิเสธ',
+  CANCELLED: 'ยกเลิกและรอคืนเงิน',
+  REJECTED: 'สลิปไม่ถูกต้อง (รอแนบใหม่)',
 }
 
 export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
-  PENDING_CONFIRM: 'warning',
-  STOCK_CONFIRMED: 'info',
-  WAITING_PAYMENT: 'warning',
-  VERIFYING_PAYMENT: 'warning',
-  PAID: 'info',
-  PACKING: 'info',
-  READY_TO_SHIP: 'info',
-  SHIPPED: 'info',
+  PENDING_CONFIRM: 'amber',
+  STOCK_CONFIRMED: 'cyan',
+  WAITING_PAYMENT: 'orange',
+  VERIFYING_PAYMENT: 'violet',
+  PAID: 'blue',
+  PACKING: 'purple',
+  READY_TO_SHIP: 'teal',
+  SHIPPED: 'indigo',
   DELIVERED: 'success',
-  CANCELLED: 'neutral',
+  CANCELLED: 'rose',
   REJECTED: 'danger',
+}
+
+export function getOrderStatusLabel(order: Pick<CustomerOrder, 'status' | 'refundStatus'>): string {
+  if (order.status === 'CANCELLED') {
+    if (order.refundStatus === 'REFUNDED') return 'คืนเงินแล้ว'
+    return 'ยกเลิกและรอคืนเงิน'
+  }
+  if (order.status === 'REJECTED') {
+    return 'สลิปไม่ถูกต้อง (รอแนบใหม่)'
+  }
+  return ORDER_STATUS_LABELS[order.status] ?? order.status
+}
+
+export function getOrderStatusTone(order: Pick<CustomerOrder, 'status' | 'refundStatus'>): BadgeTone {
+  if (order.status === 'CANCELLED') {
+    if (order.refundStatus === 'REFUNDED') return 'success'
+    return 'rose'
+  }
+  return ORDER_STATUS_TONES[order.status] ?? 'neutral'
 }
 
 export const CHANNEL_LABELS: Record<OrderChannel, string> = {
@@ -141,7 +171,7 @@ const MILESTONE_OF: Record<OrderStatus, number> = {
 export const milestoneOf = (status: OrderStatus) => MILESTONE_OF[status]
 
 export const isClosedOrder = (status: OrderStatus) =>
-  status === 'DELIVERED' || status === 'CANCELLED' || status === 'REJECTED'
+  status === 'DELIVERED' || status === 'CANCELLED'
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 

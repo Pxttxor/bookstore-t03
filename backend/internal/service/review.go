@@ -44,17 +44,15 @@ func NewReviewService(
 
 // ReviewInput — ฟอร์มเขียนรีวิวของลูกค้า (`Customer.writeReview()`)
 type ReviewInput struct {
-	BookID   int    `json:"bookId"`
-	Rating   int    `json:"rating"`
-	Headline string `json:"headline,omitempty"`
-	Comment  string `json:"comment"`
+	BookID  int    `json:"bookId"`
+	Rating  int    `json:"rating"`
+	Comment string `json:"comment"`
 }
 
 // UpdateReviewInput — ฟอร์มแก้ไขรีวิวของลูกค้า
 type UpdateReviewInput struct {
-	Rating   int    `json:"rating"`
-	Headline string `json:"headline,omitempty"`
-	Comment  string `json:"comment"`
+	Rating  int    `json:"rating"`
+	Comment string `json:"comment"`
 }
 
 // ModerateInput — คำสั่งตรวจสอบรีวิวของพนักงาน (`Review.moderate(action)`)
@@ -106,7 +104,6 @@ func (s *ReviewService) Submit(current Identity, input ReviewInput) (*repository
 			BookID:     input.BookID,
 			OrderID:    &orderID,
 			Rating:     input.Rating,
-			Headline:   input.Headline,
 			Comment:    input.Comment,
 		}
 		if err := review.Submit(s.filter, time.Now()); err != nil {
@@ -141,7 +138,7 @@ func (s *ReviewService) Update(current Identity, reviewID int, input UpdateRevie
 		if review.Status == model.ReviewStatusRemoved {
 			return model.ErrReviewRemoved
 		}
-		if err := review.Update(input.Rating, input.Headline, input.Comment, s.filter); err != nil {
+		if err := review.Update(input.Rating, input.Comment, s.filter); err != nil {
 			return err
 		}
 		return s.reviews.Save(tx, review)
@@ -219,22 +216,11 @@ func (s *ReviewService) Moderate(reviewID int, input ModerateInput, by string) (
 			return err
 		}
 
-		report, err := s.reviews.FindReportByReview(tx, reviewID)
-		if err != nil {
-			return err
-		}
-		if report == nil || report.Status != model.ApprovalStatusPending {
-			return nil
-		}
-
 		decision := model.ApprovalStatusApproved
 		if input.Action == model.ModerateActionPublish {
 			decision = model.ApprovalStatusRejected
 		}
-		if err := report.Decide(decision, by, time.Now()); err != nil {
-			return err
-		}
-		return s.reviews.SaveReport(tx, report)
+		return s.closePendingReport(tx, reviewID, decision, by)
 	})
 	if err != nil {
 		return nil, err
@@ -242,7 +228,31 @@ func (s *ReviewService) Moderate(reviewID int, input ModerateInput, by string) (
 	return s.reviews.Find(s.db, reviewID)
 }
 
+// closePendingReport — ปิดรายงานที่ยังค้างของรีวิวนี้ ในทรานแซกชันเดียวกับที่เปลี่ยนสถานะรีวิว
+//
+// ไม่มีรายงาน หรือรายงานถูกตัดสินไปแล้ว = ไม่ต้องทำอะไร (ไม่ใช่ข้อผิดพลาด)
+func (s *ReviewService) closePendingReport(
+	tx *gorm.DB, reviewID int, decision model.ApprovalStatus, by string,
+) error {
+	report, err := s.reviews.FindReportByReview(tx, reviewID)
+	if err != nil {
+		return err
+	}
+	if report == nil || report.Status != model.ApprovalStatusPending {
+		return nil
+	}
+	if err := report.Decide(decision, by, time.Now()); err != nil {
+		return err
+	}
+	return s.reviews.SaveReport(tx, report)
+}
+
 // Reply — พนักงานตอบกลับรีวิว แล้วรีวิวขึ้นหน้าร้าน
+//
+// ตอบกลับ = ยอมรับรีวิวนั้นไปในตัว (`Review.AddReply` ดันสถานะเป็น PUBLISHED)
+// รายงานที่ยังค้างของรีวิวนี้จึงต้องปิดว่า **ไม่เป็นผล** ในทรานแซกชันเดียวกัน
+// เหมือนที่ `Moderate` ทำกับคำสั่ง PUBLISH — ไม่งั้นรีวิวขึ้นหน้าร้านแล้วแต่รายงาน
+// ยังค้าง PENDING ทำให้คิว "รอตรวจสอบ" ของผู้จัดการไม่ขยับตามที่ตัดสินไป
 func (s *ReviewService) Reply(reviewID int, input ReplyInput, by string) (*repository.ReviewRow, error) {
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		review, err := s.reviews.FindForUpdate(tx, reviewID)
@@ -262,7 +272,10 @@ func (s *ReviewService) Reply(reviewID int, input ReplyInput, by string) (*repos
 		for i := range fresh {
 			fresh[i].ReviewID = review.ReviewID
 		}
-		return s.reviews.AddReplies(tx, fresh)
+		if err := s.reviews.AddReplies(tx, fresh); err != nil {
+			return err
+		}
+		return s.closePendingReport(tx, reviewID, model.ApprovalStatusRejected, by)
 	})
 	if err != nil {
 		return nil, err

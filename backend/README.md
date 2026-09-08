@@ -256,6 +256,7 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | POST | `/suppliers/{id}/deactivate` | U3 | ผู้จัดการร้าน |
 | GET | `/categories` · `/books` · `/books/{id}` · `/inventory` | — | คลัง, ผจก., ฝ่ายขาย |
 | GET | `/books/{id}/change-logs` | — | ฝ่ายขาย, ผจก. |
+| GET | `/book-change-logs` | — | ผู้จัดการร้าน (ประวัติการแก้ไขหนังสือทุกเล่มรวมกัน) |
 | POST/PUT | `/books` · `/books/{id}` · `/books/{id}/status` | — | ฝ่ายขาย, ผจก. |
 | GET | `/inventory/alerts` | U5 | คลังสินค้า |
 | GET | `/inventory/low-stock` | — | คลัง, ผจก., ฝ่ายขาย |
@@ -269,6 +270,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
 | POST | `/orders/{id}/pack` · `/orders/{id}/ready` | — | คลังสินค้า |
 | POST | `/orders/{id}/ship` · `/orders/{id}/deliver` | — | ฝ่ายจัดส่ง |
 | POST | `/orders/{id}/cancel` | — | ฝ่ายขาย, ผจก. |
+| POST | `/orders/validate-discount` | — | ทุกคนที่ล็อกอินแล้ว (ตรวจโค้ดส่วนลดจากการแลกของรางวัล) |
+| POST | `/orders/{id}/refund-bank` | — | ทุกคนที่ล็อกอินแล้ว (ลูกค้ากรอกบัญชีรับเงินคืนของใบตัวเอง) |
+| POST | `/orders/{id}/refund-confirm` | — | ฝ่ายขาย, ผจก. |
 | GET/POST/PUT/DELETE | `/promotions` · `/promotions/{id}` · `/promotions/{id}/status` | — | ผู้จัดการร้าน |
 | GET | `/banks` | — | ทุกคนที่ล็อกอินแล้ว (ลูกค้าต้องรู้ว่าจะโอนเข้าบัญชีไหน) |
 | GET | `/payments` · `/payments/{id}` | — | ฝ่ายขาย, ผจก. |
@@ -484,8 +488,9 @@ migrate ชนิดข้อมูล · ค่าทุกตัวเป็�
     `membership_tier.point_rate` เป็น `numeric(12,4)` ไม่ใช่ `(12,2)` เหมือนคอลัมน์เงินอื่น
     เพราะอัตราอย่าง 0.015 จะถูกปัดเป็น 0.02 ถ้าเก็บแค่สองตำแหน่ง
 
-25. **`review` เพิ่มสามคอลัมน์ที่ diagram ไม่มี** — `headline` (หน้าจอแสดงหัวข้อรีวิวแยกจากเนื้อ) ·
-    `flagged` (ผลของ `ProfanityFilter` ตอนที่ลูกค้าส่งเข้ามา เก็บไว้เพราะรายการคำต้องห้ามเปลี่ยนได้
+25. **`review` เพิ่มสองคอลัมน์ที่ diagram ไม่มี** (เคยเป็นสาม · PR #25 ตัด `headline` ทิ้งทั้งสาย
+    แล้วให้ `Migrate` สั่ง `DROP COLUMN IF EXISTS headline` ให้เอง) — `flagged` (ผลของ
+    `ProfanityFilter` ตอนที่ลูกค้าส่งเข้ามา เก็บไว้เพราะรายการคำต้องห้ามเปลี่ยนได้
     แต่ผลที่พนักงานเห็นตอนตรวจต้องเป็นผลของตอนนั้น) · `review_reply.replied_by`
     (กติกาเดียวกับ `book_change_log.changed_by` — บันทึกว่าใครทำ) · **ต้องตกลงกับเจ้าของคลาสก่อนรวมงาน**
 

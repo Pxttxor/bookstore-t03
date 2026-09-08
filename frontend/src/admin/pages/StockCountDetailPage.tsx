@@ -17,7 +17,6 @@ import {
   STOCK_COUNT_STATUS_LABELS,
   STOCK_COUNT_STATUS_TONES,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './StockCountDetailPage.css'
 
 export default function StockCountDetailPage() {
@@ -120,7 +119,7 @@ export default function StockCountDetailPage() {
         </div>
       </div>
 
-      <section className="admin-card count-detail">
+      <section className="admin-card admin-card--flush count-detail">
         <div className="table-wrap">
           <table className="data-table">
             <thead>

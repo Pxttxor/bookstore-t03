@@ -34,29 +34,40 @@ type orderShipmentDTO struct {
 }
 
 type orderDTO struct {
-	OrderID         int                `json:"orderId"`
-	Code            string             `json:"code"`
-	CustomerID      int                `json:"customerId"`
-	CustomerName    string             `json:"customerName"`
-	CustomerEmail   string             `json:"customerEmail,omitempty"`
-	Channel         model.OrderChannel `json:"channel"`
-	ChannelLabel    string             `json:"channelLabel"`
-	OrderDate       time.Time          `json:"orderDate"`
-	ShippingAddress string             `json:"shippingAddress"`
-	Status          model.OrderStatus  `json:"status"`
-	StatusLabel     string             `json:"statusLabel"`
-	Subtotal        float64            `json:"subtotal"`
-	DiscountAmount  float64            `json:"discountAmount"`
-	NetAmount       float64            `json:"netAmount"`
-	PromotionID     *int               `json:"promotionId,omitempty"`
-	PromotionName   string             `json:"promotionName,omitempty"`
-	SlipFileName    string             `json:"slipFileName,omitempty"`
-	ItemCount       int                `json:"itemCount"`
-	Closed          bool               `json:"closed"`
-	CanCancel       bool               `json:"canCancel"`
-	Items           []orderItemDTO     `json:"items"`
-	Timeline        []orderHistoryDTO  `json:"timeline"`
-	Shipment        *orderShipmentDTO  `json:"shipment,omitempty"`
+	OrderID           int                `json:"orderId"`
+	Code              string             `json:"code"`
+	CustomerID        int                `json:"customerId"`
+	CustomerName      string             `json:"customerName"`
+	CustomerPhone     string             `json:"customerPhone,omitempty"`
+	CustomerEmail     string             `json:"customerEmail,omitempty"`
+	Channel           model.OrderChannel `json:"channel"`
+	ChannelLabel      string             `json:"channelLabel"`
+	OrderDate         time.Time          `json:"orderDate"`
+	ShippingAddress   string             `json:"shippingAddress"`
+	Status            model.OrderStatus  `json:"status"`
+	StatusLabel       string             `json:"statusLabel"`
+	Subtotal          float64            `json:"subtotal"`
+	DiscountAmount    float64            `json:"discountAmount"`
+	NetAmount         float64            `json:"netAmount"`
+	PromotionID       *int               `json:"promotionId,omitempty"`
+	PromotionName     string             `json:"promotionName,omitempty"`
+	DiscountCode      string             `json:"discountCode,omitempty"`
+	SlipFileName      string             `json:"slipFileName,omitempty"`
+	ItemCount         int                `json:"itemCount"`
+	Closed            bool               `json:"closed"`
+	CanCancel         bool               `json:"canCancel"`
+	CancelReason      string             `json:"cancelReason,omitempty"`
+	RefundBankName    string             `json:"refundBankName,omitempty"`
+	RefundAccountNo   string             `json:"refundAccountNo,omitempty"`
+	RefundAccountName string             `json:"refundAccountName,omitempty"`
+	RefundStatus      string             `json:"refundStatus,omitempty"`
+	RefundStatusLabel string             `json:"refundStatusLabel,omitempty"`
+	RefundNote        string             `json:"refundNote,omitempty"`
+	RefundedAt        *time.Time         `json:"refundedAt,omitempty"`
+	RefundedBy        string             `json:"refundedBy,omitempty"`
+	Items             []orderItemDTO     `json:"items"`
+	Timeline          []orderHistoryDTO  `json:"timeline"`
+	Shipment          *orderShipmentDTO  `json:"shipment,omitempty"`
 }
 
 type promotionDTO struct {
@@ -105,28 +116,69 @@ func toOrderDTO(view service.OrderView) orderDTO {
 		}
 	}
 
+	cancelReason := ""
+	if order.Status == model.OrderStatusCancelled || order.Status == model.OrderStatusRejected {
+		cancelReason = order.CancelReason
+		if cancelReason == "" {
+			for i := len(order.Timeline) - 1; i >= 0; i-- {
+				if order.Timeline[i].Status == model.OrderStatusCancelled || order.Timeline[i].Status == model.OrderStatusRejected {
+					cancelReason = order.Timeline[i].Note
+					break
+				}
+			}
+		}
+	}
+
+	var refundStatusLabel string
+	switch order.RefundStatus {
+	case model.RefundStatusPending:
+		refundStatusLabel = "รอคืนเงิน"
+	case model.RefundStatusRefunded:
+		refundStatusLabel = "คืนเงินลูกค้าแล้ว"
+	}
+
+	statusLabel := order.Status.Label()
+	if order.Status == model.OrderStatusCancelled {
+		if order.RefundStatus == model.RefundStatusRefunded {
+			statusLabel = "คืนเงินแล้ว"
+		} else {
+			statusLabel = "ยกเลิกและรอคืนเงิน"
+		}
+	}
+
 	dto := orderDTO{
-		OrderID:         order.OrderID,
-		CanCancel:       order.CanTransitionTo(model.OrderStatusCancelled),
-		Code:            model.FormatOrderCode(order.OrderID),
-		CustomerID:      order.CustomerID,
-		CustomerName:    view.CustomerName,
-		CustomerEmail:   view.CustomerEmail,
-		Channel:         order.Channel,
-		ChannelLabel:    order.Channel.Label(),
-		OrderDate:       order.OrderDate,
-		ShippingAddress: order.ShippingAddress,
-		Status:          order.Status,
-		StatusLabel:     order.Status.Label(),
-		Subtotal:        order.Subtotal,
-		DiscountAmount:  order.DiscountAmount,
-		NetAmount:       order.NetAmount,
-		PromotionID:     order.PromotionID,
-		SlipFileName:    order.SlipFileName,
-		ItemCount:       order.ItemCount(),
-		Closed:          order.IsClosed(),
-		Items:           items,
-		Timeline:        timeline,
+		OrderID:           order.OrderID,
+		CanCancel:         order.CanTransitionTo(model.OrderStatusCancelled),
+		Code:              model.FormatOrderCode(order.OrderID),
+		CustomerID:        order.CustomerID,
+		CustomerName:      view.CustomerName,
+		CustomerPhone:     view.CustomerPhone,
+		CustomerEmail:     view.CustomerEmail,
+		Channel:           order.Channel,
+		ChannelLabel:      order.Channel.Label(),
+		OrderDate:         order.OrderDate,
+		ShippingAddress:   order.ShippingAddress,
+		Status:            order.Status,
+		StatusLabel:       statusLabel,
+		Subtotal:          order.Subtotal,
+		DiscountAmount:    order.DiscountAmount,
+		NetAmount:         order.NetAmount,
+		PromotionID:       order.PromotionID,
+		DiscountCode:      order.DiscountCode,
+		SlipFileName:      order.SlipFileName,
+		CancelReason:      cancelReason,
+		RefundBankName:    order.RefundBankName,
+		RefundAccountNo:   order.RefundAccountNo,
+		RefundAccountName: order.RefundAccountName,
+		RefundStatus:      order.RefundStatus,
+		RefundStatusLabel: refundStatusLabel,
+		RefundNote:        order.RefundNote,
+		RefundedAt:        order.RefundedAt,
+		RefundedBy:        order.RefundedBy,
+		ItemCount:         order.ItemCount(),
+		Closed:            order.IsClosed(),
+		Items:             items,
+		Timeline:          timeline,
 	}
 	if view.Promotion != nil {
 		dto.PromotionName = view.Promotion.Name
@@ -184,4 +236,15 @@ func toPromotionDTOs(views []service.PromotionView) []promotionDTO {
 		out[i] = toPromotionDTO(view)
 	}
 	return out
+}
+
+type validateDiscountInput struct {
+	Code     string  `json:"code"`
+	Subtotal float64 `json:"subtotal"`
+}
+
+type discountValidationDTO struct {
+	Code           string  `json:"code"`
+	RewardName     string  `json:"rewardName"`
+	DiscountAmount float64 `json:"discountAmount"`
 }

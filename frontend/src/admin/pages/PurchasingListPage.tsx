@@ -23,22 +23,32 @@ import {
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatBaht, formatSupplierCode } from '../suppliers/suppliers'
-import '../components/Tabs.css'
-import '../components/DataTable.css'
 import './PurchasingListPage.css'
 
-type Tab = 'ALL' | 'PENDING' | 'PO' | 'RECEIVING'
+type Tab = 'ALL' | 'PENDING' | 'PR' | 'PO' | 'RECEIVING'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'ALL', label: 'ทั้งหมด' },
   { key: 'PENDING', label: 'รออนุมัติ' },
+  { key: 'PR', label: 'PR' },
   { key: 'PO', label: 'PO' },
   { key: 'RECEIVING', label: 'รับสินค้า' },
 ]
 
+// วันที่เสมอกันได้บ่อยเพราะ updated เป็นวันที่ระดับวัน ไม่ใช่ timestamp — ต้องมี tie-break
+// ที่แน่นอน ไม่งั้นแถวที่เสมอกันจะตกไปเรียงตามลำดับที่ต่อ array (PR ASC แล้ว PO ASC)
+// ซึ่งสวนทางกับทั้งตารางที่เรียงจากใหม่ไปเก่า
+//
+// ต้องเทียบชนิดเอกสาร *ก่อน* docId เสมอ: PR กับ PO เดินคนละ sequence และเลขคนละหลัก
+// (PR หลักร้อย · PO หลักพัน) docId จึงเทียบกันได้เฉพาะภายในชนิดเดียวกัน — ถ้ายุบชั้นนี้ทิ้ง
+// จะได้ PO-2431, PO-2430, PR-106 เพราะ 2431 > 106 ซึ่งเป็นอาการเดิมในรูปแบบใหม่
+const KIND_ORDER: Record<DocumentRow['kind'], number> = { PR: 0, PO: 1 }
+
 interface DocumentRow {
   key: string
   kind: 'PR' | 'PO'
+  /** เลขเอกสารเป็นตัวเลข ใช้เรียงลำดับ — code เป็นสตริงจึงเทียบเชิงตัวเลขไม่ได้ */
+  docId: number
   code: string
   supplierId: number
   total: number
@@ -74,6 +84,7 @@ export default function PurchasingListPage() {
     const prRows = requisitions.map<DocumentRow>((pr) => ({
       key: `PR-${pr.prId}`,
       kind: 'PR',
+      docId: pr.prId,
       code: formatPRCode(pr.prId),
       supplierId: pr.supplierId,
       total: documentTotal(pr.items),
@@ -95,6 +106,7 @@ export default function PurchasingListPage() {
       return {
         key: `PO-${po.poId}`,
         kind: 'PO',
+        docId: po.poId,
         code: formatPOCode(po.poId),
         supplierId: po.supplierId,
         total: documentTotal(po.items),
@@ -114,7 +126,12 @@ export default function PurchasingListPage() {
       }
     })
 
-    return [...prRows, ...poRows].sort((a, b) => b.updated.localeCompare(a.updated))
+    return [...prRows, ...poRows].sort(
+      (a, b) =>
+        b.updated.localeCompare(a.updated) ||
+        KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
+        b.docId - a.docId,
+    )
   }, [requisitions, orders, mayApprove, mayHandleOrders, role])
 
   const filtered = useMemo(() => {
@@ -125,6 +142,8 @@ export default function PurchasingListPage() {
     return rows.filter((row) => {
       if (tab === 'PENDING' && !(row.kind === 'PR' && row.label === PR_STATUS_LABELS.SUBMITTED))
         return false
+      // แท็บ PR = ใบขอสั่งซื้อทุกสถานะ ต่างจากแท็บ PENDING ข้างบนที่คัดเฉพาะ SUBMITTED
+      if (tab === 'PR' && row.kind !== 'PR') return false
       if (tab === 'PO' && row.kind !== 'PO') return false
       if (
         tab === 'RECEIVING' &&
@@ -169,8 +188,8 @@ export default function PurchasingListPage() {
         )}
       </div>
 
-      <section className="admin-card">
-        <div className="admin-tabs" role="tablist">
+      <section className="admin-card admin-card--flush">
+        <div className="admin-tabs admin-tabs--inset" role="tablist">
           {TABS.map((entry) => (
             <button
               key={entry.key}

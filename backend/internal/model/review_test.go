@@ -11,20 +11,19 @@ var reviewAt = time.Date(2026, 8, 30, 12, 0, 0, 0, time.UTC)
 func sampleReview(comment string) Review {
 	return Review{
 		ReviewID: 1, CustomerID: 1, BookID: 110,
-		Rating:   5,
-		Headline: "อ่านสนุกมาก",
-		Comment:  comment,
+		Rating:  5,
+		Comment: comment,
 	}
 }
 
-func TestReviewSubmitSetsPendingAndKeepsCleanTextUnflagged(t *testing.T) {
+func TestReviewSubmitSetsPublishedAndKeepsCleanTextUnflagged(t *testing.T) {
 	review := sampleReview("เนื้อเรื่องดี จัดส่งไว แพ็กมาอย่างดี")
 
 	if err := review.Submit(DefaultProfanityFilter(), reviewAt); err != nil {
 		t.Fatalf("ส่งรีวิวไม่ผ่าน: %v", err)
 	}
-	if review.Status != ReviewStatusPending {
-		t.Errorf("สถานะ = %s ต้องการ PENDING", review.Status)
+	if review.Status != ReviewStatusPublished {
+		t.Errorf("สถานะ = %s ต้องการ PUBLISHED", review.Status)
 	}
 	if review.Flagged {
 		t.Error("ข้อความสุภาพต้องไม่ถูกติดธง")
@@ -44,8 +43,8 @@ func TestReviewSubmitFlagsProfanityWithoutRejecting(t *testing.T) {
 	if !review.Flagged {
 		t.Error("ข้อความที่มีคำต้องห้ามต้องถูกติดธง")
 	}
-	if review.Status != ReviewStatusPending {
-		t.Errorf("สถานะ = %s ต้องการ PENDING เพื่อเข้าคิวตรวจ", review.Status)
+	if review.Status != ReviewStatusPublished {
+		t.Errorf("สถานะ = %s ต้องการ PUBLISHED เพื่อแสดงใต้หนังสือทันที", review.Status)
 	}
 }
 
@@ -79,24 +78,24 @@ func TestReviewSubmitRejectsLongComment(t *testing.T) {
 func TestReviewUpdate(t *testing.T) {
 	review := sampleReview("ข้อความเดิม")
 	review.Status = ReviewStatusPublished
-	if err := review.Update(4, "หัวข้อใหม่", "ข้อความใหม่ที่แก้ไขแล้ว", DefaultProfanityFilter()); err != nil {
+	if err := review.Update(4, "ข้อความใหม่ที่แก้ไขแล้ว", DefaultProfanityFilter()); err != nil {
 		t.Fatalf("แก้ไขไม่ผ่าน: %v", err)
 	}
-	if review.Rating != 4 || review.Headline != "หัวข้อใหม่" || review.Comment != "ข้อความใหม่ที่แก้ไขแล้ว" {
+	if review.Rating != 4 || review.Comment != "ข้อความใหม่ที่แก้ไขแล้ว" {
 		t.Errorf("ข้อมูลที่แก้ไขไม่ตรง: %+v", review)
 	}
-	if review.Status != ReviewStatusPending {
-		t.Errorf("สถานะหลังแก้ไขต้องกลับเป็น PENDING, ได้ %s", review.Status)
+	if review.Status != ReviewStatusPublished {
+		t.Errorf("สถานะหลังแก้ไขต้องเป็น PUBLISHED, ได้ %s", review.Status)
 	}
 
-	if err := review.Update(0, "หัวข้อ", "ข้อความ", DefaultProfanityFilter()); err != ErrInvalidRating {
+	if err := review.Update(0, "ข้อความ", DefaultProfanityFilter()); err != ErrInvalidRating {
 		t.Errorf("คะแนน 0 ต้องได้ ErrInvalidRating, ได้ %v", err)
 	}
-	if err := review.Update(5, "หัวข้อ", "   ", DefaultProfanityFilter()); err != ErrEmptyReviewComment {
+	if err := review.Update(5, "   ", DefaultProfanityFilter()); err != ErrEmptyReviewComment {
 		t.Errorf("ข้อความว่างต้องได้ ErrEmptyReviewComment, ได้ %v", err)
 	}
 	longText := strings.Repeat("ก", 76)
-	if err := review.Update(5, "หัวข้อ", longText, DefaultProfanityFilter()); err != ErrReviewCommentTooLong {
+	if err := review.Update(5, longText, DefaultProfanityFilter()); err != ErrReviewCommentTooLong {
 		t.Errorf("ข้อความเกิน 75 ตัวอักษรต้องได้ ErrReviewCommentTooLong, ได้ %v", err)
 	}
 }

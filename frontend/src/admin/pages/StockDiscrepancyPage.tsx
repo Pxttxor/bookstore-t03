@@ -19,9 +19,6 @@ import {
   formatCountCode,
   formatReportCode,
 } from '../inventory/inventory'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
-import '../components/Tabs.css'
 import './StockDiscrepancyPage.css'
 
 type Tab = 'PENDING' | 'ALL'
@@ -115,13 +112,11 @@ export default function StockDiscrepancyPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">หนังสือที่จำนวนคลาดเคลื่อน</h1>
-          <p className="admin-page__subtitle">
-            แสดงรายงานหนังสือที่มีจำนวนคลาดเคลื่อนและยังไม่ได้รับการแก้ไข
-          </p>
+          <p className="admin-page__subtitle">รายงานที่ยังรอการพิจารณา</p>
         </div>
       </div>
 
-      <section className="admin-card discrepancy">
+      <section className="admin-card admin-card--flush discrepancy">
         <div className="discrepancy__tabs">
           <div className="admin-tabs">
             <button

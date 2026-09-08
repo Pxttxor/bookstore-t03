@@ -1,10 +1,26 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { CatalogueBook } from '../data/catalogue'
+import { apiPost, ApiError, tokenStore } from '../api/client'
 
 // ตะกร้าสินค้าของหน้าร้าน — บันทึกใน localStorage เพื่อให้คงอยู่เมื่อรีเฟรชหน้าจอ
 // (คำสั่งซื้อจริงเกิดตอนกดยืนยันที่ `/checkout/payment` ซึ่งเขียนลงฐานข้อมูล)
 
 const CART_STORAGE_KEY = 'bookhaven.cart'
+const DISCOUNT_STORAGE_KEY = 'bookhaven.discount'
+
+function loadSavedDiscount(): AppliedDiscount | null {
+  try {
+    const raw = localStorage.getItem(DISCOUNT_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed.code === 'string' && typeof parsed.discountAmount === 'number') {
+      return parsed as AppliedDiscount
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
 
 function loadSavedCart(): CartLine[] {
   try {
@@ -53,10 +69,23 @@ export interface CartLine {
   qty: number
 }
 
+export interface AppliedDiscount {
+  code: string
+  rewardName: string
+  discountAmount: number
+}
+
 interface CartValue {
   lines: CartLine[]
   count: number
   subtotal: number
+  appliedDiscount: AppliedDiscount | null
+  discountError: string | null
+  discountSuccess: string | null
+  applyDiscount: (code: string) => Promise<AppliedDiscount>
+  removeDiscount: () => void
+  setDiscountError: (err: string | null) => void
+  setDiscountSuccess: (msg: string | null) => void
   /** คืนจำนวนที่เพิ่มได้จริง — 0 แปลว่าของหมดหรือในตะกร้ามีครบยอดคงเหลือแล้ว */
   addItem: (book: CatalogueBook, qty?: number) => number
   setQty: (bookId: number, qty: number) => void
@@ -78,6 +107,9 @@ const snapshot = (book: CatalogueBook): CartBook => ({
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>(loadSavedCart)
+  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(loadSavedDiscount)
+  const [discountError, setDiscountError] = useState<string | null>(null)
+  const [discountSuccess, setDiscountSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -91,7 +123,77 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [lines])
 
+  useEffect(() => {
+    try {
+      if (!appliedDiscount) {
+        localStorage.removeItem(DISCOUNT_STORAGE_KEY)
+      } else {
+        localStorage.setItem(DISCOUNT_STORAGE_KEY, JSON.stringify(appliedDiscount))
+      }
+    } catch {
+      // ignore storage error
+    }
+  }, [appliedDiscount])
+
+  const subtotal = useMemo(
+    () => lines.reduce((s, l) => s + l.book.price * l.qty, 0),
+    [lines],
+  )
+
   const value = useMemo<CartValue>(() => {
+    const applyDiscount = async (code: string): Promise<AppliedDiscount> => {
+      const trimmed = code.trim()
+      if (!trimmed) {
+        const msg = 'กรุณากรอกโค้ดส่วนลด'
+        setDiscountError(msg)
+        setDiscountSuccess(null)
+        throw new Error(msg)
+      }
+      if (!tokenStore.get()) {
+        const msg = 'กรุณาเข้าสู่ระบบสมาชิกก่อนใช้งานโค้ดส่วนลด'
+        setDiscountError(msg)
+        setDiscountSuccess(null)
+        throw new Error(msg)
+      }
+      setDiscountError(null)
+      setDiscountSuccess(null)
+      try {
+        const result = await apiPost<AppliedDiscount>('/api/orders/validate-discount', {
+          code: trimmed,
+          subtotal,
+        })
+        setAppliedDiscount(result)
+        setDiscountSuccess(`ใช้โค้ด ${result.code} สำเร็จ!`)
+        return result
+      } catch (err) {
+        setAppliedDiscount(null)
+        setDiscountSuccess(null)
+        let msg = 'ไม่สามารถใช้โค้ดส่วนลดนี้ได้'
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            msg = 'กรุณาเข้าสู่ระบบสมาชิกก่อนใช้งานโค้ดส่วนลด'
+          } else {
+            msg = err.message
+          }
+        } else if (err instanceof Error) {
+          msg = err.message
+        }
+        setDiscountError(msg)
+        throw new Error(msg, { cause: err })
+      }
+    }
+
+    const removeDiscount = () => {
+      setAppliedDiscount(null)
+      setDiscountError(null)
+      setDiscountSuccess(null)
+      try {
+        localStorage.removeItem(DISCOUNT_STORAGE_KEY)
+      } catch {
+        // ignore
+      }
+    }
+
     const qtyInCart = (bookId: number) =>
       lines.find((l) => l.book.bookId === bookId)?.qty ?? 0
 
@@ -130,18 +232,37 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const clear = () => {
       setLines([])
+      setAppliedDiscount(null)
+      setDiscountError(null)
+      setDiscountSuccess(null)
       try {
         localStorage.removeItem(CART_STORAGE_KEY)
+        localStorage.removeItem(DISCOUNT_STORAGE_KEY)
       } catch {
         // ignore
       }
     }
 
     const count = lines.reduce((n, l) => n + l.qty, 0)
-    const subtotal = lines.reduce((s, l) => s + l.book.price * l.qty, 0)
 
-    return { lines, count, subtotal, addItem, setQty, removeItem, clear, qtyInCart }
-  }, [lines])
+    return {
+      lines,
+      count,
+      subtotal,
+      appliedDiscount,
+      discountError,
+      discountSuccess,
+      applyDiscount,
+      removeDiscount,
+      setDiscountError,
+      setDiscountSuccess,
+      addItem,
+      setQty,
+      removeItem,
+      clear,
+      qtyInCart,
+    }
+  }, [lines, subtotal, appliedDiscount, discountError, discountSuccess])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }

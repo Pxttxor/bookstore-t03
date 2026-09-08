@@ -21,8 +21,6 @@ import {
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatBaht, formatSupplierCode } from '../suppliers/suppliers'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './RequisitionFormPage.css'
 
 // ตัวห่อกันไว้ก่อนให้ฟอร์ม mount — ฟอร์มตั้งค่าเริ่มต้นของรายการด้วย useState

@@ -117,6 +117,31 @@ func TestOrderWaitingPaymentBranch(t *testing.T) {
 	}
 }
 
+// คำสั่งซื้อที่สลิปถูกปฏิเสธ สามารถแนบสลิปใหม่กลับไป VERIFYING_PAYMENT ได้
+func TestOrderRejectedCanUploadSlipAgain(t *testing.T) {
+	order := sampleOrder()
+	at := time.Now()
+	for _, next := range []OrderStatus{
+		OrderStatusStockConfirmed, OrderStatusVerifyingPayment, OrderStatusRejected,
+	} {
+		if err := order.UpdateStatus(next, "ฝ่ายขาย", "", at); err != nil {
+			t.Fatalf("เปลี่ยนเป็น %s ไม่สำเร็จ: %v", next, err)
+		}
+	}
+	if order.Status != OrderStatusRejected {
+		t.Fatalf("สถานะ = %s ต้องการ REJECTED", order.Status)
+	}
+	if !order.CanTransitionTo(OrderStatusVerifyingPayment) {
+		t.Error("คำสั่งซื้อที่ถูกปฏิเสธต้องส่งสลิปใหม่ไป VERIFYING_PAYMENT ได้")
+	}
+	if err := order.UpdateStatus(OrderStatusVerifyingPayment, "ลูกค้า", "แนบสลิปใหม่", at); err != nil {
+		t.Fatalf("ส่งสลิปใหม่ไม่สำเร็จ: %v", err)
+	}
+	if order.Status != OrderStatusVerifyingPayment {
+		t.Errorf("สถานะ = %s ต้องการ VERIFYING_PAYMENT", order.Status)
+	}
+}
+
 // ป้ายไทยต้องตรงกับ ORDER_STATUS_LABELS / CHANNEL_LABELS ฝั่งหน้าจอ
 func TestOrderLabelsMatchFrontend(t *testing.T) {
 	want := map[OrderStatus]string{
@@ -222,5 +247,38 @@ func TestOrderWithApplicablePromotions(t *testing.T) {
 	}
 	if order2.NetAmount != 810 {
 		t.Errorf("ยอดสุทธิต้องเป็น 810 ได้ %.2f", order2.NetAmount)
+	}
+}
+
+func TestOrderCancellationAndRefundFields(t *testing.T) {
+	order := sampleOrder()
+	order.Status = OrderStatusPaid
+	order.CancelReason = "ลูกค้าขอยกเลิกคำสั่งซื้อ"
+	order.RefundBankName = "ธนาคารกสิกรไทย"
+	order.RefundAccountNo = "012-3-45678-9"
+	order.RefundAccountName = "สมศรี มีสุข"
+	order.RefundStatus = RefundStatusPending
+
+	if order.CancelReason != "ลูกค้าขอยกเลิกคำสั่งซื้อ" {
+		t.Errorf("CancelReason ไม่ถูกต้อง: %s", order.CancelReason)
+	}
+	if order.RefundBankName != "ธนาคารกสิกรไทย" || order.RefundAccountNo != "012-3-45678-9" || order.RefundAccountName != "สมศรี มีสุข" {
+		t.Errorf("ข้อมูลบัญชีคืนเงินไม่ถูกต้อง: %s %s %s", order.RefundBankName, order.RefundAccountNo, order.RefundAccountName)
+	}
+	if order.RefundStatus != RefundStatusPending {
+		t.Errorf("RefundStatus ควรเป็น PENDING ได้ %s", order.RefundStatus)
+	}
+
+	now := time.Now().UTC()
+	order.RefundStatus = RefundStatusRefunded
+	order.RefundNote = "คืนเงินลูกค้าไปแล้ว"
+	order.RefundedAt = &now
+	order.RefundedBy = "สมชาย ใจดี"
+
+	if order.RefundStatus != RefundStatusRefunded {
+		t.Errorf("RefundStatus ควรเป็น REFUNDED ได้ %s", order.RefundStatus)
+	}
+	if order.RefundNote != "คืนเงินลูกค้าไปแล้ว" {
+		t.Errorf("RefundNote ควรเป็น 'คืนเงินลูกค้าไปแล้ว' ได้ %s", order.RefundNote)
 	}
 }

@@ -12,8 +12,6 @@ import { useNotifications } from '../notifications/NotificationContext'
 import { can } from '../permissions'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { formatSupplierCode } from '../suppliers/suppliers'
-import '../components/Tabs.css'
-import '../components/DataTable.css'
 import './ContactCentrePage.css'
 
 type Tab = 'directory' | 'routing' | 'notifications'
@@ -108,14 +106,12 @@ export default function ContactCentrePage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">ศูนย์การติดต่อ &amp; การส่งเอกสาร</h1>
-          <p className="admin-page__subtitle">
-            รวมไว้ที่เดียวว่าต้องส่งเอกสารอะไร ให้ใคร ช่องทางไหน และจุดใดที่ระบบแจ้งเตือนอัตโนมัติ
-          </p>
+          <p className="admin-page__subtitle">เอกสาร · ผู้รับ · ช่องทาง · ทริกเกอร์</p>
         </div>
       </div>
 
-      <section className="admin-card">
-        <div className="admin-tabs" role="tablist">
+      <section className="admin-card admin-card--flush">
+        <div className="admin-tabs admin-tabs--inset" role="tablist">
           {tabs.map((entry) => (
             <button
               key={entry.key}
@@ -131,7 +127,7 @@ export default function ContactCentrePage() {
         </div>
 
         {tab === 'directory' && (
-          <>
+          <div className="contacts__panel">
             <div className="contacts__grid">
               <ContactCard
                 icon="user"
@@ -180,7 +176,7 @@ export default function ContactCentrePage() {
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {tab === 'routing' && mayViewRouting && (
@@ -214,7 +210,7 @@ export default function ContactCentrePage() {
         )}
 
         {tab === 'notifications' && mayViewRouting && (
-          <>
+          <div className="contacts__panel">
             <p className="contacts__note">
               <Icon name="help" size={16} />
               รายการนี้แสดงทั้งการแจ้งเตือนในระบบและสำเนาอีเมลที่ระบบบันทึกไว้
@@ -255,7 +251,7 @@ export default function ContactCentrePage() {
                 ))}
               </ul>
             )}
-          </>
+          </div>
         )}
       </section>
     </div>

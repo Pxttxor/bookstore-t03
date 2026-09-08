@@ -1,73 +1,46 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import Icon from '../components/Icon'
 import Modal from '../admin/components/Modal'
-import { apiGet, apiPut, ApiError } from '../api/client'
+import LoadingState from '../admin/components/LoadingState'
+import ErrorState from '../admin/components/ErrorState'
+import { apiPut, ApiError } from '../api/client'
+import { useResource } from '../api/useResource'
+import { loadMyProfile, type MyProfile } from '../data/profile'
 import { useAuth } from '../auth/AuthContext'
 import './ProfilePage.css'
 
-interface CustomerProfile {
-  customerId: number
-  personId: number
-  firstName: string
-  lastName: string
-  name: string
-  email: string
-  phone: string
-  address: string
-  registeredDate: string
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
 export default function ProfilePage() {
-  const { user, logout, refreshUser } = useAuth()
-  const navigate = useNavigate()
+  const { user, refreshUser } = useAuth()
+  const { pathname } = useLocation()
 
-  const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  // เรียก hook ก่อน early return เสมอ — ถ้าย้ายลงล่าง useResource จะไม่ทำงานตอน user เป็น null
+  // enabled กันพนักงานที่หลุดเข้ามา (AccountLayout เช็คแค่ล็อกอิน ไม่เช็ค role) ยิง
+  // /api/customers/me แล้วได้ 403 เงียบ ๆ — เส้นทางนี้เป็นของลูกค้าเท่านั้น
+  const { data: profile, loading, error, apply, reload } = useResource(
+    loadMyProfile,
+    user?.role === 'customer',
+  )
+
   const [isEditing, setIsEditing] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
-  const loadProfile = useCallback(async () => {
-    if (!user) return
-    try {
-      const data = await apiGet<CustomerProfile>('/api/customers/me')
-      setProfile(data)
-    } catch {
-      // ignore
-    }
-  }, [user])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadProfile()
-  }, [loadProfile])
-
-  // only signed-in members can open their profile
-  if (!user) return <Navigate to="/login" replace state={{ from: '/profile' }} />
-
-  const signOut = () => {
-    logout()
-    navigate('/', { replace: true })
-  }
+  // AccountLayout กันคนไม่ล็อกอินไว้ก่อนแล้ว — เหลือไว้แค่ narrow ชนิด `user` ให้ TS
+  if (!user) return <Navigate to="/login" replace state={{ from: pathname }} />
 
   const openEditModal = () => {
-    setFirstName(profile?.firstName ?? '')
-    setLastName(profile?.lastName ?? '')
-    setPhone(profile?.phone ?? '')
-    setAddress(profile?.address ?? '')
-    setError('')
+    if (!profile) return
+    setFirstName(profile.firstName)
+    setLastName(profile.lastName)
+    setPhone(profile.phone)
+    setAddress(profile.address)
+    setFormError('')
     setIsEditing(true)
   }
 
@@ -75,29 +48,31 @@ export default function ProfilePage() {
     e.preventDefault()
     if (saving) return
     if (!firstName.trim()) {
-      setError('กรุณากรอกชื่อ')
+      setFormError('กรุณากรอกชื่อ')
       return
     }
     if (!lastName.trim()) {
-      setError('กรุณากรอกนามสกุล')
+      setFormError('กรุณากรอกนามสกุล')
       return
     }
     setSaving(true)
-    setError('')
+    setFormError('')
     try {
-      const updated = await apiPut<CustomerProfile>('/api/customers/me', {
+      const updated = await apiPut<MyProfile>('/api/customers/me', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),
         address: address.trim(),
       })
-      setProfile(updated)
+      apply(() => updated)
       await refreshUser()
       setIsEditing(false)
       setSuccessMsg('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว')
       setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      setFormError(
+        err instanceof ApiError ? err.message : 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+      )
     } finally {
       setSaving(false)
     }
@@ -107,112 +82,72 @@ export default function ProfilePage() {
   const displayEmail = profile?.email || user.email
 
   return (
-    <div className="profile page-shell">
-      <section className="profile__hero">
-        <span className="profile__avatar" aria-hidden="true">
-          {initialsOf(displayName)}
-        </span>
-        <div className="profile__id">
-          <h1 className="profile__name">{displayName}</h1>
-          <p className="profile__email">{displayEmail}</p>
-          <span className="profile__badge">
-            <Icon name="check-circle" size={16} />
-            BookHaven Member
-          </span>
-        </div>
-      </section>
+    <div className="profile">
+      <h1 className="profile__title">ข้อมูลสมาชิก</h1>
 
-      <div className="profile__grid">
-        <section className="profile__card">
+      <section className="profile__card">
+        <header className="profile__card-head">
           <h2 className="profile__card-title">
             <Icon name="user" size={20} />
             ข้อมูลบัญชี
           </h2>
-          <dl className="profile__details">
-            <div className="profile__row">
-              <dt>ชื่อ-นามสกุล</dt>
-              <dd>{displayName}</dd>
-            </div>
-            <div className="profile__row">
-              <dt>อีเมล</dt>
-              <dd>{displayEmail}</dd>
-            </div>
-            <div className="profile__row">
-              <dt>เบอร์โทรศัพท์</dt>
-              <dd>{profile?.phone || '—'}</dd>
-            </div>
-            <div className="profile__row">
-              <dt>ที่อยู่จัดส่ง</dt>
-              <dd>{profile?.address || '—'}</dd>
-            </div>
-            <div className="profile__row">
-              <dt>รหัสผ่าน</dt>
-              <dd>••••••••</dd>
-            </div>
-          </dl>
-
-          {successMsg && (
-            <p className="profile__success-msg">
-              <Icon name="check-circle" size={16} /> {successMsg}
-            </p>
-          )}
-
           <button
             type="button"
-            className="btn btn-outline profile__edit"
+            className="btn btn-outline btn-sm"
             onClick={openEditModal}
+            disabled={!profile}
+            title={
+              profile
+                ? undefined
+                : user.role !== 'customer'
+                  ? 'แก้ไขข้อมูลส่วนตัวได้เฉพาะบัญชีลูกค้า'
+                  : 'กำลังโหลดข้อมูลบัญชี'
+            }
           >
             <Icon name="edit" size={16} />
             แก้ไขข้อมูลส่วนตัว
           </button>
-        </section>
+        </header>
 
-        <section className="profile__card">
-          <h2 className="profile__card-title">
-            <Icon name="package" size={20} />
-            ทางลัด
-          </h2>
-          <nav className="profile__links">
-            <Link to="/orders" className="profile__link">
-              <Icon name="clock" size={18} />
-              <span>ประวัติการสั่งซื้อ</span>
-              <Icon name="arrow-right" size={16} />
-            </Link>
-            <Link to="/member/points" className="profile__link">
-              <Icon name="award" size={18} />
-              <span>แต้มสะสมของฉัน</span>
-              <Icon name="arrow-right" size={16} />
-            </Link>
-            <Link to="/member/rewards" className="profile__link">
-              <Icon name="gift" size={18} />
-              <span>แลกของรางวัล</span>
-              <Icon name="arrow-right" size={16} />
-            </Link>
-            <span
-              className="profile__link profile__link--soon"
-              aria-disabled="true"
-              title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
-            >
-              <Icon name="heart" size={18} />
-              <span>รายการโปรดของฉัน</span>
-              <em className="profile__soon">เร็ว ๆ นี้</em>
-            </span>
-            <span
-              className="profile__link profile__link--soon"
-              aria-disabled="true"
-              title="ฟีเจอร์นี้เป็นส่วนของระบบสมาชิก — อยู่นอกขอบเขตต้นแบบนี้"
-            >
-              <Icon name="truck" size={18} />
-              <span>สมุดที่อยู่จัดส่ง</span>
-              <em className="profile__soon">เร็ว ๆ นี้</em>
-            </span>
-          </nav>
-          <button type="button" className="profile__signout" onClick={signOut}>
-            <Icon name="log-out" size={18} />
-            ออกจากระบบ
-          </button>
-        </section>
-      </div>
+        {loading && <LoadingState label="กำลังโหลดข้อมูลบัญชี…" />}
+
+        {!loading && error && (
+          <ErrorState message={error} onRetry={() => void reload()} />
+        )}
+
+        {!loading && !error && (
+          <>
+            <dl className="profile__details">
+              <div className="profile__row">
+                <dt>ชื่อ-นามสกุล</dt>
+                <dd>{displayName}</dd>
+              </div>
+              <div className="profile__row">
+                <dt>อีเมล</dt>
+                <dd>{displayEmail}</dd>
+              </div>
+              <div className="profile__row">
+                <dt>เบอร์โทรศัพท์</dt>
+                <dd>{profile?.phone || '—'}</dd>
+              </div>
+              <div className="profile__row">
+                <dt>ที่อยู่จัดส่ง</dt>
+                <dd>{profile?.address || '—'}</dd>
+              </div>
+              <div className="profile__row">
+                <dt>รหัสผ่าน</dt>
+                <dd>••••••••</dd>
+              </div>
+            </dl>
+
+            {successMsg && (
+              <p className="profile__success-msg">
+                <Icon name="check-circle" size={16} /> {successMsg}
+              </p>
+            )}
+          </>
+        )}
+      </section>
 
       {isEditing && (
         <Modal
@@ -240,16 +175,16 @@ export default function ProfilePage() {
           }
         >
           <form id="profile-edit-form" onSubmit={handleSave} className="profile-edit-form">
-            {error && (
+            {formError && (
               <div className="profile-edit-form__error">
                 <Icon name="alert-triangle" size={16} />
-                <span>{error}</span>
+                <span>{formError}</span>
               </div>
             )}
             <div className="profile-edit-form__grid">
               <label className="profile-edit-form__field">
                 <span>
-                  ชื่อ <span className="text-danger">*</span>
+                  ชื่อ <span className="profile-edit-form__required">*</span>
                 </span>
                 <input
                   type="text"
@@ -261,7 +196,7 @@ export default function ProfilePage() {
               </label>
               <label className="profile-edit-form__field">
                 <span>
-                  นามสกุล <span className="text-danger">*</span>
+                  นามสกุล <span className="profile-edit-form__required">*</span>
                 </span>
                 <input
                   type="text"

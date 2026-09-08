@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import Icon from '../components/Icon'
 import { formatPrice } from '../data/money'
+import {
+  SHOP_PROMPTPAY_ID,
+  SHOP_PROMPTPAY_NAME,
+  buildPromptPayPayload,
+  formatPromptPayId,
+} from '../data/promptpay'
 import { useCart } from '../cart/CartContext'
 import { useOrders } from '../admin/orders/OrderContext'
 import { usePayments } from '../admin/payments/PaymentContext'
+import { useToast } from '../admin/components/ToastContext'
 import type { Promotion } from '../admin/promotions/promotions'
 import { fetchActivePromotions, findBestPromotion } from '../services/promotionService'
 import './CheckoutPaymentPage.css'
@@ -19,40 +27,22 @@ interface ShippingState {
 const MAX_SLIP_BYTES = 5 * 1024 * 1024
 const SLIP_PATTERN = /\.(jpe?g|png|pdf)$/i
 
-// Placeholder graphic only, this is not a scannable payment code.
-function QrPlaceholder() {
-  const cells = 21
-  const filled = (r: number, c: number) => ((r * 7 + c * 13 + r * c) % 3 === 0)
-  return (
-    <svg className="pay__qr-svg" viewBox="0 0 21 21" role="img" aria-label="รหัสคิวอาร์สำหรับชำระเงิน">
-      <rect width="21" height="21" fill="#fff" />
-      {Array.from({ length: cells }).map((_, r) =>
-        Array.from({ length: cells }).map((_, c) =>
-          filled(r, c) ? (
-            <rect key={`${r}-${c}`} x={c} y={r} width="1" height="1" fill="#1a1c1c" />
-          ) : null,
-        ),
-      )}
-      {[
-        [0, 0],
-        [14, 0],
-        [0, 14],
-      ].map(([x, y], i) => (
-        <g key={i}>
-          <rect x={x} y={y} width="7" height="7" fill="#1a1c1c" />
-          <rect x={x + 1} y={y + 1} width="5" height="5" fill="#fff" />
-          <rect x={x + 2} y={y + 2} width="3" height="3" fill="#1a1c1c" />
-        </g>
-      ))}
-    </svg>
-  )
-}
-
 export default function CheckoutPaymentPage() {
   const navigate = useNavigate()
   const { state } = useLocation()
-  const { subtotal, lines, clear } = useCart()
+  const {
+    subtotal,
+    lines,
+    clear,
+    appliedDiscount,
+    discountError,
+    applyDiscount,
+    removeDiscount,
+    setDiscountError,
+    setDiscountSuccess,
+  } = useCart()
   const { placeOrder } = useOrders()
+  const toast = useToast()
   const {
     banks,
     loading: banksLoading,
@@ -60,6 +50,8 @@ export default function CheckoutPaymentPage() {
     reload: reloadBanks,
   } = usePayments()
   const [promotions, setPromotions] = useState<Promotion[]>([])
+  const [couponInput, setCouponInput] = useState('')
+  const [checkingCoupon, setCheckingCoupon] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [slip, setSlip] = useState<File | null>(null)
   const [slipPreviewUrl, setSlipPreviewUrl] = useState<string>('')
@@ -82,8 +74,51 @@ export default function CheckoutPaymentPage() {
     () => findBestPromotion(promotions, subtotal, totalQty),
     [promotions, subtotal, totalQty],
   )
-  const netAmount = Math.max(0, subtotal - discount)
+  const rewardDiscount = appliedDiscount ? appliedDiscount.discountAmount : 0
+  const totalDiscount = Math.min(subtotal, discount + rewardDiscount)
+  const netAmount = Math.max(0, subtotal - totalDiscount)
   const amount = netAmount
+
+  // ยอดที่ล็อกไว้ในรหัสคิวอาร์ ต้องเป็นยอดเดียวกับที่โชว์ให้ลูกค้าเห็น
+  // ตะกร้าว่างจะยังไม่มียอด จึงยังไม่ล็อกยอดลงในรหัส
+  const qrAmount = lines.length ? amount : 0
+  // สร้างรหัสใหม่ทุกครั้งที่ยอดเปลี่ยน เช่น ตอนใช้โปรโมชั่นหรือโค้ดส่วนลด
+  const qrPayload = useMemo(
+    () => buildPromptPayPayload(SHOP_PROMPTPAY_ID, qrAmount),
+    [qrAmount],
+  )
+
+  const handleApplyCoupon = async (e?: React.SyntheticEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    const code = couponInput.trim()
+    if (!code || checkingCoupon) return
+    setCheckingCoupon(true)
+    try {
+      const res = await applyDiscount(code)
+      setCouponInput('')
+      toast.notify(
+        'success',
+        `ใช้โค้ดส่วนลด "${res.code}" สำเร็จ! ได้รับส่วนลด ${formatPrice(res.discountAmount)} (ใช้ร่วมกับโปรโมชั่นได้)`,
+      )
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'ไม่สามารถใช้โค้ดส่วนลดนี้ได้'
+      toast.notify('error', `ไม่สามารถใช้โค้ดได้: ${msg}`)
+    } finally {
+      setCheckingCoupon(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    const code = appliedDiscount?.code
+    removeDiscount()
+    setCouponInput('')
+    if (code) {
+      toast.notify('info', `ยกเลิกการใช้โค้ดส่วนลด "${code}" เรียบร้อยแล้ว`)
+    }
+  }
   const selectedBankId = bankId || banks[0]?.bankId
   const selectedBank = banks.find((bank) => bank.bankId === selectedBankId)
   const shipping = (state ?? {}) as ShippingState
@@ -141,11 +176,13 @@ export default function CheckoutPaymentPage() {
       // ส่งชื่อผู้รับ ที่อยู่จัดส่ง บัญชีธนาคาร รายการหนังสือ ชื่อไฟล์สลิป และรหัสโปรโมชั่น (ถ้ามี)
       const order = await placeOrder({
         customerName: recipient,
+        customerPhone: mobile,
         bankId: selectedBankId,
         shippingAddress,
         items: lines.map((line) => ({ bookId: line.book.bookId, quantity: line.qty })),
         slipFileName: slip.name,
         promotionId: bestPromo?.promotionId,
+        discountCode: appliedDiscount?.code,
       })
       if (slipPreviewUrl) {
         try {
@@ -195,9 +232,39 @@ export default function CheckoutPaymentPage() {
       <div className="pay__grid">
         <section className="pay__card pay__scan">
           <div className="pay__qr">
-            <QrPlaceholder />
+            {qrPayload ? (
+              <QRCodeSVG
+                className="pay__qr-svg"
+                value={qrPayload}
+                size={200}
+                level="M"
+                marginSize={1}
+                bgColor="#ffffff"
+                fgColor="#1a1c1c"
+                title={
+                  qrAmount > 0
+                    ? `รหัสคิวอาร์พร้อมเพย์ ยอด ${formatPrice(qrAmount)}`
+                    : 'รหัสคิวอาร์พร้อมเพย์'
+                }
+              />
+            ) : (
+              <p className="pay__qr-error" role="alert">
+                สร้างรหัสคิวอาร์ไม่สำเร็จ กรุณาโอนเข้าบัญชีธนาคารด้านขวาแทน
+              </p>
+            )}
           </div>
-          <p className="pay__scan-note">สแกนรหัสด้านบนด้วยแอปธนาคารเพื่อชำระเงิน</p>
+
+          <div className="pay__promptpay">
+            <span className="pay__promptpay-brand">พร้อมเพย์ (PromptPay)</span>
+            <strong>{SHOP_PROMPTPAY_NAME}</strong>
+            <span className="pay__promptpay-id">{formatPromptPayId(SHOP_PROMPTPAY_ID)}</span>
+          </div>
+
+          <p className="pay__scan-note">
+            {qrAmount > 0
+              ? `สแกนรหัสด้านบนด้วยแอปธนาคาร ยอด ${formatPrice(qrAmount)} จะถูกกรอกให้อัตโนมัติ`
+              : 'สแกนรหัสด้านบนด้วยแอปธนาคารเพื่อชำระเงิน'}
+          </p>
 
           {bestPromo && discount > 0 && (
             <div className="pay__promo-banner">
@@ -210,17 +277,117 @@ export default function CheckoutPaymentPage() {
             </div>
           )}
 
+          {appliedDiscount && rewardDiscount > 0 && (
+            <div className="pay__promo-banner pay__promo-banner--reward">
+              <Icon name="tag" size={16} />
+              <div className="pay__promo-text">
+                <span>โค้ดส่วนลดจากการแลกแต้ม</span>
+                <strong>{appliedDiscount.code} ({appliedDiscount.rewardName})</strong>
+              </div>
+              <span className="pay__promo-discount">-{formatPrice(rewardDiscount)}</span>
+            </div>
+          )}
+
+          <div className="pay__coupon-box">
+            <div className="pay__coupon-header">
+              <span className="pay__coupon-label">
+                <Icon name="tag" size={14} />
+                โค้ดส่วนลดจากการแลกแต้ม
+              </span>
+              <span className="pay__coupon-hint">(ใช้ร่วมกับโปรโมชั่นได้)</span>
+            </div>
+
+            {appliedDiscount ? (
+              <div className="pay__coupon-applied">
+                <div className="pay__coupon-applied-info">
+                  <Icon name="tag" size={14} />
+                  <span>ใช้โค้ด <strong>{appliedDiscount.code}</strong> (-{formatPrice(rewardDiscount)})</span>
+                </div>
+                <button
+                  type="button"
+                  className="pay__coupon-remove-btn"
+                  onClick={handleRemoveCoupon}
+                  title="ยกเลิกการใช้โค้ด"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="pay__coupon-form">
+                <input
+                  type="text"
+                  className={`pay__coupon-input ${discountError ? 'pay__coupon-input--error' : ''}`}
+                  placeholder="กรอกโค้ด เช่น RWD00001"
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value)
+                    if (discountError) setDiscountError(null)
+                    setDiscountSuccess(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      void handleApplyCoupon(e)
+                    }
+                  }}
+                  disabled={checkingCoupon}
+                />
+                <button
+                  type="button"
+                  className="pay__coupon-btn"
+                  disabled={!couponInput.trim() || checkingCoupon}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    void handleApplyCoupon(e)
+                  }}
+                >
+                  {checkingCoupon ? '...' : 'ใช้โค้ด'}
+                </button>
+              </div>
+            )}
+
+            {appliedDiscount && (
+              <div className="pay__coupon-feedback pay__coupon-feedback--success" role="status">
+                <Icon name="check-circle" size={14} />
+                <span>ใช้โค้ดสำเร็จ! ได้รับส่วนลด {formatPrice(appliedDiscount.discountAmount)} (ใช้ร่วมกับโปรโมชั่นร้านได้)</span>
+              </div>
+            )}
+
+            {discountError && !appliedDiscount && (
+              <div className="pay__coupon-feedback pay__coupon-feedback--error" role="alert">
+                <Icon name="alert-triangle" size={14} />
+                <span>{discountError}</span>
+              </div>
+            )}
+          </div>
+
           <div className="pay__amount">
-            {bestPromo && discount > 0 ? (
+            {totalDiscount > 0 ? (
               <div className="pay__amount-breakdown">
                 <div className="pay__amount-subrow">
                   <span>รวมค่าสินค้า</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
-                <div className="pay__amount-subrow pay__amount-subrow--discount">
-                  <span>ส่วนลด ({bestPromo.name})</span>
-                  <span>-{formatPrice(discount)}</span>
-                </div>
+                {bestPromo && discount > 0 && (
+                  <div className="pay__amount-subrow pay__amount-subrow--discount">
+                    <span>ส่วนลดโปรโมชั่น ({bestPromo.name})</span>
+                    <span>-{formatPrice(discount)}</span>
+                  </div>
+                )}
+                {appliedDiscount && rewardDiscount > 0 && (
+                  <div className="pay__amount-subrow pay__amount-subrow--discount">
+                    <span>ส่วนลดโค้ดรางวัล ({appliedDiscount.code})</span>
+                    <span>-{formatPrice(rewardDiscount)}</span>
+                  </div>
+                )}
+                {bestPromo && discount > 0 && appliedDiscount && rewardDiscount > 0 && (
+                  <div className="pay__amount-subrow pay__amount-subrow--combined">
+                    <span>ส่วนลดรวม (ใช้ร่วมกันได้)</span>
+                    <span>-{formatPrice(totalDiscount)}</span>
+                  </div>
+                )}
                 <div className="pay__amount-main">
                   <span>ยอดชำระสุทธิ</span>
                   <strong>{formatPrice(lines.length ? amount : 0)}</strong>

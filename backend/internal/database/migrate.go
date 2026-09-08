@@ -106,6 +106,24 @@ func Migrate(db *gorm.DB) error {
 	if err := db.Exec(backfillTrackingLocations).Error; err != nil {
 		return fmt.Errorf("เติมค่า location พัสดุไม่สำเร็จ: %w", err)
 	}
+	if err := db.Exec(`ALTER TABLE review DROP COLUMN IF EXISTS headline`).Error; err != nil {
+		return fmt.Errorf("ลบคอลัมน์ headline ออกจาก review ไม่สำเร็จ: %w", err)
+	}
+	if err := db.Exec(`ALTER TABLE customer_order ADD COLUMN IF NOT EXISTS customer_phone varchar(50)`).Error; err != nil {
+		return fmt.Errorf("เพิ่มคอลัมน์ customer_phone ใน customer_order ไม่สำเร็จ: %w", err)
+	}
+	backfillCustomerPhone := `
+		UPDATE customer_order co
+		SET customer_phone = p.phone
+		FROM customer c
+		JOIN person p ON c.person_id = p.person_id
+		WHERE co.customer_id = c.customer_id
+		  AND (co.customer_phone IS NULL OR co.customer_phone = '')
+		  AND p.phone IS NOT NULL AND p.phone != '';
+	`
+	if err := db.Exec(backfillCustomerPhone).Error; err != nil {
+		return fmt.Errorf("เติมค่า customer_phone ใน customer_order ไม่สำเร็จ: %w", err)
+	}
 	return applyViews(db)
 }
 
@@ -248,6 +266,7 @@ var foreignKeys = []foreignKey{
 	{"point_transaction", "order_id", "customer_order", "order_id"},
 	{"redemption", "member_id", "member", "member_id"},
 	{"redemption", "reward_id", "reward", "reward_id"},
+	{"redemption", "order_id", "customer_order", "order_id"},
 	{"employee", "person_id", "person", "person_id"},
 	{"customer", "person_id", "person", "person_id"},
 	{"user_account", "person_id", "person", "person_id"},

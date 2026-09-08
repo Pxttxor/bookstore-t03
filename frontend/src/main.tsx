@@ -10,6 +10,7 @@ import { NotificationProvider } from './admin/notifications/NotificationContext'
 import { OrderProvider } from './admin/orders/OrderContext'
 import { PaymentProvider } from './admin/payments/PaymentContext'
 import { MembershipProvider } from './membership/MembershipContext'
+import { ToastProvider } from './admin/components/ToastContext'
 
 // NotificationProvider and OrderProvider sit above both route groups: the storefront
 // checkout has to create customer orders and alert staff, and the back office reads and
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')!).render(
             <OrderProvider>
               <PaymentProvider>
                 <MembershipProvider>
-                  <App />
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
                 </MembershipProvider>
               </PaymentProvider>
             </OrderProvider>

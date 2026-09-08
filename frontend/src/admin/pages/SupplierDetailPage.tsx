@@ -25,7 +25,6 @@ import {
   SUPPLIER_STATUS_LABELS,
 } from '../suppliers/suppliers'
 import DeactivateSupplierModal from './DeactivateSupplierModal'
-import '../components/DataTable.css'
 import './SupplierDetailPage.css'
 
 type Tab = 'books' | 'orders'
@@ -205,7 +204,7 @@ export default function SupplierDetailPage() {
         </section>
       </div>
 
-      <section className="admin-card supplier-detail__tabs-card">
+      <section className="admin-card admin-card--flush supplier-detail__tabs-card">
         <div className="supplier-detail__tabs" role="tablist">
           <button
             type="button"

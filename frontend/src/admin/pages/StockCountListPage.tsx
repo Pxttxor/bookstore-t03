@@ -15,7 +15,6 @@ import {
   STOCK_COUNT_STATUS_LABELS,
   STOCK_COUNT_STATUS_TONES,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './StockCountListPage.css'
 
 // The counting history — the record every round leaves behind.
@@ -74,7 +73,7 @@ export default function StockCountListPage() {
         )}
       </div>
 
-      <section className="admin-card count-list">
+      <section className="admin-card admin-card--flush count-list">
         {loading ? (
           <LoadingState label="กำลังโหลดประวัติการตรวจนับ…" />
         ) : error ? (

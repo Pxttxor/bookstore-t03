@@ -61,11 +61,43 @@
   width: 200px;
   height: 200px;
   display: block;
-  image-rendering: pixelated;
+}
+.pay__qr-error {
+  width: 200px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--danger);
+  text-align: center;
+}
+
+/* ปลายทางพร้อมเพย์ที่โชว์ใต้รหัส ให้ลูกค้าเทียบกับที่แอปธนาคารขึ้นให้ */
+.pay__promptpay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.pay__promptpay-brand {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.pay__promptpay strong {
+  font-size: 15px;
+  color: var(--text-heading);
+}
+.pay__promptpay-id {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
 }
 .pay__scan-note {
   color: var(--text-muted);
   font-size: 14px;
+  text-align: center;
 }
 .pay__amount {
   display: flex;
@@ -123,6 +155,174 @@
   color: #15803d;
   white-space: nowrap;
 }
+
+.pay__promo-banner--reward {
+  background: rgba(14, 116, 144, 0.1);
+  border-color: rgba(14, 116, 144, 0.3);
+  color: #0e7490;
+}
+.pay__promo-banner--reward .pay__promo-text strong {
+  color: #0c4a6e;
+}
+.pay__promo-banner--reward .pay__promo-discount {
+  color: #0e7490;
+}
+
+/* coupon input box in payment page */
+.pay__coupon-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface-muted, rgba(0, 0, 0, 0.02));
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.pay__coupon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pay__coupon-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.pay__coupon-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pay__coupon-form {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.pay__coupon-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface);
+  color: var(--text-heading);
+  text-transform: uppercase;
+}
+
+.pay__coupon-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb, 14, 116, 144), 0.15);
+}
+
+.pay__coupon-input--error {
+  border-color: #ef4444;
+}
+
+.pay__coupon-input--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.pay__coupon-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--primary, #0e7490);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.pay__coupon-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.pay__coupon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pay__coupon-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  color: #15803d;
+}
+
+.pay__coupon-applied-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pay__coupon-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #166534;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.pay__coupon-remove-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ── Feedback alerts ────────────────────────────────── */
+.pay__coupon-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pay__coupon-feedback--success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #15803d;
+}
+
+.pay__coupon-feedback--error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+
 .pay__amount-breakdown {
   display: flex;
   flex-direction: column;
@@ -138,6 +338,16 @@
 .pay__amount-subrow--discount {
   color: #16a34a;
   font-weight: 600;
+}
+.pay__amount-subrow--combined {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.08);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 .pay__amount-main {
   display: flex;

@@ -290,7 +290,7 @@
 /* ── Carrier Tabs Filter Bar ────────────────────────────────────────── */
 .carrier-tabs-bar {
   border-bottom: 1px solid var(--border-soft);
-  padding-bottom: 14px;
+  padding-bottom: 8px;
   margin-bottom: 2px;
 }
 
@@ -299,7 +299,10 @@
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  /* overflow-x: auto บังคับให้ overflow-y เป็น auto ไปด้วย กล่องนี้จึงตัดขอบที่ padding box
+     ต้องเผื่อที่ให้ทั้ง translateY(-1px) ตอน hover ของ .carrier-tab และเงา box-shadow: 0 2px 5px
+     ของมัน ไม่งั้นเส้นขอบบนหนา 1.5px จะถูกตัดหายตอนเอาเมาส์ไปชี้ */
+  padding: 6px 2px 8px;
   scrollbar-width: thin;
 }
 
@@ -457,15 +460,20 @@
 
 .parcel-table__select {
   height: 32px;
-  padding: 0 8px;
+  padding: 0 26px 0 8px;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--text-heading);
   font-size: 12.5px;
   font-family: var(--font-thai);
   outline: none;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
 }
 
 .parcel-table__wrapper {
@@ -963,6 +971,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.label-party--sender {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border-soft);
+}
+
+.label-party--recipient {
+  padding-top: 2px;
 }
 
 .party-title {

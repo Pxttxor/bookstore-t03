@@ -30,7 +30,6 @@ type Review struct {
 	BookID      int           `gorm:"column:book_id;not null;index" json:"bookId"`
 	OrderID     *int          `gorm:"column:order_id;index" json:"orderId,omitempty"`
 	Rating      int           `gorm:"column:rating;not null" json:"rating"`
-	Headline    string        `gorm:"column:headline;type:varchar(200)" json:"headline,omitempty"`
 	Comment     string        `gorm:"column:comment;type:text;not null" json:"comment"`
 	Status      ReviewStatus  `gorm:"column:status;type:varchar(20);not null;index" json:"status"`
 	Flagged     bool          `gorm:"column:flagged;not null;default:false" json:"flagged"`
@@ -119,7 +118,6 @@ func (r *Review) Submit(filter *ProfanityFilter, at time.Time) error {
 	if r.Rating < 1 || r.Rating > 5 {
 		return ErrInvalidRating
 	}
-	r.Headline = strings.TrimSpace(r.Headline)
 	r.Comment = strings.TrimSpace(r.Comment)
 	if r.Comment == "" {
 		return ErrEmptyReviewComment
@@ -128,8 +126,8 @@ func (r *Review) Submit(filter *ProfanityFilter, at time.Time) error {
 		return ErrReviewCommentTooLong
 	}
 
-	r.Flagged = filter.CheckText(r.Headline + " " + r.Comment)
-	r.Status = ReviewStatusPending
+	r.Flagged = filter.CheckText(r.Comment)
+	r.Status = ReviewStatusPublished
 	if r.CreatedDate.IsZero() {
 		r.CreatedDate = at.UTC()
 	}
@@ -137,7 +135,7 @@ func (r *Review) Submit(filter *ProfanityFilter, at time.Time) error {
 }
 
 // Update — ลูกค้าแก้ไขรีวิว
-func (r *Review) Update(rating int, headline, comment string, filter *ProfanityFilter) error {
+func (r *Review) Update(rating int, comment string, filter *ProfanityFilter) error {
 	if rating < 1 || rating > 5 {
 		return ErrInvalidRating
 	}
@@ -150,10 +148,9 @@ func (r *Review) Update(rating int, headline, comment string, filter *ProfanityF
 	}
 
 	r.Rating = rating
-	r.Headline = strings.TrimSpace(headline)
 	r.Comment = comment
-	r.Flagged = filter.CheckText(r.Headline + " " + r.Comment)
-	r.Status = ReviewStatusPending
+	r.Flagged = filter.CheckText(r.Comment)
+	r.Status = ReviewStatusPublished
 	return nil
 }
 

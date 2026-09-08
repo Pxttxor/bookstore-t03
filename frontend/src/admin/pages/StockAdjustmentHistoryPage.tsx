@@ -11,7 +11,6 @@ import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import { useBooks } from '../books/BookContext'
 import { formatBookCode, type StockTransaction } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './StockAdjustmentHistoryPage.css'
 
 const formatDate = (value: string) =>
@@ -98,11 +97,11 @@ export default function StockAdjustmentHistoryPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">ประวัติการปรับยอดสต็อก</h1>
-          <p className="admin-page__subtitle">ตรวจสอบรายการปรับจำนวนหนังสือทั้งหมดที่บันทึกโดยคลังสินค้า</p>
+          <p className="admin-page__subtitle">ประวัติการปรับยอดทั้งหมด</p>
         </div>
       </div>
 
-      <section className="admin-card adjustment-history">
+      <section className="admin-card admin-card--flush adjustment-history">
         <div className="adjustment-history__summary">
           <span className="adjustment-history__count">ทั้งหมด {transactions.length} รายการ</span>
           <div className="admin-tabs">

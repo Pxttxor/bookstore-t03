@@ -1,0 +1,244 @@
+/* RefundsListPage.css */
+
+.refunds__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.refunds-list {
+  overflow: hidden;
+}
+
+.refunds-table {
+  width: 100%;
+}
+
+.refunds-table__amount-col {
+  text-align: right;
+}
+
+.refunds-table__order-link {
+  font-weight: 700;
+  color: var(--primary, #2563eb);
+  text-decoration: none;
+}
+
+.refunds-table__order-link:hover {
+  text-decoration: underline;
+}
+
+.refunds-table__date {
+  font-size: 13px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.refunds-table__customer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.refunds-table__cust-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.refunds-table__cust-email {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.refunds-table__reason {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  color: #dc2626;
+  max-width: 180px;
+}
+
+.refunds-table__bank-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.refunds-table__bank-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.refunds-table__acc-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refunds-table__acc-no {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369a1;
+  background-color: #f0f9ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #bae6fd;
+}
+
+.refunds-table__copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.refunds-table__copy-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.refunds-table__acc-owner {
+  font-size: 12px;
+  color: #475569;
+}
+
+.refunds-table__no-bank {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.refunds-table__amount {
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.refunds-table__action-btn {
+  white-space: nowrap;
+}
+
+.refunds-table__done-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #166534;
+}
+
+.refunds-table__done-date {
+  font-weight: 600;
+}
+
+.refunds-table__done-by {
+  color: #64748b;
+}
+
+.row--refunded {
+  background-color: #fafdfb;
+}
+
+/* Modal styles */
+.refund-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.refund-modal__alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #1e40af;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.refund-modal__summary-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.refund-modal__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.refund-modal__label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.refund-modal__val {
+  color: #1e293b;
+  font-weight: 600;
+  text-align: right;
+}
+
+.refund-modal__val--amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0284c7;
+}
+
+.refund-modal__val--acc {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.refund-modal__copy-btn {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.refund-modal__input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.refund-modal__error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 0;
+}
+
+.refund-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}

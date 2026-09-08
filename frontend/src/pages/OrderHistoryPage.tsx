@@ -9,8 +9,8 @@ import { formatPrice } from '../data/money'
 import {
   formatOrderCode,
   orderItemCount,
-  ORDER_STATUS_LABELS,
-  ORDER_STATUS_TONES,
+  getOrderStatusLabel,
+  getOrderStatusTone,
 } from '../admin/orders/orders'
 import './OrderHistoryPage.css'
 
@@ -18,7 +18,8 @@ export default function OrderHistoryPage() {
   const { user } = useAuth()
   const { orders, loading, error, reload } = useOrders()
 
-  // Only signed-in members have an order history to show.
+  // AccountLayout already redirects a signed-out visitor before this page mounts —
+  // kept here only to narrow `user` for TypeScript below.
   if (!user) return <Navigate to="/login" replace state={{ from: '/orders' }} />
 
   // Orders are tagged with the buyer's email/id; newest first.
@@ -37,7 +38,7 @@ export default function OrderHistoryPage() {
     .sort((a, b) => b.orderId - a.orderId)
 
   return (
-    <div className="history page-shell">
+    <div className="history">
       <header className="history__head">
         <h1 className="history__title">ประวัติการสั่งซื้อ</h1>
         <p className="history__subtitle">คำสั่งซื้อทั้งหมดของบัญชี {user.email}</p>
@@ -73,10 +74,20 @@ export default function OrderHistoryPage() {
                     <span className="history__meta">
                       {order.orderDate ? order.orderDate.slice(0, 10) : '—'} · {orderItemCount(order)} เล่ม
                     </span>
+                    {order.status === 'CANCELLED' && order.cancelReason && (
+                      <span className="history__cancel-reason">
+                        <Icon name="alert-triangle" size={14} /> เหตุผลที่ยกเลิก: {order.cancelReason}
+                      </span>
+                    )}
+                    {order.status === 'REJECTED' && (
+                      <span className="history__cancel-reason history__cancel-reason--rejected">
+                        <Icon name="alert-triangle" size={14} /> สลิปไม่ผ่าน{order.cancelReason ? `: ${order.cancelReason}` : ''} (คลิกเพื่อแนบใหม่)
+                      </span>
+                    )}
                   </div>
                   <div className="history__card-side">
-                    <StatusBadge tone={ORDER_STATUS_TONES[order.status]}>
-                      {ORDER_STATUS_LABELS[order.status]}
+                    <StatusBadge tone={getOrderStatusTone(order)}>
+                      {getOrderStatusLabel(order)}
                     </StatusBadge>
                     <span className="history__total">{formatPrice(order.netAmount)}</span>
                     <Icon name="arrow-right" size={18} />

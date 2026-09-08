@@ -59,6 +59,9 @@ export interface Redemption {
   pointsUsed: number
   redeemedDate: string
   couponCode: string
+  isUsed?: boolean
+  usedDate?: string
+  orderId?: number
 }
 
 export const POINT_TXN_TYPE_LABELS: Record<PointTxnType, string> = {

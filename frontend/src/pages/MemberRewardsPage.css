@@ -1,6 +1,5 @@
 .rewards {
   font-family: var(--font-thai);
-  padding-block: 40px 64px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -157,6 +156,33 @@
   border-bottom: none;
 }
 
+.rewards__coupon-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rewards__coupon-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 10px);
+}
+
+.rewards__coupon-badge--available {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.rewards__coupon-badge--used {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-muted);
+}
+
+.rewards__coupon--used {
+  opacity: 0.65;
+}
+
 .rewards__coupon-name {
   color: var(--text-heading);
   font-weight: 600;
@@ -168,6 +194,12 @@
   font-size: 13px;
 }
 
+.rewards__coupon-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .rewards__coupon-code {
   padding: 6px 14px;
   border: 1px dashed var(--primary-deep);
@@ -175,6 +207,29 @@
   color: var(--primary-deep);
   font-family: var(--font-mono);
   font-size: 15px;
+}
+
+.rewards__coupon-code--used {
+  border-color: var(--border);
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.rewards__copy-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary-deep);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rewards__copy-btn:hover {
+  background: var(--primary);
+  color: #fff;
 }
 
 .rewards__back {

@@ -91,15 +91,22 @@ func (Reward) TableName() string { return "reward" }
 // CouponCode ออกจาก redemption_id หลังเขียนแถวแล้ว (ดู FormatCouponCode)
 // จึงไม่ซ้ำกันโดยไม่ต้องสุ่มเลข
 type Redemption struct {
-	RedemptionID int       `gorm:"column:redemption_id;primaryKey;autoIncrement" json:"redemptionId"`
-	MemberID     int       `gorm:"column:member_id;not null;index" json:"memberId"`
-	RewardID     int       `gorm:"column:reward_id;not null;index" json:"rewardId"`
-	PointsUsed   int       `gorm:"column:points_used;not null" json:"pointsUsed"`
-	RedeemedDate time.Time `gorm:"column:redeemed_date;type:timestamptz;not null" json:"redeemedDate"`
-	CouponCode   string    `gorm:"column:coupon_code;type:varchar(50);not null" json:"couponCode"`
+	RedemptionID int        `gorm:"column:redemption_id;primaryKey;autoIncrement" json:"redemptionId"`
+	MemberID     int        `gorm:"column:member_id;not null;index" json:"memberId"`
+	RewardID     int        `gorm:"column:reward_id;not null;index" json:"rewardId"`
+	PointsUsed   int        `gorm:"column:points_used;not null" json:"pointsUsed"`
+	RedeemedDate time.Time  `gorm:"column:redeemed_date;type:timestamptz;not null" json:"redeemedDate"`
+	CouponCode   string     `gorm:"column:coupon_code;type:varchar(50);not null" json:"couponCode"`
+	OrderID      *int       `gorm:"column:order_id;index" json:"orderId,omitempty"`
+	UsedDate     *time.Time `gorm:"column:used_date;type:timestamptz" json:"usedDate,omitempty"`
 }
 
 func (Redemption) TableName() string { return "redemption" }
+
+// IsUsed — โค้ดนี้ถูกนำไปใช้ในคำสั่งซื้อแล้วหรือไม่
+func (r Redemption) IsUsed() bool {
+	return r.UsedDate != nil || r.OrderID != nil
+}
 
 // ── กฎที่ตัดสินได้จากเอกสารใบเดียว ──────────────────────────────────────
 

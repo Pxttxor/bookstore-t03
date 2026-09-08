@@ -15,7 +15,6 @@ import {
   SUPPLIER_STATUS_LABELS,
   type SupplierStatus,
 } from '../suppliers/suppliers'
-import '../components/DataTable.css'
 import './SupplierListPage.css'
 
 type StatusFilter = SupplierStatus | 'ALL'
@@ -92,7 +91,7 @@ export default function SupplierListPage() {
         )}
       </div>
 
-      <section className="admin-card supplier-list">
+      <section className="admin-card admin-card--flush supplier-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />

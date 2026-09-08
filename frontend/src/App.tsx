@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import StorefrontLayout from './layouts/StorefrontLayout'
-import AuthLayout from './layouts/AuthLayout'
+import AccountLayout from './layouts/AccountLayout'
 import AdminLayout from './admin/AdminLayout'
 import RequireCan from './admin/components/RequireCan'
 import { can } from './admin/permissions'
@@ -18,8 +18,6 @@ const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'))
 const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const PromotionsPage = lazy(() => import('./pages/PromotionsPage'))
-const LoginPage = lazy(() => import('./pages/LoginPage'))
-const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 
 const DashboardPage = lazy(() => import('./admin/pages/DashboardPage'))
 const BookListPage = lazy(() => import('./admin/pages/BookListPage'))
@@ -36,6 +34,7 @@ const StockCountDetailPage = lazy(() => import('./admin/pages/StockCountDetailPa
 const StockDiscrepancyPage = lazy(() => import('./admin/pages/StockDiscrepancyPage'))
 const OrdersListPage = lazy(() => import('./admin/pages/OrdersListPage'))
 const CustomerOrderDetailPage = lazy(() => import('./admin/pages/CustomerOrderDetailPage'))
+const RefundsListPage = lazy(() => import('./admin/pages/RefundsListPage'))
 const DeliverySummaryReportPage = lazy(() => import('./admin/pages/DeliverySummaryReportPage'))
 const SupplierListPage = lazy(() => import('./admin/pages/SupplierListPage'))
 const SupplierDetailPage = lazy(() => import('./admin/pages/SupplierDetailPage'))
@@ -61,17 +60,13 @@ const MemberRewardsPage = lazy(() => import('./pages/MemberRewardsPage'))
 export default function App() {
   return (
     <Routes>
-      <Route element={<AuthLayout />}>
-        <Route path="login" element={<LoginPage />} />
-        <Route path="signup" element={<SignUpPage />} />
-      </Route>
-
       {/* The Figma spec defines no URLs; these mirror its sitemap (§5). */}
       <Route path="admin" element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
 
         <Route path="orders" element={<OrdersListPage />} />
         <Route path="orders/:id" element={<CustomerOrderDetailPage />} />
+        <Route path="refunds" element={<RefundsListPage />} />
 
         <Route path="payments" element={<Navigate to="/admin/orders" replace />} />
         <Route element={<RequireCan allowed={can.managePaymentReports} />}>
@@ -156,16 +151,24 @@ export default function App() {
 
       <Route element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />
+        {/* /login และ /signup ไม่ใช่หน้าจริง — เรนเดอร์หน้าหลักเป็นฉากหลังแล้วให้
+            StorefrontLayout วาง AuthModal ทับตาม pathname เอง (สไตล์ mebmarket.com,
+            7 ก.ย. 69) การคง URL ไว้ทำให้ 6 จุดที่ redirect ไป /login ทั่วระบบไม่ต้องแก้ */}
+        <Route path="login" element={<HomePage />} />
+        <Route path="signup" element={<HomePage />} />
         <Route path="book/:bookId" element={<BookDetailPage />} />
         <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
         <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
         <Route path="order/:id" element={<OrderTrackingPage />} />
-        <Route path="orders" element={<OrderHistoryPage />} />
-        <Route path="profile" element={<ProfilePage />} />
         <Route path="promotions" element={<PromotionsPage />} />
         <Route path="deals" element={<PromotionsPage />} />
-        <Route path="member/points" element={<MemberPointsPage />} />
-        <Route path="member/rewards" element={<MemberRewardsPage />} />
+        {/* หน้าบัญชี — เมนูซ้ายค้างอยู่ทุกหน้า ดู layouts/AccountLayout.tsx (7 ก.ย. 69) */}
+        <Route element={<AccountLayout />}>
+          <Route path="orders" element={<OrderHistoryPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="member/points" element={<MemberPointsPage />} />
+          <Route path="member/rewards" element={<MemberRewardsPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

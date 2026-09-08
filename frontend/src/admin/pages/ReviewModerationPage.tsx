@@ -137,28 +137,56 @@ export default function ReviewModerationPage() {
 
       {/* KPI Cards */}
       <section className="review-kpi-grid-sales">
-        <div className="kpi-card-sales">
+        <div
+          className={`kpi-card-sales ${statusFilter === 'ALL' ? 'active' : ''}`}
+          role="button"
+          tabIndex={0}
+          title="คลิกเพื่อแสดงรีวิวทั้งหมด"
+          onClick={() => { setStatusFilter('ALL'); setPage(1) }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setStatusFilter('ALL'); setPage(1) } }}
+        >
           <div className="kpi-icon-wrap-sales total"><Icon name="bar-chart" size={20} /></div>
           <div className="kpi-content-sales">
             <span className="kpi-label-sales">รีวิวทั้งหมด</span>
             <span className="kpi-value-sales total">{kpiTotal.toLocaleString()}</span>
           </div>
         </div>
-        <div className="kpi-card-sales">
+        <div
+          className={`kpi-card-sales ${statusFilter === 'UNREPLIED' ? 'active unreplied' : ''}`}
+          role="button"
+          tabIndex={0}
+          title="คลิกเพื่อกรองเฉพาะรีวิวที่รอตอบกลับ"
+          onClick={() => { setStatusFilter((prev) => (prev === 'UNREPLIED' ? 'ALL' : 'UNREPLIED')); setPage(1) }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setStatusFilter((prev) => (prev === 'UNREPLIED' ? 'ALL' : 'UNREPLIED')); setPage(1) } }}
+        >
           <div className="kpi-icon-wrap-sales unreplied"><Icon name="clock" size={20} /></div>
           <div className="kpi-content-sales">
             <span className="kpi-label-sales">รอตอบกลับ</span>
             <span className="kpi-value-sales unreplied">{kpiUnreplied}</span>
           </div>
         </div>
-        <div className="kpi-card-sales">
+        <div
+          className={`kpi-card-sales ${statusFilter === 'REPLIED' ? 'active replied' : ''}`}
+          role="button"
+          tabIndex={0}
+          title="คลิกเพื่อกรองเฉพาะรีวิวที่ตอบกลับแล้ว"
+          onClick={() => { setStatusFilter((prev) => (prev === 'REPLIED' ? 'ALL' : 'REPLIED')); setPage(1) }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setStatusFilter((prev) => (prev === 'REPLIED' ? 'ALL' : 'REPLIED')); setPage(1) } }}
+        >
           <div className="kpi-icon-wrap-sales replied"><Icon name="check-circle" size={20} /></div>
           <div className="kpi-content-sales">
             <span className="kpi-label-sales">ตอบกลับแล้ว</span>
             <span className="kpi-value-sales replied">{kpiReplied.toLocaleString()}</span>
           </div>
         </div>
-        <div className="kpi-card-sales">
+        <div
+          className={`kpi-card-sales ${statusFilter === 'REPORTED' ? 'active reported' : ''}`}
+          role="button"
+          tabIndex={0}
+          title="คลิกเพื่อกรองเฉพาะรีวิวที่รายงานผู้จัดการแล้ว"
+          onClick={() => { setStatusFilter((prev) => (prev === 'REPORTED' ? 'ALL' : 'REPORTED')); setPage(1) }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setStatusFilter((prev) => (prev === 'REPORTED' ? 'ALL' : 'REPORTED')); setPage(1) } }}
+        >
           <div className="kpi-icon-wrap-sales reported"><Icon name="flag" size={20} /></div>
           <div className="kpi-content-sales">
             <span className="kpi-label-sales">รายงานผู้จัดการแล้ว</span>
@@ -168,37 +196,33 @@ export default function ReviewModerationPage() {
       </section>
 
       {/* Search & Filter */}
-      <section className="review-filter-bar-sales">
-        <div className="search-input-wrap-sales">
+      <section className="filter-bar">
+        <label className="filter-bar__search">
           <Icon name="search" size={18} />
           <input
             type="search"
             value={term}
-            placeholder="ค้นหาชื่อหนังสือ, ชื่อผู้ใช้ หรือ ISBN..."
+            placeholder="ค้นหาชื่อหนังสือ ผู้ใช้ หรือ ISBN"
             onChange={(e) => { setTerm(e.target.value); setPage(1) }}
           />
-        </div>
-        <div className="filter-select-group-sales">
-          <div className="select-pill-sales">
-            <Icon name="filter" size={16} />
-            <span>สถานะ:</span>
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as FilterStatus); setPage(1) }}>
-              <option value="ALL">ทั้งหมด</option>
-              <option value="UNREPLIED">รอตอบกลับ</option>
-              <option value="REPLIED">ตอบกลับแล้ว</option>
-              <option value="REPORTED">รายงานผู้จัดการแล้ว</option>
-            </select>
-          </div>
-          <div className="select-pill-sales">
-            <Icon name="sort" size={16} />
-            <span>เรียงตาม:</span>
-            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortOrder); setPage(1) }}>
-              <option value="LATEST">ล่าสุด</option>
-              <option value="RATING_HIGH">คะแนนสูงสุด</option>
-              <option value="RATING_LOW">คะแนนต่ำสุด</option>
-            </select>
-          </div>
-        </div>
+        </label>
+        <label className="filter-bar__select">
+          <span>สถานะ</span>
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as FilterStatus); setPage(1) }}>
+            <option value="ALL">ทั้งหมด</option>
+            <option value="UNREPLIED">รอตอบกลับ</option>
+            <option value="REPLIED">ตอบกลับแล้ว</option>
+            <option value="REPORTED">รายงานผู้จัดการแล้ว</option>
+          </select>
+        </label>
+        <label className="filter-bar__select">
+          <span>เรียงตาม</span>
+          <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortOrder); setPage(1) }}>
+            <option value="LATEST">ล่าสุด</option>
+            <option value="RATING_HIGH">คะแนนสูงสุด</option>
+            <option value="RATING_LOW">คะแนนต่ำสุด</option>
+          </select>
+        </label>
       </section>
 
       {/* Review Cards */}

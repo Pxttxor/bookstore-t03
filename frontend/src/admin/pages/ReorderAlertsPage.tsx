@@ -13,7 +13,6 @@ import { can } from '../permissions'
 import type { RequisitionSeedState } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import { findSupplierBook, formatSupplierCode } from '../suppliers/suppliers'
-import '../components/DataTable.css'
 import './ReorderAlertsPage.css'
 
 // Order back up to twice the reorder point so the title does not reappear here next week.
@@ -136,9 +135,7 @@ export default function ReorderAlertsPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">แจ้งเตือนสินค้าถึงจุดสั่งซื้อ</h1>
-          <p className="admin-page__subtitle">
-            ระบบตรวจสอบยอดคงเหลือเทียบจุดสั่งซื้อตามรอบเวลา พบ {rows.length} รายการที่ต้องดำเนินการ
-          </p>
+          <p className="admin-page__subtitle">พบ {rows.length} รายการที่ต้องดำเนินการ</p>
         </div>
         {can.createRequisition(role) && (
           <div className="admin-page__actions">
@@ -163,7 +160,7 @@ export default function ReorderAlertsPage() {
         </p>
       )}
 
-      <section className="admin-card">
+      <section className="admin-card admin-card--flush">
         {loading ? (
           <LoadingState label="กำลังโหลดรายการที่ถึงจุดสั่งซื้อ…" />
         ) : error ? (

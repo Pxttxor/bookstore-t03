@@ -53,6 +53,9 @@ type redemptionDTO struct {
 	PointsUsed   int              `json:"pointsUsed"`
 	RedeemedDate time.Time        `json:"redeemedDate"`
 	CouponCode   string           `json:"couponCode"`
+	IsUsed       bool             `json:"isUsed"`
+	UsedDate     *time.Time       `json:"usedDate,omitempty"`
+	OrderID      *int             `json:"orderId,omitempty"`
 }
 
 func toMemberDTO(view service.MemberView) memberDTO {
@@ -136,6 +139,9 @@ func toRedemptionDTO(view service.RedemptionView) redemptionDTO {
 		PointsUsed:   redemption.PointsUsed,
 		RedeemedDate: redemption.RedeemedDate,
 		CouponCode:   redemption.CouponCode,
+		IsUsed:       redemption.IsUsed(),
+		UsedDate:     redemption.UsedDate,
+		OrderID:      redemption.OrderID,
 	}
 }
 

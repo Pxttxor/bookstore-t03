@@ -38,3 +38,40 @@
   background: var(--status-info-bg);
   color: var(--status-info);
 }
+.badge--amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+.badge--cyan {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.badge--orange {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.badge--violet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.badge--blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.badge--purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+.badge--teal {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+.badge--indigo {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.badge--rose {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+

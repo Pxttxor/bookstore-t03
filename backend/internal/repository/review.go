@@ -167,11 +167,10 @@ func (r *ReviewRepository) Save(tx *gorm.DB, review *model.Review) error {
 	return tx.Model(&model.Review{}).
 		Where("review_id = ?", review.ReviewID).
 		Updates(map[string]any{
-			"rating":   review.Rating,
-			"headline": review.Headline,
-			"comment":  review.Comment,
-			"status":   review.Status,
-			"flagged":  review.Flagged,
+			"rating":  review.Rating,
+			"comment": review.Comment,
+			"status":  review.Status,
+			"flagged": review.Flagged,
 		}).Error
 }
 

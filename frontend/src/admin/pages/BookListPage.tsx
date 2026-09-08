@@ -18,7 +18,6 @@ import {
   type BookStatus,
 } from '../books/books'
 import { formatBookCode } from '../inventory/inventory'
-import '../components/DataTable.css'
 import './BookListPage.css'
 
 type StatusFilter = BookStatus | 'ALL'
@@ -69,9 +68,7 @@ export default function BookListPage() {
       <div className="admin-page__head">
         <div>
           <h1 className="admin-page__title">รายการหนังสือ</h1>
-          <p className="admin-page__subtitle">
-            ค้นหาและเรียกดูข้อมูลหนังสือในระบบทั้งหมด {books.length} รายการ
-          </p>
+          <p className="admin-page__subtitle">ทั้งหมด {books.length} รายการ</p>
         </div>
         {mayEdit && (
           <div className="admin-page__actions">
@@ -83,14 +80,14 @@ export default function BookListPage() {
         )}
       </div>
 
-      <section className="admin-card book-list">
+      <section className="admin-card admin-card--flush book-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />
             <input
               type="search"
               value={term}
-              placeholder="กรอกรายละเอียดของหนังสือในช่องค้นหา — ชื่อหนังสือ ผู้แต่ง หรือ ISBN"
+              placeholder="ค้นหาชื่อหนังสือ ผู้แต่ง หรือ ISBN"
               onChange={(e) => {
                 setTerm(e.target.value)
                 setPage(1)

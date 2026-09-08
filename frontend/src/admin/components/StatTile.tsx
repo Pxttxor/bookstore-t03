@@ -13,20 +13,13 @@ interface StatTileProps {
   icon?: IconName
   tone?: TileTone
   to?: string
-  linkLabel?: string
 }
 
-export default function StatTile({
-  label,
-  value,
-  note,
-  icon,
-  tone = 'default',
-  to,
-  linkLabel,
-}: StatTileProps) {
-  return (
-    <article className={`tile tile--${tone}`}>
+export default function StatTile({ label, value, note, icon, tone = 'default', to }: StatTileProps) {
+  const className = `tile tile--${tone}${to ? ' tile--clickable' : ''}`
+
+  const body = (
+    <>
       <header className="tile__head">
         {icon && <Icon name={icon} size={18} />}
         <h3 className="tile__label">{label}</h3>
@@ -34,13 +27,19 @@ export default function StatTile({
 
       <p className="tile__value">{value}</p>
       {note && <p className="tile__note">{note}</p>}
-
-      {to && (
-        <Link to={to} className="tile__link">
-          {linkLabel ?? 'ดูรายละเอียด'}
-          <Icon name="arrow-right" size={16} />
-        </Link>
-      )}
-    </article>
+    </>
   )
+
+  // The whole card is the link target — no separate "ดูรายละเอียด" row underneath, per
+  // the Figma spec's §SCR-01 mock (label + number, nothing else). A real <a> (via Link)
+  // keeps Tab/Enter working; an <article onClick> would not be focusable at all.
+  if (to) {
+    return (
+      <Link to={to} className={className}>
+        {body}
+      </Link>
+    )
+  }
+
+  return <article className={className}>{body}</article>
 }

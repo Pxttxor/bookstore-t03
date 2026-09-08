@@ -5,13 +5,20 @@ import { isEmployee } from '../auth/roles'
 import AdminTopBar from './components/AdminTopBar'
 import AdminSidebar from './components/AdminSidebar'
 import LoadingState from './components/LoadingState'
-import { ToastProvider } from './components/ToastContext'
 import { BookProvider } from './books/BookContext'
 import { InventoryProvider } from './inventory/InventoryContext'
 import { PurchasingProvider } from './purchasing/PurchasingContext'
 import { SupplierProvider } from './suppliers/SupplierContext'
 import { PromotionProvider } from './promotions/PromotionContext'
 import { ReviewProvider } from './reviews/ReviewContext'
+// Shared control/table/tab styles for the whole back office, loaded once here so every
+// /admin route gets them regardless of what that page's own .css imports — a page that
+// forgets one of these imports used to render unstyled instead of failing loudly (it did,
+// 12 times). Order matters for cascade: shared → layout → page.
+import './components/AdminControls.css'
+import './components/AdminForm.css'
+import './components/DataTable.css'
+import './components/Tabs.css'
 import './AdminLayout.css'
 
 export default function AdminLayout() {
@@ -54,19 +61,17 @@ export default function AdminLayout() {
           <PurchasingProvider>
             <PromotionProvider>
               <ReviewProvider>
-                <ToastProvider>
-                  <div className="admin">
-                    <AdminTopBar user={user} />
-                    <div className="admin__body">
-                      <AdminSidebar role={user.role} />
-                      <main className="admin__main">
-                        <Suspense fallback={null}>
-                          <Outlet />
-                        </Suspense>
-                      </main>
-                    </div>
+                <div className="admin">
+                  <AdminTopBar user={user} />
+                  <div className="admin__body">
+                    <AdminSidebar role={user.role} />
+                    <main className="admin__main">
+                      <Suspense fallback={null}>
+                        <Outlet />
+                      </Suspense>
+                    </main>
                   </div>
-                </ToastProvider>
+                </div>
               </ReviewProvider>
             </PromotionProvider>
           </PurchasingProvider>

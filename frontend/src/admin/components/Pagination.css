@@ -11,6 +11,10 @@
   color: var(--text-muted);
 }
 
+.pagination__count {
+  color: var(--text-muted);
+}
+
 .pagination__controls {
   display: flex;
   align-items: center;

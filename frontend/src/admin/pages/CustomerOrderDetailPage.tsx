@@ -26,12 +26,12 @@ import {
   ORDER_MILESTONES,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_TONES,
+  getOrderStatusLabel,
+  getOrderStatusTone,
   orderItemTotal,
   SHIPMENT_STATUS_LABELS,
   type OrderStatus,
 } from '../orders/orders'
-import '../components/AdminForm.css'
-import '../components/DataTable.css'
 import './CustomerOrderDetailPage.css'
 
 const fmtDateTime = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)}`.trim()
@@ -87,6 +87,7 @@ export default function CustomerOrderDetailPage() {
   const [decision, setDecision] = useState<'CANCELLED' | 'REJECTED' | null>(null)
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState('')
+
   const [saving, setSaving] = useState(false)
   const [slipModalOpen, setSlipModalOpen] = useState(false)
 
@@ -140,7 +141,11 @@ export default function CustomerOrderDetailPage() {
 
   // ต้องรอผลก่อนขึ้น toast — เซิร์ฟเวอร์เป็นคนตัดสินว่าเปลี่ยนสถานะได้จริงไหม
   // (ตารางการเปลี่ยนสถานะ · สต็อกพอไหมตอนแพ็ก · สิทธิ์ของบทบาท)
-  const advance = async (next: OrderStatus, message: string, note?: string) => {
+  const advance = async (
+    next: OrderStatus,
+    message: string,
+    note?: string,
+  ) => {
     if (saving) return
     setSaving(true)
     try {
@@ -167,7 +172,11 @@ export default function CustomerOrderDetailPage() {
       setReasonError('กรุณาระบุเหตุผลก่อนยืนยัน')
       return
     }
-    void advance(decision, decision === 'CANCELLED' ? 'ยกเลิกคำสั่งซื้อแล้ว' : 'ปฏิเสธการชำระเงินแล้ว', reason.trim())
+    void advance(
+      decision,
+      decision === 'CANCELLED' ? 'ยกเลิกคำสั่งซื้อแล้ว' : 'ปฏิเสธการชำระเงินแล้ว',
+      reason.trim(),
+    )
   }
 
   const recordShipment = () => {
@@ -288,8 +297,8 @@ export default function CustomerOrderDetailPage() {
         <div>
           <h1 className="admin-page__title">
             คำสั่งซื้อ {formatOrderCode(order.orderId)}
-            <StatusBadge tone={ORDER_STATUS_TONES[order.status]}>
-              {ORDER_STATUS_LABELS[order.status]}
+            <StatusBadge tone={getOrderStatusTone(order)}>
+              {getOrderStatusLabel(order)}
             </StatusBadge>
           </h1>
           <p className="admin-page__subtitle">
@@ -300,14 +309,44 @@ export default function CustomerOrderDetailPage() {
       </div>
 
       {order.status === 'CANCELLED' && (
-        <p className="order-detail__banner order-detail__banner--muted">
-          <Icon name="close" size={18} /> คำสั่งซื้อนี้ถูกยกเลิกแล้ว
-        </p>
+        <div
+          className={`order-detail__banner ${
+            order.refundStatus === 'REFUNDED'
+              ? 'order-detail__banner--success'
+              : order.refundStatus === 'PENDING'
+                ? 'order-detail__banner--warning'
+                : 'order-detail__banner--muted'
+          }`}
+        >
+          <p className="order-detail__banner-title">
+            <Icon
+              name={order.refundStatus === 'REFUNDED' ? 'check-circle' : 'alert-triangle'}
+              size={18}
+            />
+            {order.refundStatus === 'REFUNDED'
+              ? 'คำสั่งซื้อนี้ถูกยกเลิก และคืนเงินให้ลูกค้าเรียบร้อยแล้ว'
+              : order.refundStatus === 'PENDING'
+                ? 'คำสั่งซื้อนี้ถูกยกเลิก และอยู่ระหว่างรอการคืนเงินให้ลูกค้า'
+                : 'คำสั่งซื้อนี้ถูกยกเลิกแล้ว'}
+          </p>
+          {order.cancelReason && (
+            <p className="order-detail__cancel-reason-text">
+              <strong>เหตุผลที่ยกเลิก:</strong> {order.cancelReason}
+            </p>
+          )}
+        </div>
       )}
       {order.status === 'REJECTED' && (
-        <p className="order-detail__banner order-detail__banner--danger">
-          <Icon name="alert-triangle" size={18} /> คำสั่งซื้อนี้ถูกปฏิเสธ (การชำระเงินไม่ผ่าน)
-        </p>
+        <div className="order-detail__banner order-detail__banner--danger">
+          <p className="order-detail__banner-title">
+            <Icon name="alert-triangle" size={18} /> คำสั่งซื้อนี้ถูกปฏิเสธ (สลิปไม่ถูกต้อง — รอลูกค้าแนบใหม่)
+          </p>
+          {order.cancelReason && (
+            <p className="order-detail__cancel-reason-text">
+              <strong>เหตุผลที่ปฏิเสธ:</strong> {order.cancelReason}
+            </p>
+          )}
+        </div>
       )}
 
       {step >= 0 && (
@@ -338,6 +377,8 @@ export default function CustomerOrderDetailPage() {
             <dl className="order-detail__dl">
               <dt>ชื่อผู้รับ</dt>
               <dd>{order.customerName}</dd>
+              <dt>เบอร์โทรศัพท์</dt>
+              <dd>{order.customerPhone || '—'}</dd>
               <dt>ที่อยู่จัดส่ง</dt>
               <dd>{order.shippingAddress}</dd>
               <dt>สลิปการชำระเงิน</dt>
@@ -552,8 +593,20 @@ export default function CustomerOrderDetailPage() {
             <ol className="order-detail__timeline">
               {[...order.timeline].reverse().map((entry, i) => (
                 <li key={`${entry.status}-${i}`} className="order-detail__timeline-item">
-                  <StatusBadge tone={ORDER_STATUS_TONES[entry.status]}>
-                    {ORDER_STATUS_LABELS[entry.status]}
+                  <StatusBadge
+                    tone={
+                      entry.status === 'CANCELLED'
+                        ? order.refundStatus === 'REFUNDED'
+                          ? 'success'
+                          : 'rose'
+                        : ORDER_STATUS_TONES[entry.status]
+                    }
+                  >
+                    {entry.status === 'CANCELLED'
+                      ? order.refundStatus === 'REFUNDED'
+                        ? 'คืนเงินแล้ว'
+                        : 'ยกเลิกและรอคืนเงิน'
+                      : ORDER_STATUS_LABELS[entry.status]}
                   </StatusBadge>
                   <span className="order-detail__timeline-date">{fmtDateTime(entry.changedDate)}</span>
                   {entry.note && <span className="order-detail__timeline-note">{entry.note}</span>}

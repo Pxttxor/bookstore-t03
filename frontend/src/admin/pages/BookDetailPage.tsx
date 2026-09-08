@@ -15,8 +15,8 @@ import {
   BOOK_FIELD_LABELS,
   BOOK_STATUS_LABELS,
   BOOK_STATUS_TONES,
+  bookFieldLabel,
   formatPriceBaht,
-  type BookField,
 } from '../books/books'
 import { useInventory } from '../inventory/InventoryContext'
 import {
@@ -26,14 +26,9 @@ import {
   STOCK_TXN_TYPE_TONES,
   stockLevel,
 } from '../inventory/inventory'
-import '../components/DataTable.css'
-import '../components/Tabs.css'
 import './BookDetailPage.css'
 
 type Tab = 'changes' | 'movements'
-
-const fieldLabel = (field: string) =>
-  BOOK_FIELD_LABELS[field as BookField] ?? field
 
 const whenText = (iso: string) => new Date(iso).toLocaleString('th-TH')
 
@@ -232,7 +227,7 @@ export default function BookDetailPage() {
                   {changes.map((log) => (
                     <tr key={log.logId}>
                       <td className="data-table__code">{whenText(log.changedDate)}</td>
-                      <td className="data-table__strong">{fieldLabel(log.changedField)}</td>
+                      <td className="data-table__strong">{bookFieldLabel(log.changedField)}</td>
                       <td>{log.oldValue || '—'}</td>
                       <td>{log.newValue || '—'}</td>
                       <td>{log.changedBy}</td>

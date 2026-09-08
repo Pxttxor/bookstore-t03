@@ -23,7 +23,6 @@ import {
   type PromotionStatus,
   type PromotionType,
 } from '../promotions/promotions'
-import '../components/DataTable.css'
 import './PromotionListPage.css'
 
 type StatusFilter = PromotionStatus | 'ALL'
@@ -136,7 +135,7 @@ export default function PromotionListPage() {
         )}
       </div>
 
-      <section className="admin-card promotion-list">
+      <section className="admin-card admin-card--flush promotion-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />

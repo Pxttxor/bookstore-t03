@@ -20,12 +20,11 @@ const (
 	managerName = "ปิยะพร วงศ์ทอง"
 )
 
-func reviewBody(bookID, rating int, headline, comment string) map[string]any {
+func reviewBody(bookID, rating int, comment string) map[string]any {
 	return map[string]any{
-		"bookId":   bookID,
-		"rating":   rating,
-		"headline": headline,
-		"comment":  comment,
+		"bookId":  bookID,
+		"rating":  rating,
+		"comment": comment,
 	}
 }
 
@@ -40,6 +39,7 @@ func runReviewFlow(e *env) {
 		cleanReviewID   int
 		flaggedReviewID int
 		reportID        int
+		replyReportID   int
 		otherReviewID   int
 	)
 
@@ -66,39 +66,39 @@ func runReviewFlow(e *env) {
 
 	check("รีวิวหนังสือที่ยังไม่เคยซื้อ → 422 REVIEW_NOT_PURCHASED", func() error {
 		return expectError("POST", "/api/reviews", customer,
-			reviewBody(reviewUnboughtBook, 5, "ยังไม่ได้ซื้อ", "อยากรีวิวเฉย ๆ"),
+			reviewBody(reviewUnboughtBook, 5, "อยากรีวิวเฉย ๆ"),
 			422, "REVIEW_NOT_PURCHASED")
 	})
 	check("ให้คะแนน 0 ดาว → 422 INVALID_RATING", func() error {
 		return expectError("POST", "/api/reviews", customer,
-			reviewBody(reviewCleanBookID, 0, "ไม่ให้ดาว", "ลืมกดดาว"), 422, "INVALID_RATING")
+			reviewBody(reviewCleanBookID, 0, "ลืมกดดาว"), 422, "INVALID_RATING")
 	})
 	check("ให้คะแนน 6 ดาว → 422 INVALID_RATING", func() error {
 		return expectError("POST", "/api/reviews", customer,
-			reviewBody(reviewCleanBookID, 6, "เกินดาว", "กดเกินไปหนึ่งดาว"), 422, "INVALID_RATING")
+			reviewBody(reviewCleanBookID, 6, "กดเกินไปหนึ่งดาว"), 422, "INVALID_RATING")
 	})
 	check("ไม่กรอกข้อความรีวิว → 422 EMPTY_REVIEW_COMMENT", func() error {
 		return expectError("POST", "/api/reviews", customer,
-			reviewBody(reviewCleanBookID, 5, "ไม่มีข้อความ", "   "), 422, "EMPTY_REVIEW_COMMENT")
+			reviewBody(reviewCleanBookID, 5, "   "), 422, "EMPTY_REVIEW_COMMENT")
 	})
 	check("พนักงานฝ่ายขายเขียนรีวิวแทนลูกค้าไม่ได้ → 403", func() error {
 		return expectStatus("POST", "/api/reviews", sales,
-			reviewBody(reviewCleanBookID, 5, "แทนลูกค้า", "ลองเขียนแทนลูกค้า"), 403)
+			reviewBody(reviewCleanBookID, 5, "ลองเขียนแทนลูกค้า"), 403)
 	})
 
 	check("รีวิวสุภาพบันทึกได้ → PENDING และไม่ถูกติดธง", func() error {
 		body, err := post(customer, "/api/reviews",
-			reviewBody(reviewCleanBookID, 5, "เนื้อเรื่องดีมาก",
+			reviewBody(reviewCleanBookID, 5,
 				"อ่านเพลิน จัดส่งไว แพ็กมาอย่างดี แนะนำเลยครับ"), 201)
 		if err != nil {
 			return err
 		}
 		cleanReviewID = int(body["reviewId"].(float64))
 
-		if err := expect(body["status"], "PENDING"); err != nil {
+		if err := expect(body["status"], "PUBLISHED"); err != nil {
 			return err
 		}
-		if err := expect(body["statusLabel"], "รอตรวจสอบ"); err != nil {
+		if err := expect(body["statusLabel"], "ตรวจสอบสำเร็จ"); err != nil {
 			return err
 		}
 		if err := expect(body["flagged"], false); err != nil {
@@ -118,11 +118,11 @@ func runReviewFlow(e *env) {
 	})
 	check("รีวิวเล่มเดิมจากใบเดิมซ้ำ → 409 REVIEW_DUPLICATED", func() error {
 		return expectError("POST", "/api/reviews", customer,
-			reviewBody(reviewCleanBookID, 4, "รีวิวซ้ำ", "เขียนอีกรอบ"), 409, "REVIEW_DUPLICATED")
+			reviewBody(reviewCleanBookID, 4, "เขียนอีกรอบ"), 409, "REVIEW_DUPLICATED")
 	})
 	check("รีวิวที่มีคำไม่เหมาะสมยังบันทึกได้ แต่ถูกติดธง", func() error {
 		body, err := post(customer, "/api/reviews",
-			reviewBody(reviewFlaggedBookID, 1, "ไม่คุ้มราคา",
+			reviewBody(reviewFlaggedBookID, 1,
 				"สำนวนแปลห่วยมาก อ่านไม่รู้เรื่องเลย"), 201)
 		if err != nil {
 			return err
@@ -132,7 +132,7 @@ func runReviewFlow(e *env) {
 		if err := expect(body["flagged"], true); err != nil {
 			return err
 		}
-		return expect(body["status"], "PENDING")
+		return expect(body["status"], "PUBLISHED")
 	})
 
 	section("สิทธิ์การเข้าถึงรีวิว")
@@ -199,17 +199,17 @@ func runReviewFlow(e *env) {
 		}
 		return fmt.Errorf("ไม่พบรีวิวที่ติดธงในผลลัพธ์ %d แถว", len(items))
 	})
-	check("รีวิวที่ยังไม่ตรวจยังไม่ขึ้นหน้าร้าน", func() error {
+	check("รีวิวที่ลูกค้าส่งขึ้นหน้าร้านทันทีโดยไม่ต้องรอพนักงานอนุมัติ", func() error {
 		items, err := getList(customer, fmt.Sprintf("/api/books/%d/reviews", reviewCleanBookID))
 		if err != nil {
 			return err
 		}
 		for _, entry := range items {
 			if int(entry.(map[string]any)["reviewId"].(float64)) == cleanReviewID {
-				return fmt.Errorf("รีวิวสถานะ PENDING ไม่ควรขึ้นหน้าร้าน")
+				return nil
 			}
 		}
-		return nil
+		return fmt.Errorf("ไม่พบรีวิวที่เพิ่งส่งในหน้าร้าน (%d แถว)", len(items))
 	})
 	check("ตอบกลับด้วยข้อความว่าง → 422 EMPTY_REPLY_TEXT", func() error {
 		return expectError("POST", fmt.Sprintf("/api/reviews/%d/replies", cleanReviewID), sales,
@@ -373,6 +373,55 @@ func runReviewFlow(e *env) {
 	check("ตอบกลับรีวิวที่ถูกลบแล้ว → 409 REVIEW_REMOVED", func() error {
 		return expectError("POST", fmt.Sprintf("/api/reviews/%d/replies", flaggedReviewID), sales,
 			map[string]any{"replyText": "ขอโทษด้วยครับ"}, 409, "REVIEW_REMOVED")
+	})
+
+	section("ตอบกลับปิดรายงานที่ยังค้าง (คิวของผู้จัดการต้องขยับตาม)")
+
+	// ตอบกลับ = ยอมรับรีวิวไปในตัว รีวิวจึงเป็น PUBLISHED — รายงานที่ยังค้างต้องปิดว่า
+	// "ไม่เป็นผล" ในทรานแซกชันเดียวกัน เหมือนที่ moderate ทำกับคำสั่ง PUBLISH
+	// ไม่งั้นรีวิวขึ้นหน้าร้านแล้วแต่รายงานยังค้าง PENDING การ์ดบนหน้าผู้จัดการจึงไม่ขยับ
+	check("ฝ่ายขายส่งรีวิวที่ตอบกลับไปแล้วให้ผู้จัดการอีกใบ → รายงาน PENDING", func() error {
+		body, err := post(sales, fmt.Sprintf("/api/reviews/%d/report", cleanReviewID),
+			map[string]any{
+				"reason": "ลูกค้าแจ้งว่าเนื้อหาชวนเข้าใจผิด",
+				"detail": "ขอให้ผู้จัดการช่วยพิจารณาอีกรอบ",
+			}, 201)
+		if err != nil {
+			return err
+		}
+		replyReportID = int(body["reportId"].(float64))
+		return expect(body["status"], "PENDING")
+	})
+	check("ตอบกลับรีวิวที่ถูกรายงาน → รีวิว PUBLISHED และรายงานถูกตัดสินว่าไม่เป็นผล", func() error {
+		body, err := post(manager, fmt.Sprintf("/api/reviews/%d/replies", cleanReviewID),
+			map[string]any{"replyText": "ทางร้านตรวจสอบแล้ว รีวิวนี้อยู่ในเกณฑ์ที่เหมาะสมครับ"}, 201)
+		if err != nil {
+			return err
+		}
+		if err := expect(body["status"], "PUBLISHED"); err != nil {
+			return err
+		}
+
+		report, ok := body["report"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("ไม่มีรายงานติดมากับรีวิว")
+		}
+		if err := expect(report["status"], "REJECTED"); err != nil {
+			return err
+		}
+		return expect(report["decidedBy"], managerName)
+	})
+	check("รายงานที่ปิดด้วยการตอบกลับออกจากคิว PENDING", func() error {
+		items, err := getList(manager, "/api/review-reports?status=PENDING")
+		if err != nil {
+			return err
+		}
+		for _, entry := range items {
+			if int(entry.(map[string]any)["reportId"].(float64)) == replyReportID {
+				return fmt.Errorf("รายงานที่ตอบกลับไปแล้วยังอยู่ในคิว")
+			}
+		}
+		return nil
 	})
 
 	section("ข้อมูลรีวิวตั้งต้น")

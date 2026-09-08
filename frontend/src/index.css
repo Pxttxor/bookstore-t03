@@ -6,6 +6,13 @@
   --border: #bbcac4;
   --border-soft: #e5e7eb;
 
+  /* Back-office form controls (soft filled) — deliberately a shade darker than
+     --surface-alt so a filled input/select doesn't read as the same surface as a table
+     header or a secondary button. */
+  --control-fill: #eef1f0;
+  --control-fill-hover: #e7ebea;
+  --control-ring: rgba(37, 196, 168, 0.18);
+
   /* Brand / accent */
   --primary: #25c4a8;
   --primary-deep: #006b5a;
@@ -40,9 +47,18 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-pill: 9999px;
+  --radius-control: 10px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+
+  /* Card spacing — the one place to retune every back-office card's inset.
+     --card-inset matches .filter-bar, .data-table cells and .pagination, so a
+     full-bleed list card (.admin-card--flush) lines its rows up with the text
+     inside an ordinary padded card. */
+  --card-pad-y: 22px;
+  --card-pad-x: 24px;
+  --card-inset: 20px;
 
   /* Typography */
   --font-sans: 'Inter', 'Sarabun', system-ui, 'Segoe UI', Roboto, sans-serif;

@@ -193,3 +193,186 @@
   flex-direction: column;
   gap: 12px;
 }
+
+/* ── ส่วนกรอกโค้ดส่วนลด ────────────────────────────────── */
+.summary__coupon {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--surface-muted, rgba(0, 0, 0, 0.02));
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.summary__coupon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary__coupon-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.summary__coupon-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.summary__coupon-form {
+  display: flex;
+  gap: 8px;
+}
+
+.summary__coupon-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface);
+  color: var(--text-heading);
+  text-transform: uppercase;
+}
+
+.summary__coupon-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb, 14, 116, 144), 0.15);
+}
+
+.summary__coupon-input--error {
+  border-color: #ef4444;
+}
+
+.summary__coupon-input--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.summary__coupon-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--primary, #0e7490);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.summary__coupon-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.summary__coupon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summary__coupon-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.summary__coupon-applied-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #15803d;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.summary__coupon-code {
+  font-family: monospace;
+  font-weight: 700;
+  background: rgba(34, 197, 94, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.summary__coupon-name {
+  color: #166534;
+}
+
+.summary__coupon-val {
+  font-weight: 700;
+  color: #15803d;
+}
+
+.summary__coupon-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #166534;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.summary__coupon-remove-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ── ข้อความและกล่องแจ้งเตือนผลการใช้โค้ด ──────────────── */
+.summary__coupon-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.summary__coupon-feedback--success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #15803d;
+}
+
+.summary__coupon-feedback--error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+
+.summary__row--stack-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border-radius: 4px;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+}

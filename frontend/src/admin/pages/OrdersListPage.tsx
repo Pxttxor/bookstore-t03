@@ -14,12 +14,12 @@ import {
   CHANNEL_LABELS,
   formatOrderCode,
   formatOrderDate,
+  getOrderStatusLabel,
+  getOrderStatusTone,
   ORDER_STATUS_LABELS,
-  ORDER_STATUS_TONES,
   orderItemCount,
   type OrderStatus,
 } from '../orders/orders'
-import '../components/DataTable.css'
 import './OrdersListPage.css'
 
 type StatusFilter = OrderStatus | 'ALL'
@@ -95,7 +95,7 @@ export default function OrdersListPage() {
         </div>
       </div>
 
-      <section className="admin-card orders-list">
+      <section className="admin-card admin-card--flush orders-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />
@@ -165,8 +165,8 @@ export default function OrdersListPage() {
                       <td>{formatOrderDate(order.orderDate)}</td>
                       <td className="orders-list__num">{formatPrice(order.netAmount)}</td>
                       <td>
-                        <StatusBadge tone={ORDER_STATUS_TONES[order.status]}>
-                          {ORDER_STATUS_LABELS[order.status]}
+                        <StatusBadge tone={getOrderStatusTone(order)}>
+                          {getOrderStatusLabel(order)}
                         </StatusBadge>
                       </td>
                       <td>

@@ -1,0 +1,34 @@
+.report-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.report-modal-alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger-bg);
+}
+
+.report-modal-alert__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--status-danger);
+}
+
+.report-modal-alert__title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--status-danger);
+}
+
+.report-modal-alert__meta {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--status-danger);
+}

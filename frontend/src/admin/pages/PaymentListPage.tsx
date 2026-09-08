@@ -21,7 +21,6 @@ import {
 } from '../payments/payments'
 import { formatOrderCode } from '../orders/orders'
 import { useOrders } from '../orders/OrderContext'
-import '../components/DataTable.css'
 import './PaymentListPage.css'
 
 type StatusFilter = PaymentStatus | 'ALL'
@@ -167,7 +166,7 @@ export default function PaymentListPage() {
         />
       </section>
 
-      <section className="admin-card payment-list">
+      <section className="admin-card admin-card--flush payment-list">
         <div className="filter-bar">
           <label className="filter-bar__search">
             <Icon name="search" size={18} />

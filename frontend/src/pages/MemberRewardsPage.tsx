@@ -25,13 +25,23 @@ export default function MemberRewardsPage() {
   const [justRedeemed, setJustRedeemed] = useState<Redemption | null>(null)
   const [error, setError] = useState('')
   const [redeemingId, setRedeemingId] = useState<number | null>(null)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
+  const copyCode = (code: string) => {
+    navigator.clipboard?.writeText(code).then(() => {
+      setCopiedCode(code)
+      setTimeout(() => setCopiedCode(null), 2000)
+    })
+  }
+
+  // AccountLayout กันคนไม่ล็อกอินไว้ก่อนแล้ว — เหลือไว้แค่ narrow ชนิด `user` ให้ TS
   if (!user) return <Navigate to="/login" replace state={{ from: '/member/rewards' }} />
+  // เฉพาะบัญชีลูกค้าเท่านั้นที่แลกของรางวัลได้ — AccountLayout เช็คแค่ล็อกอิน ไม่เช็ค role
   if (user.role !== 'customer') return <Navigate to="/" replace />
 
   if (loading) {
     return (
-      <div className="rewards page-shell">
+      <div className="rewards">
         <section className="rewards__panel">
           <LoadingState label="กำลังโหลดของรางวัล…" />
         </section>
@@ -41,7 +51,7 @@ export default function MemberRewardsPage() {
 
   if (loadError || !member) {
     return (
-      <div className="rewards page-shell">
+      <div className="rewards">
         <section className="rewards__panel">
           <ErrorState
             message={loadError ?? 'ไม่พบข้อมูลสมาชิกของบัญชีนี้'}
@@ -79,7 +89,7 @@ export default function MemberRewardsPage() {
   )
 
   return (
-    <div className="rewards page-shell">
+    <div className="rewards">
       <header className="rewards__head">
         <div>
           <h1 className="rewards__title">แลกของรางวัล</h1>
@@ -147,17 +157,49 @@ export default function MemberRewardsPage() {
         ) : (
           <ul className="rewards__coupons">
             {myCoupons.map((redemption) => (
-              <li key={redemption.redemptionId} className="rewards__coupon">
+              <li
+                key={redemption.redemptionId}
+                className={`rewards__coupon ${redemption.isUsed ? 'rewards__coupon--used' : ''}`}
+              >
                 <div>
-                  <p className="rewards__coupon-name">
-                    {redemption.rewardName || findReward(redemption.rewardId)?.name || 'ของรางวัล'}
-                  </p>
+                  <div className="rewards__coupon-title-row">
+                    <p className="rewards__coupon-name">
+                      {redemption.rewardName || findReward(redemption.rewardId)?.name || 'ของรางวัล'}
+                    </p>
+                    <span
+                      className={`rewards__coupon-badge ${
+                        redemption.isUsed
+                          ? 'rewards__coupon-badge--used'
+                          : 'rewards__coupon-badge--available'
+                      }`}
+                    >
+                      {redemption.isUsed ? 'ใช้งานแล้ว' : 'ยังไม่ได้ใช้'}
+                    </span>
+                  </div>
                   <p className="rewards__coupon-meta">
                     แลกเมื่อ {redemption.redeemedDate.slice(0, 10)} · ใช้{' '}
                     {redemption.pointsUsed.toLocaleString('th-TH')} แต้ม
+                    {!redemption.isUsed && ' · นำโค้ดนี้ไปกรอกในหน้าสั่งซื้อเพื่อรับส่วนลด'}
                   </p>
                 </div>
-                <span className="rewards__coupon-code">{redemption.couponCode}</span>
+                <div className="rewards__coupon-actions">
+                  <span
+                    className={`rewards__coupon-code ${
+                      redemption.isUsed ? 'rewards__coupon-code--used' : ''
+                    }`}
+                  >
+                    {redemption.couponCode}
+                  </span>
+                  {!redemption.isUsed && (
+                    <button
+                      type="button"
+                      className="rewards__copy-btn"
+                      onClick={() => copyCode(redemption.couponCode)}
+                    >
+                      {copiedCode === redemption.couponCode ? 'คัดลอกแล้ว!' : 'คัดลอกรหัส'}
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
