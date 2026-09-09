@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
@@ -18,6 +18,7 @@ import {
   RETURN_REASONS,
   RETURN_STATUS_LABELS,
   RETURN_STATUS_TONES,
+  returnableQty,
   type Compensation,
 } from '../purchasing/purchasing'
 import { useSuppliers } from '../suppliers/SupplierContext'
@@ -70,12 +71,13 @@ export default function PurchaseReturnPage() {
 function PurchaseReturnForm() {
   const { id } = useParams()
   const [search] = useSearchParams()
-  const { state } = useLocation() as { state: { bookIds?: number[] } | null }
   const { user } = useAuth()
   const { suppliers } = useSuppliers()
   const {
     findReturn,
     findOrder,
+    returnsForOrder,
+    receiptsForOrder,
     createReturn,
     escalateReturn,
     recordCompensation,
@@ -94,17 +96,53 @@ function PurchaseReturnForm() {
   const [compensationType, setCompensationType] =
     useState<Compensation['type']>('REPLACEMENT')
   const [compensationNote, setCompensationNote] = useState('')
+  // ตั้งต้นจาก "จำนวนที่ยังคืนได้" (รับจริง − เคยคืนไปแล้ว) ไม่ใช่ receivedQty ดิบ ๆ
+  // ตรงกับกฎ RETURN_EXCEEDS_RECEIVED ฝั่งเซิร์ฟเวอร์ — กันคืนซ้ำเกินโควตาที่คีย์ผ่าน client ได้
   const [lines, setLines] = useState<DraftLine[]>(() => {
-    const preselected = state?.bookIds
-    return (order?.items ?? [])
-      .filter((line) => line.receivedQty > 0)
-      .map((line) => ({
-        bookId: line.bookId,
-        received: line.receivedQty,
-        quantity: preselected?.includes(line.bookId) ? line.receivedQty : 0,
-        reason: RETURN_REASONS[0],
-      }))
+    if (!order) return []
+    // จำนวนที่ชำรุดจากใบรับที่บันทึกแล้ว — ใช้ตั้งต้นช่องจำนวนคืน เหมือนกันทุกทางเข้า
+    // (PO ที่ยังไม่เคยรับสินค้าเลยไม่มีใบรับให้อ่าน ช่องนี้จึงตั้งต้นเป็น 0 ตามปกติ)
+    const damagedQty = new Map<number, number>()
+    for (const grn of receiptsForOrder(order.poId)) {
+      for (const line of grn.items) {
+        if (line.condition !== 'DAMAGED') continue
+        damagedQty.set(line.bookId, (damagedQty.get(line.bookId) ?? 0) + line.receivedQty)
+      }
+    }
+    const remaining = returnableQty(order, returnsForOrder(order.poId))
+    return order.items
+      .filter((line) => (remaining.get(line.bookId) ?? 0) > 0)
+      .map((line) => {
+        const received = remaining.get(line.bookId) ?? 0
+        return {
+          bookId: line.bookId,
+          received,
+          quantity: Math.min(damagedQty.get(line.bookId) ?? 0, received),
+          reason: RETURN_REASONS[0],
+        }
+      })
   })
+
+  if (!can.createReturn(role)) {
+    return (
+      <div className="admin-page">
+        <Breadcrumb
+          items={[
+            { label: 'หน้าหลัก', to: '/admin' },
+            { label: 'เอกสารจัดซื้อ', to: '/admin/purchasing' },
+            { label: 'ส่งคืนสินค้า' },
+          ]}
+        />
+        <section className="admin-card">
+          <EmptyState
+            icon="lock"
+            title="บทบาทของคุณไม่มีสิทธิ์บันทึกการส่งคืน"
+            description="การส่งคืนสินค้าเป็นหน้าที่ของพนักงานคลังสินค้า"
+          />
+        </section>
+      </div>
+    )
+  }
 
   if (!order) {
     return (
@@ -131,30 +169,12 @@ function PurchaseReturnForm() {
     )
   }
 
-  if (!can.createReturn(role)) {
-    return (
-      <div className="admin-page">
-        <Breadcrumb
-          items={[
-            { label: 'หน้าหลัก', to: '/admin' },
-            { label: 'เอกสารจัดซื้อ', to: '/admin/purchasing' },
-            { label: 'ส่งคืนสินค้า' },
-          ]}
-        />
-        <section className="admin-card">
-          <EmptyState
-            icon="lock"
-            title="บทบาทของคุณไม่มีสิทธิ์บันทึกการส่งคืน"
-            description="การส่งคืนสินค้าเป็นหน้าที่ของพนักงานคลังสินค้า"
-          />
-        </section>
-      </div>
-    )
-  }
-
   const supplier = suppliers.find((entry) => entry.supplierId === order.supplierId)
   const titleOf = (bookId: number) =>
     supplier?.books.find((book) => book.bookId === bookId)?.title ?? formatBookCode(bookId)
+
+  const rows = existing?.items ?? lines
+  const hasNoRows = rows.length === 0
 
   const update = (bookId: number, patch: Partial<DraftLine>) =>
     setLines((current) =>
@@ -271,121 +291,135 @@ function PurchaseReturnForm() {
       </div>
 
       <section className="admin-card ret">
-        {!existing && (
-          <label className="admin-field ret__reason">
-            <span className="admin-field__label">เหตุผลรวมของใบส่งคืน</span>
-            <select
-              className="admin-input"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            >
-              {RETURN_REASONS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        {hasNoRows ? (
+          <EmptyState
+            icon="package"
+            title="ยังไม่มีสินค้าที่ส่งคืนได้"
+            description="ใบส่งคืนต้องอ้างอิงสินค้าที่รับเข้าคลังแล้ว — บันทึกรับสินค้าของใบสั่งซื้อนี้ก่อน"
+            action={{
+              label: 'ไปหน้าบันทึกรับสินค้า',
+              onClick: () => navigate(`/admin/purchasing/po/${order.poId}/receive`),
+            }}
+          />
+        ) : (
+          <>
+            {!existing && (
+              <label className="admin-field ret__reason">
+                <span className="admin-field__label">เหตุผลรวมของใบส่งคืน</span>
+                <select
+                  className="admin-input"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                >
+                  {RETURN_REASONS.map((entry) => (
+                    <option key={entry} value={entry}>
+                      {entry}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>หนังสือ</th>
-                <th className="ret__num">จำนวนคืน</th>
-                <th>เหตุผล</th>
-                <th>หลักฐาน</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(existing?.items ?? lines).map((line) => {
-                const draft = 'received' in line ? (line as DraftLine) : undefined
-                return (
-                  <tr key={line.bookId}>
-                    <td className="data-table__strong">
-                      <span className="ret__code">{formatBookCode(line.bookId)}</span>
-                      {titleOf(line.bookId)}
-                      {draft && (
-                        <span className="ret__received">รับไว้ {draft.received} เล่ม</span>
-                      )}
-                    </td>
-                    <td className="ret__num">
-                      {draft ? (
-                        <input
-                          type="number"
-                          min={0}
-                          max={draft.received}
-                          className="admin-input ret__input"
-                          value={draft.quantity}
-                          onChange={(e) =>
-                            update(line.bookId, {
-                              quantity: Math.max(
-                                0,
-                                Math.min(draft.received, Number(e.target.value) || 0),
-                              ),
-                            })
-                          }
-                        />
-                      ) : (
-                        line.quantity
-                      )}
-                    </td>
-                    <td>
-                      {draft ? (
-                        <select
-                          className="admin-input ret__select"
-                          value={draft.reason}
-                          onChange={(e) => update(line.bookId, { reason: e.target.value })}
-                        >
-                          {RETURN_REASONS.map((entry) => (
-                            <option key={entry} value={entry}>
-                              {entry}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        line.reason
-                      )}
-                    </td>
-                    <td>
-                      {draft ? (
-                        <label className="ret__attach">
-                          <Icon name="upload" size={16} />
-                          {draft.evidence ? 'เปลี่ยนรูป' : 'แนบรูป'}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => attach(line.bookId, e.target.files?.[0])}
-                          />
-                        </label>
-                      ) : line.evidence ? (
-                        <img
-                          className="ret__thumb"
-                          src={line.evidence}
-                          alt="หลักฐานการส่งคืน"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span className="ret__none">ไม่มี</span>
-                      )}
-                      {draft?.evidence && (
-                        <img
-                          className="ret__thumb"
-                          src={draft.evidence}
-                          alt="หลักฐานการส่งคืน"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
-                    </td>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>หนังสือ</th>
+                    <th className="ret__num">จำนวนคืน</th>
+                    <th>เหตุผล</th>
+                    <th>หลักฐาน</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {rows.map((line) => {
+                    const draft = 'received' in line ? (line as DraftLine) : undefined
+                    return (
+                      <tr key={line.bookId}>
+                        <td className="data-table__strong">
+                          <span className="ret__code">{formatBookCode(line.bookId)}</span>
+                          {titleOf(line.bookId)}
+                          {draft && (
+                            <span className="ret__received">คืนได้ {draft.received} เล่ม</span>
+                          )}
+                        </td>
+                        <td className="ret__num">
+                          {draft ? (
+                            <input
+                              type="number"
+                              min={0}
+                              max={draft.received}
+                              className="admin-input ret__input"
+                              value={draft.quantity}
+                              onChange={(e) =>
+                                update(line.bookId, {
+                                  quantity: Math.max(
+                                    0,
+                                    Math.min(draft.received, Number(e.target.value) || 0),
+                                  ),
+                                })
+                              }
+                            />
+                          ) : (
+                            line.quantity
+                          )}
+                        </td>
+                        <td>
+                          {draft ? (
+                            <select
+                              className="admin-input ret__select"
+                              value={draft.reason}
+                              onChange={(e) => update(line.bookId, { reason: e.target.value })}
+                            >
+                              {RETURN_REASONS.map((entry) => (
+                                <option key={entry} value={entry}>
+                                  {entry}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            line.reason
+                          )}
+                        </td>
+                        <td>
+                          {draft ? (
+                            <label className="ret__attach">
+                              <Icon name="upload" size={16} />
+                              {draft.evidence ? 'เปลี่ยนรูป' : 'แนบรูป'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => attach(line.bookId, e.target.files?.[0])}
+                              />
+                            </label>
+                          ) : line.evidence ? (
+                            <img
+                              className="ret__thumb"
+                              src={line.evidence}
+                              alt="หลักฐานการส่งคืน"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <span className="ret__none">ไม่มี</span>
+                          )}
+                          {draft?.evidence && (
+                            <img
+                              className="ret__thumb"
+                              src={draft.evidence}
+                              alt="หลักฐานการส่งคืน"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
       {existing ? (

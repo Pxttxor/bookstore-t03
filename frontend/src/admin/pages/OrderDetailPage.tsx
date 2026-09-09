@@ -26,6 +26,7 @@ import {
   poDisplayStatus,
   RETURN_STATUS_LABELS,
   RETURN_STATUS_TONES,
+  returnableQty,
   SEND_CHANNELS,
   type PODisplayStatus,
 } from '../purchasing/purchasing'
@@ -133,6 +134,11 @@ export default function OrderDetailPage() {
   // ยกเลิกไม่ได้เมื่อใบปิดรายการแล้ว (เซิร์ฟเวอร์ตอบ 409 PO_ALREADY_CLOSED ซ้ำอีกชั้น)
   const closed = display === 'RECEIVED_FULL' || display === 'RETURNED' || display === 'CANCELLED'
   const mayCancel = can.cancelPurchaseOrder(role) && !closed
+  const mayReturn = can.createReturn(role)
+  const totalReturnable = Array.from(returnableQty(order, returns).values()).reduce(
+    (sum, qty) => sum + qty,
+    0,
+  )
 
   const daysSinceSent = order.sentAt
     ? Math.floor((now - new Date(order.sentAt).getTime()) / 86400000)
@@ -369,26 +375,40 @@ export default function OrderDetailPage() {
         </section>
       )}
 
-      {returns.length > 0 && (
+      {(returns.length > 0 || (mayReturn && totalReturnable > 0)) && (
         <section className="admin-card po-detail__panel">
           <h2 className="po-detail__panel-title">ใบส่งคืนที่เกี่ยวข้อง</h2>
-          <ul className="po-detail__returns">
-            {returns.map((entry) => (
-              <li key={entry.returnId}>
-                <Link to={`/admin/purchasing/returns/${entry.returnId}`}>
-                  {formatReturnCode(entry.returnId)}
-                </Link>
-                <span>{entry.returnDate}</span>
-                <span>
-                  {entry.items.reduce((sum, line) => sum + line.quantity, 0)} เล่ม ·{' '}
-                  {entry.items.map((line) => formatBookCode(line.bookId)).join(', ')}
-                </span>
-                <StatusBadge tone={RETURN_STATUS_TONES[entry.status]}>
-                  {RETURN_STATUS_LABELS[entry.status]}
-                </StatusBadge>
-              </li>
-            ))}
-          </ul>
+          {returns.length > 0 && (
+            <ul className="po-detail__returns">
+              {returns.map((entry) => (
+                <li key={entry.returnId}>
+                  <Link to={`/admin/purchasing/returns/${entry.returnId}`}>
+                    {formatReturnCode(entry.returnId)}
+                  </Link>
+                  <span>{entry.returnDate}</span>
+                  <span>
+                    {entry.items.reduce((sum, line) => sum + line.quantity, 0)} เล่ม ·{' '}
+                    {entry.items.map((line) => formatBookCode(line.bookId)).join(', ')}
+                  </span>
+                  <StatusBadge tone={RETURN_STATUS_TONES[entry.status]}>
+                    {RETURN_STATUS_LABELS[entry.status]}
+                  </StatusBadge>
+                </li>
+              ))}
+            </ul>
+          )}
+          {mayReturn && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm po-detail__next"
+              disabled={totalReturnable === 0}
+              title={totalReturnable === 0 ? 'ไม่มีสินค้าที่ยังส่งคืนได้แล้ว' : undefined}
+              onClick={() => navigate(`/admin/purchasing/returns/new?po=${order.poId}`)}
+            >
+              <Icon name="file-text" size={18} />
+              เปิดใบส่งคืน
+            </button>
+          )}
         </section>
       )}
 

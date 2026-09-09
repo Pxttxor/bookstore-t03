@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/Icon'
 import type { Role } from '../../auth/roles'
 import { useInventory } from '../inventory/InventoryContext'
@@ -235,7 +235,23 @@ const MENU: MenuGroup[] = [
   },
 ]
 
+// เมนู active เมื่อ path ตรงหรือเป็น prefix (เคารพ `end`) — ยกเว้นมีเมนูอื่นที่ path ยาวกว่า
+// แล้วแมตช์ pathname เดียวกันอยู่ด้วย เมนูนั้นจะชนะแทน (เช่น /admin/purchasing เป็น prefix ของ
+// /admin/purchasing/receipts — ต้องให้ตัวหลังสว่างคนเดียว ไม่ใช่สว่างพร้อมกันทั้งคู่)
+function matchesPath(pathname: string, item: MenuItem): boolean {
+  if (item.end) return pathname === item.to
+  return pathname === item.to || pathname.startsWith(`${item.to}/`)
+}
+
+function isActiveItem(pathname: string, item: MenuItem, allItems: MenuItem[]): boolean {
+  if (!matchesPath(pathname, item)) return false
+  return !allItems.some(
+    (other) => other !== item && other.to.length > item.to.length && matchesPath(pathname, other),
+  )
+}
+
 export default function AdminSidebar({ role }: { role: Role }) {
+  const { pathname } = useLocation()
   const { belowReorder, pendingReports, loading: stockLoading } = useInventory()
   const { unrepliedCount, pendingCount, loading: reviewLoading } = useReviews()
 
@@ -265,27 +281,32 @@ export default function AdminSidebar({ role }: { role: Role }) {
     items: group.items.filter((item) => item.allowed(role)),
   })).filter((group) => group.items.length > 0)
 
+  // isActiveItem เทียบกับเมนูที่บทบาทนี้เห็นจริงเท่านั้น — เมนูที่ถูกกรองออกไปแล้ว
+  // (บทบาทอื่นเห็น) จะไม่มามีผลต่อว่าใครชนะ
+  const allVisibleItems = visibleGroups.flatMap((group) => group.items)
+
   return (
     <aside className="admin-nav">
       {visibleGroups.map((group) => (
         <div key={group.heading} className="admin-nav__group">
           <p className="admin-nav__heading">{group.heading}</p>
           <ul>
-            {group.items.map((item) => (
-              <li key={item.label}>
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    'admin-nav__link' + (isActive ? ' admin-nav__link--active' : '')
-                  }
-                >
-                  <Icon name={item.icon} size={19} />
-                  <span>{item.label}</span>
-                  {dotCount(item.dot) > 0 && <span className="admin-nav__dot" />}
-                </NavLink>
-              </li>
-            ))}
+            {group.items.map((item) => {
+              const active = isActiveItem(pathname, item, allVisibleItems)
+              return (
+                <li key={item.label}>
+                  <Link
+                    to={item.to}
+                    className={'admin-nav__link' + (active ? ' admin-nav__link--active' : '')}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    <Icon name={item.icon} size={19} />
+                    <span>{item.label}</span>
+                    {dotCount(item.dot) > 0 && <span className="admin-nav__dot" />}
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </div>
       ))}

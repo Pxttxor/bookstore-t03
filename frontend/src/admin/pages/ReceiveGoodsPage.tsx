@@ -296,18 +296,8 @@ function ReceiveGoodsForm() {
           {damaged.length > 0 && (
             <p className="receive__banner receive__banner--warning">
               <Icon name="alert-triangle" size={18} />
-              พบสินค้าขาด/ชำรุด {damaged.length} รายการ
-              <button
-                type="button"
-                className="receive__link"
-                onClick={() =>
-                  navigate(`/admin/purchasing/returns/new?po=${order.poId}`, {
-                    state: { bookIds: damaged.map((line) => line.bookId) },
-                  })
-                }
-              >
-                เปิดใบส่งคืน
-              </button>
+              พบสินค้าขาด/ชำรุด {damaged.length} รายการ · บันทึกการรับก่อน
+              แล้วเปิดใบส่งคืนได้จากหน้าใบสั่งซื้อ
             </p>
           )}
 
@@ -322,7 +312,7 @@ function ReceiveGoodsForm() {
             >
               ยกเลิก
             </button>
-            <button type="button" className="btn btn-primary btn-sm" onClick={save}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => void save()}>
               <Icon name="package" size={18} />
               บันทึกการรับ
             </button>

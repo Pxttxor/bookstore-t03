@@ -229,6 +229,23 @@ export function outstandingOrders(orders: PurchaseOrder[]) {
   return orders.filter((po) => !CLOSED_PO.includes(po.status))
 }
 
+// คืนได้ไม่เกิน "รับเข้าคลังจริง − ที่เคยคืนไปแล้ว" ตรงกับ RETURN_EXCEEDS_RECEIVED ฝั่งเซิร์ฟเวอร์
+// (`service/returns.go` นับใบคืนทุกสถานะ ไม่ใช่แค่ที่ปิดแล้ว — สต็อกถูกตัดตั้งแต่ตอนเปิดใบ)
+export function returnableQty(order: PurchaseOrder, returns: PurchaseReturn[]): Map<number, number> {
+  const alreadyReturned = new Map<number, number>()
+  for (const entry of returns) {
+    if (entry.poId !== order.poId) continue
+    for (const line of entry.items) {
+      alreadyReturned.set(line.bookId, (alreadyReturned.get(line.bookId) ?? 0) + line.quantity)
+    }
+  }
+  const result = new Map<number, number>()
+  for (const line of order.items) {
+    result.set(line.bookId, Math.max(0, line.receivedQty - (alreadyReturned.get(line.bookId) ?? 0)))
+  }
+  return result
+}
+
 // งบประมาณของ SCR-23 ย้ายไปฝั่งเซิร์ฟเวอร์แล้ว — อ่านผ่าน `GET /api/purchasing/budget`
 // ซึ่งคืน { budget, committed, remaining } และคิด committed จากใบสั่งซื้อที่ยังไม่ถูกยกเลิกทั้งหมด
 // (เดิมเป็นค่าคงที่ `PURCHASE_BUDGET = 500000` กับ `committedAmount()` ที่คำนวณฝั่งหน้าจอ
