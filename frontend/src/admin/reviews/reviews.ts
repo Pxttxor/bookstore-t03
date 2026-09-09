@@ -84,7 +84,7 @@ export const MODERATE_ACTION_STATUS: Record<ModerateAction, ReviewStatus> = {
 
 export const MODERATE_ACTION_LABELS: Record<ModerateAction, string> = {
   PUBLISH: 'อนุมัติ',
-  HIDE: 'ซ่อนถาวร',
+  HIDE: 'ซ่อน',
   REMOVE: 'ลบรีวิว',
 }
 
@@ -114,6 +114,21 @@ export const salesBucketOf = (r: Review): SalesReviewBucket =>
  */
 export const hasPendingReport = (r: Review): boolean =>
   !!r.report?.isReported && r.report.managerStatus === 'PENDING'
+
+/**
+ * ช่องของหน้าผู้จัดการ ("จัดการรีวิวที่มีปัญหา") — รีวิวหนึ่งใบอยู่ได้ช่องเดียวเท่านั้น
+ * ลำดับความสำคัญ: ซ่อนแล้ว > ลบแล้ว > รอตรวจสอบ (มีรายงานค้าง) > ตรวจสอบสำเร็จ
+ * สถานะที่ตัดสินไปแล้ว (HIDDEN/REMOVED) ต้องมาก่อนรายงานค้างใหม่ที่อาจเกิดซ้ำ
+ * ไม่งั้นรีวิวใบเดิมจะโผล่ทั้งแท็บรอตรวจสอบและแท็บซ่อน/ลบพร้อมกัน
+ */
+export type ManagerReviewBucket = 'HIDDEN' | 'DELETED' | 'PENDING' | 'APPROVED'
+
+export const managerBucketOf = (r: Review): ManagerReviewBucket => {
+  if (r.status === 'HIDDEN') return 'HIDDEN'
+  if (r.status === 'REMOVED') return 'DELETED'
+  if (hasPendingReport(r)) return 'PENDING'
+  return 'APPROVED'
+}
 
 /**
  * รีวิวที่มีการกดส่งรายงานปัญหา — หน้าจัดการรีวิวที่มีปัญหาจะแสดงเฉพาะรีวิวกลุ่มนี้เท่านั้น

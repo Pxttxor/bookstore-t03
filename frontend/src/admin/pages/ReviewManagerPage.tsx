@@ -13,8 +13,8 @@ import BookCover from '../../components/BookCover'
 import { useReviews } from '../reviews/ReviewContext'
 import {
   formatThaiRelativeTime,
-  hasPendingReport,
   isReportedReview,
+  managerBucketOf,
   REPORT_DECISION_LABELS,
   type Review,
 } from '../reviews/reviews'
@@ -22,7 +22,7 @@ import ReviewDetailDrawer from './ReviewDetailDrawer'
 import ReviewReplyModal from './ReviewReplyModal'
 import './ReviewManagerPage.css'
 
-type TabType = 'PENDING' | 'APPROVED' | 'DELETED'
+type TabType = 'PENDING' | 'APPROVED' | 'HIDDEN' | 'DELETED'
 type SortOrder = 'LATEST' | 'OLDEST' | 'RATING_HIGH' | 'RATING_LOW' | 'MOST_REPORTED'
 
 export default function ReviewManagerPage() {
@@ -31,6 +31,7 @@ export default function ReviewManagerPage() {
     reviews,
     pendingCount,
     approvedCount,
+    hiddenCount,
     deletedCount,
     approveReview,
     hideReview,
@@ -66,17 +67,9 @@ export default function ReviewManagerPage() {
       // รีวิวปกติที่ฝ่ายขายตอบกลับเองจะอยู่เฉพาะหน้า "ตรวจสอบรีวิว" ไม่แสดงในหน้านี้
       if (!isReportedReview(r)) return false
 
-      // Tab filter — ต้องตรงกับ pendingCount/approvedCount/deletedCount ใน ReviewContext เป๊ะ ๆ
-      // "รอตรวจสอบ" มาจากรายงานที่ฝ่ายขายส่งเท่านั้น ไม่ใช่ review.status === 'PENDING'
-      // (สถานะนั้นไม่มีทางเกิดผ่าน API และไม่ได้แปลว่ามีรายงานค้างอยู่จริง)
-      const isPending = hasPendingReport(r)
-      if (activeTab === 'PENDING') {
-        if (!isPending) return false
-      } else if (activeTab === 'APPROVED') {
-        if (isPending || r.status === 'HIDDEN' || r.status === 'REMOVED') return false
-      } else if (activeTab === 'DELETED') {
-        if (r.status !== 'REMOVED' && r.status !== 'HIDDEN') return false
-      }
+      // Tab filter — ใช้ managerBucketOf ตัวเดียวกับ ReviewContext เพื่อไม่ให้ 4 แท็บทับกัน
+      // (ซ่อน/ลบแล้วต้องไม่ตกกลับไปแท็บรอตรวจสอบแม้จะมีรายงานค้างใหม่)
+      if (managerBucketOf(r) !== activeTab) return false
 
       // Rating filter
       if (ratingFilter !== 'ALL' && r.rating !== ratingFilter) return false
@@ -150,7 +143,7 @@ export default function ReviewManagerPage() {
   const handleHide = async (review: Review) => {
     try {
       await hideReview(review.reviewId)
-      notify('warning', `ซ่อนรีวิวของคุณ ${review.customerName} ถาวรแล้ว`)
+      notify('warning', `ซ่อนรีวิวของคุณ ${review.customerName}แล้ว`)
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'ซ่อนรีวิวไม่สำเร็จ')
     }
@@ -207,12 +200,6 @@ export default function ReviewManagerPage() {
 
       {/* Top Header & Filter Controls Bar */}
       <header className="review-header-section">
-        <div className="review-header-left">
-          <p className="review-header-desc">
-            ตรวจสอบรีวิวที่ถูกรายงาน และจัดการการแสดงผลพร้อมตอบกลับลูกค้าอย่างเป็นทางการเพื่อรักษามาตรฐานชุมชนนักอ่าน
-          </p>
-        </div>
-
         <div className="review-header-controls">
           <button
             type="button"
@@ -314,7 +301,7 @@ export default function ReviewManagerPage() {
         </div>
       )}
 
-      {/* KPI Cards (3 Cards matching Design) */}
+      {/* KPI Cards (4 Cards matching Design) */}
       <section className="review-kpi-grid">
         <div
           className={`kpi-card ${activeTab === 'PENDING' ? 'kpi-card--active' : ''}`}
@@ -349,6 +336,24 @@ export default function ReviewManagerPage() {
           </div>
           <div className="kpi-icon-wrap kpi-icon--approved">
             <Icon name="check-circle" size={22} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-card ${activeTab === 'HIDDEN' ? 'kpi-card--active' : ''}`}
+          onClick={() => {
+            setActiveTab('HIDDEN')
+            setPage(1)
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="kpi-content">
+            <span className="kpi-label">รีวิวที่ถูกซ่อน (Hidden)</span>
+            <span className="kpi-value">{hiddenCount}</span>
+          </div>
+          <div className="kpi-icon-wrap kpi-icon--hidden">
+            <Icon name="eye-off" size={22} />
           </div>
         </div>
 
@@ -396,6 +401,18 @@ export default function ReviewManagerPage() {
           >
             <span>ตรวจสอบสำเร็จ</span>
             <span className="tab-badge tab-badge--neutral">{approvedCount}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`review-tab-btn ${activeTab === 'HIDDEN' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('HIDDEN')
+              setPage(1)
+            }}
+          >
+            <span>รีวิวที่ถูกซ่อน</span>
+            <span className="tab-badge tab-badge--neutral">{hiddenCount}</span>
           </button>
 
           <button
@@ -559,14 +576,25 @@ export default function ReviewManagerPage() {
                         <span>ลบรีวิว</span>
                       </button>
 
-                      <button
-                        type="button"
-                        className="btn-card-action btn-action--hide"
-                        onClick={() => void handleHide(review)}
-                      >
-                        <Icon name="eye-off" size={16} />
-                        <span>ซ่อนถาวร</span>
-                      </button>
+                      {review.status === 'HIDDEN' ? (
+                        <button
+                          type="button"
+                          className="btn-card-action btn-action--unhide"
+                          onClick={() => void handleApprove(review)}
+                        >
+                          <Icon name="eye" size={16} />
+                          <span>ยกเลิกการซ่อน</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-card-action btn-action--hide"
+                          onClick={() => void handleHide(review)}
+                        >
+                          <Icon name="eye-off" size={16} />
+                          <span>ซ่อน</span>
+                        </button>
+                      )}
 
                       <button
                         type="button"

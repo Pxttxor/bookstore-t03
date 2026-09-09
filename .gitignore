@@ -58,3 +58,8 @@ QA_REPORT*.md
 PROGRESS.md
 BUILD_ERRORS.md
 frontend/ui-example/README.md
+
+# --- เอกสารรายงาน Word / Business Use Cases ---
+*.docx
+~$*.docx
+BUSINESS_USE_CASES*
