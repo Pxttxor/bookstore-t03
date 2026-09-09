@@ -102,7 +102,8 @@ export default function BookDetailPage() {
 
   const item = findByBookId(book.bookId)
   const movements = movementRows ?? []
-  const changes = [...(changeRows ?? [])].reverse()
+  // API ส่งมาเรียงล่าสุดขึ้นก่อนอยู่แล้ว (`ChangeLogs` เรียง changed_date DESC)
+  const changes = changeRows ?? []
   const level = item ? stockLevel(item) : undefined
 
   return (
