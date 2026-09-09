@@ -290,7 +290,9 @@ export default function OrderTrackingPage() {
     )
   }
 
-  return <RealOrderView order={order} />
+  // ต้อง remount เมื่อเปลี่ยน id — ฟอร์มบัญชีรับเงินคืนใน RealOrderView ซีด useState จาก order
+  // และ React Router ใช้คอมโพเนนต์เดิมซ้ำเมื่อเปลี่ยนแค่ route param (กับดักเดียวกับ PurchaseReturnPage)
+  return <RealOrderView key={order.orderId} order={order} />
 }
 
 function RealOrderView({ order }: { order: CustomerOrder }) {
