@@ -34,35 +34,35 @@ type orderShipmentDTO struct {
 }
 
 type orderDTO struct {
-	OrderID           int                `json:"orderId"`
-	Code              string             `json:"code"`
-	CustomerID        int                `json:"customerId"`
-	CustomerName      string             `json:"customerName"`
-	CustomerPhone     string             `json:"customerPhone,omitempty"`
-	CustomerEmail     string             `json:"customerEmail,omitempty"`
-	Channel           model.OrderChannel `json:"channel"`
-	ChannelLabel      string             `json:"channelLabel"`
-	OrderDate         time.Time          `json:"orderDate"`
-	ShippingAddress   string             `json:"shippingAddress"`
-	Status            model.OrderStatus  `json:"status"`
-	StatusLabel       string             `json:"statusLabel"`
-	Subtotal          float64            `json:"subtotal"`
-	DiscountAmount    float64            `json:"discountAmount"`
-	NetAmount         float64            `json:"netAmount"`
-	PromotionID       *int               `json:"promotionId,omitempty"`
-	PromotionName     string             `json:"promotionName,omitempty"`
-	DiscountCode      string             `json:"discountCode,omitempty"`
-	SlipFileName      string             `json:"slipFileName,omitempty"`
-	ItemCount         int                `json:"itemCount"`
-	Closed            bool               `json:"closed"`
-	CanCancel         bool               `json:"canCancel"`
-	CancelReason      string             `json:"cancelReason,omitempty"`
-	RefundBankName    string             `json:"refundBankName,omitempty"`
-	RefundAccountNo   string             `json:"refundAccountNo,omitempty"`
-	RefundAccountName string             `json:"refundAccountName,omitempty"`
-	RefundStatus      string             `json:"refundStatus,omitempty"`
-	RefundStatusLabel string             `json:"refundStatusLabel,omitempty"`
-	RefundNote        string             `json:"refundNote,omitempty"`
+	OrderID              int                `json:"orderId"`
+	Code                 string             `json:"code"`
+	CustomerID           int                `json:"customerId"`
+	CustomerName         string             `json:"customerName"`
+	CustomerPhone        string             `json:"customerPhone,omitempty"`
+	CustomerEmail        string             `json:"customerEmail,omitempty"`
+	Channel              model.OrderChannel `json:"channel"`
+	ChannelLabel         string             `json:"channelLabel"`
+	OrderDate            time.Time          `json:"orderDate"`
+	ShippingAddress      string             `json:"shippingAddress"`
+	Status               model.OrderStatus  `json:"status"`
+	StatusLabel          string             `json:"statusLabel"`
+	Subtotal             float64            `json:"subtotal"`
+	DiscountAmount       float64            `json:"discountAmount"`
+	NetAmount            float64            `json:"netAmount"`
+	PromotionID          *int               `json:"promotionId,omitempty"`
+	PromotionName        string             `json:"promotionName,omitempty"`
+	DiscountCode         string             `json:"discountCode,omitempty"`
+	SlipFileName         string             `json:"slipFileName,omitempty"`
+	ItemCount            int                `json:"itemCount"`
+	Closed               bool               `json:"closed"`
+	CanCancel            bool               `json:"canCancel"`
+	CancelReason         string             `json:"cancelReason,omitempty"`
+	RefundBankName       string             `json:"refundBankName,omitempty"`
+	RefundAccountNo      string             `json:"refundAccountNo,omitempty"`
+	RefundAccountName    string             `json:"refundAccountName,omitempty"`
+	RefundStatus         string             `json:"refundStatus,omitempty"`
+	RefundStatusLabel    string             `json:"refundStatusLabel,omitempty"`
+	RefundNote           string             `json:"refundNote,omitempty"`
 	RefundedAt           *time.Time         `json:"refundedAt,omitempty"`
 	RefundedBy           string             `json:"refundedBy,omitempty"`
 	OutOfStockNote       string             `json:"outOfStockNote,omitempty"`
@@ -154,32 +154,32 @@ func toOrderDTO(view service.OrderView) orderDTO {
 	}
 
 	dto := orderDTO{
-		OrderID:           order.OrderID,
-		CanCancel:         order.CanTransitionTo(model.OrderStatusCancelled),
-		Code:              model.FormatOrderCode(order.OrderID),
-		CustomerID:        order.CustomerID,
-		CustomerName:      view.CustomerName,
-		CustomerPhone:     view.CustomerPhone,
-		CustomerEmail:     view.CustomerEmail,
-		Channel:           order.Channel,
-		ChannelLabel:      order.Channel.Label(),
-		OrderDate:         order.OrderDate,
-		ShippingAddress:   order.ShippingAddress,
-		Status:            order.Status,
-		StatusLabel:       statusLabel,
-		Subtotal:          order.Subtotal,
-		DiscountAmount:    order.DiscountAmount,
-		NetAmount:         order.NetAmount,
-		PromotionID:       order.PromotionID,
-		DiscountCode:      order.DiscountCode,
-		SlipFileName:      order.SlipFileName,
-		CancelReason:      cancelReason,
-		RefundBankName:    order.RefundBankName,
-		RefundAccountNo:   order.RefundAccountNo,
-		RefundAccountName: order.RefundAccountName,
-		RefundStatus:      order.RefundStatus,
-		RefundStatusLabel: refundStatusLabel,
-		RefundNote:        order.RefundNote,
+		OrderID:              order.OrderID,
+		CanCancel:            order.CanTransitionTo(model.OrderStatusCancelled),
+		Code:                 model.FormatOrderCode(order.OrderID),
+		CustomerID:           order.CustomerID,
+		CustomerName:         view.CustomerName,
+		CustomerPhone:        view.CustomerPhone,
+		CustomerEmail:        view.CustomerEmail,
+		Channel:              order.Channel,
+		ChannelLabel:         order.Channel.Label(),
+		OrderDate:            order.OrderDate,
+		ShippingAddress:      order.ShippingAddress,
+		Status:               order.Status,
+		StatusLabel:          statusLabel,
+		Subtotal:             order.Subtotal,
+		DiscountAmount:       order.DiscountAmount,
+		NetAmount:            order.NetAmount,
+		PromotionID:          order.PromotionID,
+		DiscountCode:         order.DiscountCode,
+		SlipFileName:         order.SlipFileName,
+		CancelReason:         cancelReason,
+		RefundBankName:       order.RefundBankName,
+		RefundAccountNo:      order.RefundAccountNo,
+		RefundAccountName:    order.RefundAccountName,
+		RefundStatus:         order.RefundStatus,
+		RefundStatusLabel:    refundStatusLabel,
+		RefundNote:           order.RefundNote,
 		RefundedAt:           order.RefundedAt,
 		RefundedBy:           order.RefundedBy,
 		OutOfStockNote:       order.OutOfStockNote,
