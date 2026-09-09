@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { can } from '../permissions'
 import { useOrders } from '../orders/OrderContext'
 import { ORDER_STATUS_LABELS, formatOrderCode } from '../orders/orders'
-import { hasPendingReport, isReportedReview, salesBucketOf } from './reviews'
+import { isReportedReview, managerBucketOf, salesBucketOf } from './reviews'
 import type { ModerateAction, Review, ReviewReply, ReviewStatus } from './reviews'
 
 // ข้อมูลอยู่ในตาราง review / review_reply / review_report ของ PostgreSQL
@@ -116,6 +116,7 @@ interface ReviewValue {
   reload: () => Promise<void>
   pendingCount: number
   approvedCount: number
+  hiddenCount: number
   deletedCount: number
   unrepliedCount: number
   repliedCount: number
@@ -172,14 +173,12 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       reload,
-      // คิวผู้จัดการ 3 แท็บต้องไม่ทับกัน (นับเฉพาะรีวิวที่มีการกดส่งรายงานมาเท่านั้น)
-      // "รอตรวจสอบ" มาจากรายงานที่ฝ่ายขายส่งเท่านั้น — ไม่แตะ review.status อีกต่อไป
-      pendingCount: reviews.filter(hasPendingReport).length,
-      approvedCount: reviews.filter(
-        (r) => isReportedReview(r) && !hasPendingReport(r) && r.status !== 'HIDDEN' && r.status !== 'REMOVED'
-      ).length,
-      deletedCount: reviews.filter((r) => isReportedReview(r) && (r.status === 'REMOVED' || r.status === 'HIDDEN'))
-        .length,
+      // คิวผู้จัดการ (นับเฉพาะรีวิวที่มีการกดส่งรายงานมาเท่านั้น) — ใช้ managerBucketOf ตัวเดียว
+      // เป็นแหล่งความจริงเดียวกับตัวกรองแท็บใน ReviewManagerPage เพื่อไม่ให้ 4 ช่องทับกัน
+      pendingCount: reviews.filter((r) => isReportedReview(r) && managerBucketOf(r) === 'PENDING').length,
+      approvedCount: reviews.filter((r) => isReportedReview(r) && managerBucketOf(r) === 'APPROVED').length,
+      hiddenCount: reviews.filter((r) => isReportedReview(r) && managerBucketOf(r) === 'HIDDEN').length,
+      deletedCount: reviews.filter((r) => isReportedReview(r) && managerBucketOf(r) === 'DELETED').length,
       // ช่องฝ่ายขาย 3 ช่องก็ต้องไม่ทับกันเช่นกัน — ใช้ salesBucketOf ตัวเดียวกับตัวกรอง
       unrepliedCount: reviews.filter((r) => salesBucketOf(r) === 'UNREPLIED').length,
       repliedCount: reviews.filter((r) => salesBucketOf(r) === 'REPLIED').length,

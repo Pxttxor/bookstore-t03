@@ -279,17 +279,6 @@ export default function DeliverySummaryReportPage() {
         </div>
       </div>
 
-      {/* Compact Book Inventory Note Banner */}
-      <section className="delivery-report__banner">
-        <div className="delivery-report__banner-icon">
-          <Icon name="package" size={15} />
-        </div>
-        <div className="delivery-report__banner-text">
-          <strong>หมายเหตุการแพ็กหนังสือ:</strong>{' '}
-          ตรวจสอบความสมบูรณ์ของกล่องพัสดุและเลข Tracking ทุกครั้งก่อนส่งมอบ
-        </div>
-      </section>
-
       {/* KPI Metrics Cards — the day chosen above */}
       <section className="delivery-report__kpis">
         <div className="delivery-kpi-card">
@@ -302,9 +291,6 @@ export default function DeliverySummaryReportPage() {
               <span className="delivery-kpi-card__value">{totalParcels}</span>
               <span className="delivery-kpi-card__unit">ออเดอร์</span>
             </div>
-            <span className="delivery-kpi-card__note">
-              <Icon name="check-circle" size={12} /> เฉพาะรายการที่จัดส่งแล้ว
-            </span>
           </div>
         </div>
 
@@ -318,7 +304,6 @@ export default function DeliverySummaryReportPage() {
               <span className="delivery-kpi-card__value">{formatPrice(totalRevenue)}</span>
             </div>
             <div className="delivery-kpi-card__note-row">
-              <span className="delivery-kpi-card__note">คิดจากยอดโอนจริง (ส่งฟรี)</span>
               <button
                 type="button"
                 className="delivery-kpi-card__link-btn"
@@ -340,7 +325,6 @@ export default function DeliverySummaryReportPage() {
               <span className="delivery-kpi-card__value">{activeCarriersCount}</span>
               <span className="delivery-kpi-card__unit">ขนส่ง</span>
             </div>
-            <span className="delivery-kpi-card__note">จากที่ใช้งานได้ {CARRIERS.length} ราย</span>
           </div>
         </div>
 
@@ -353,9 +337,6 @@ export default function DeliverySummaryReportPage() {
             <div className="delivery-kpi-card__val-row">
               <span className="delivery-kpi-card__value">{trackedPercent}%</span>
             </div>
-            <span className="delivery-kpi-card__note">
-              {trackedCount} จาก {totalParcels} รายการ
-            </span>
           </div>
         </div>
       </section>
