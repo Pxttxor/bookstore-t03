@@ -39,21 +39,26 @@ func runPersonFlow(e *env) {
 	email := fmt.Sprintf("smoke%d@example.com", time.Now().UnixNano()%1000000000)
 
 	section("สมัครสมาชิก (Person · Customer · UserAccount)")
-	check("สมัครบัญชีลูกค้าใหม่ สถานะ UNVERIFIED", func() error {
+	check("สมัครบัญชีลูกค้าใหม่ ยังไม่บันทึกลงระบบ (สถานะ UNVERIFIED)", func() error {
 		body, err := post("", "/api/auth/register", registerBody(email), 201)
 		if err != nil {
 			return err
-		}
-		if body["customerId"] == nil {
-			return fmt.Errorf("ไม่ได้ customerId กลับมา: %v", body)
 		}
 		if err := expect(body["otpHint"], model.DevOtpCode); err != nil {
 			return err
 		}
 		return expect(body["status"], string(model.AccountStatusUnverified))
 	})
-	check("สมัครด้วยอีเมลเดิม → 409 EMAIL_TAKEN", func() error {
-		return expectError("POST", "/api/auth/register", "", registerBody(email), 409, "EMAIL_TAKEN")
+	check("ยังไม่ยืนยัน OTP ข้อมูลต้องยังไม่อยู่ในระบบ", func() error {
+		rows, err := getList(manager, "/api/customers?q="+email)
+		if err != nil {
+			return err
+		}
+		if len(rows) > 0 {
+			return fmt.Errorf("พบข้อมูลในระบบทั้งที่ยังไม่ได้ยืนยัน OTP: %v", rows)
+		}
+		return expectError("POST", "/api/auth/login", "",
+			loginBody(email, seedCustomerPassword), 401, "INVALID_CREDENTIALS")
 	})
 	check("รหัสผ่านสั้นกว่า 8 ตัว → 422 PASSWORD_TOO_SHORT", func() error {
 		body := registerBody("short" + email)
@@ -70,21 +75,30 @@ func runPersonFlow(e *env) {
 	})
 
 	section("ยืนยันตัวตนและเข้าสู่ระบบ")
-	check("ยังไม่ยืนยัน OTP ล็อกอินไม่ได้ → 401 ACCOUNT_NOT_VERIFIED", func() error {
-		return expectError("POST", "/api/auth/login", "",
-			loginBody(email, seedCustomerPassword), 401, "ACCOUNT_NOT_VERIFIED")
-	})
-	check("รหัส OTP ผิด → 422 INVALID_OTP", func() error {
+	check("รหัส OTP ผิด → 422 INVALID_OTP (ข้อมูลยังไม่ถูกบันทึก)", func() error {
 		return expectError("POST", "/api/auth/verify-otp", "",
 			map[string]any{"email": email, "otp": "000000"}, 422, "INVALID_OTP")
 	})
-	check("ยืนยัน OTP ถูกต้อง สถานะเป็น ACTIVE", func() error {
+	check("ยืนยัน OTP ถูกต้อง บันทึกข้อมูลลงระบบและสถานะเป็น ACTIVE", func() error {
 		body, err := post("", "/api/auth/verify-otp",
 			map[string]any{"email": email, "otp": model.DevOtpCode}, 200)
 		if err != nil {
 			return err
 		}
-		return expect(body["status"], string(model.AccountStatusActive))
+		if err := expect(body["status"], string(model.AccountStatusActive)); err != nil {
+			return err
+		}
+		rows, err := getList(manager, "/api/customers?q="+email)
+		if err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return fmt.Errorf("ไม่พบข้อมูลลูกค้าหลังยืนยัน OTP: %v", rows)
+		}
+		return nil
+	})
+	check("สมัครซ้ำด้วยอีเมลเดิมหลังยืนยันแล้ว → 409 EMAIL_TAKEN", func() error {
+		return expectError("POST", "/api/auth/register", "", registerBody(email), 409, "EMAIL_TAKEN")
 	})
 	check("ล็อกอินหลังยืนยันแล้ว ได้ token บทบาท customer", func() error {
 		body, err := post("", "/api/auth/login", loginBody(email, seedCustomerPassword), 200)
