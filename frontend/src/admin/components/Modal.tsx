@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import Icon from '../../components/Icon'
 import './Modal.css'
 
@@ -10,6 +10,8 @@ interface ModalProps {
 }
 
 export default function Modal({ title, onClose, footer, children }: ModalProps) {
+  const mouseDownTargetRef = useRef<EventTarget | null>(null)
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -18,8 +20,23 @@ export default function Modal({ title, onClose, footer, children }: ModalProps) 
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
+  const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    mouseDownTargetRef.current = e.target
+  }
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (mouseDownTargetRef.current === e.currentTarget && e.target === e.currentTarget) {
+      onClose()
+    }
+    mouseDownTargetRef.current = null
+  }
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div
+      className="modal-backdrop"
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
+    >
       <div
         className="modal"
         role="dialog"

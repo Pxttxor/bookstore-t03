@@ -85,8 +85,8 @@ export default function MemberPointsPage() {
           </p>
         </div>
         <Link to="/member/rewards" className="btn btn-primary btn-sm">
-          <Icon name="gift" size={18} />
-          แลกของรางวัล
+          <Icon name="tag" size={18} />
+          แลกแต้มส่วนลด
         </Link>
       </header>
 

@@ -159,8 +159,30 @@ func (r *NotificationRepository) ListFor(role model.Role) ([]model.Notification,
 	return notifications, err
 }
 
+// ListForCustomer — การแจ้งเตือนของลูกค้าคนหนึ่ง ใหม่สุดขึ้นก่อน
+func (r *NotificationRepository) ListForCustomer(customerID int) ([]model.Notification, error) {
+	var notifications []model.Notification
+	err := r.db.Where("to_role = ? AND customer_id = ?", model.RoleCustomer, customerID).
+		Order("created_at DESC, id DESC").
+		Find(&notifications).Error
+	return notifications, err
+}
+
 func (r *NotificationRepository) MarkRead(id int) error {
 	result := r.db.Model(&model.Notification{}).Where("id = ?", id).Update("read", true)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return model.NotFound("NOTIFICATION_NOT_FOUND", "ไม่พบการแจ้งเตือนนี้")
+	}
+	return nil
+}
+
+func (r *NotificationRepository) MarkReadForCustomer(id, customerID int) error {
+	result := r.db.Model(&model.Notification{}).
+		Where("id = ? AND to_role = ? AND customer_id = ?", id, model.RoleCustomer, customerID).
+		Update("read", true)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -173,6 +195,12 @@ func (r *NotificationRepository) MarkRead(id int) error {
 func (r *NotificationRepository) MarkAllRead(role model.Role) error {
 	return r.db.Model(&model.Notification{}).
 		Where("to_role = ? AND read = false", role).
+		Update("read", true).Error
+}
+
+func (r *NotificationRepository) MarkAllReadForCustomer(customerID int) error {
+	return r.db.Model(&model.Notification{}).
+		Where("to_role = ? AND customer_id = ? AND read = false", model.RoleCustomer, customerID).
 		Update("read", true).Error
 }
 

@@ -40,6 +40,12 @@ type Order struct {
 	RefundNote        string               `gorm:"column:refund_note;type:text" json:"refundNote,omitempty"`
 	RefundedAt        *time.Time           `gorm:"column:refunded_at;type:timestamptz" json:"refundedAt,omitempty"`
 	RefundedBy        string               `gorm:"column:refunded_by;type:varchar(200)" json:"refundedBy,omitempty"`
+	OutOfStockNote    string               `gorm:"column:out_of_stock_note;type:text" json:"outOfStockNote,omitempty"`
+	RestockEstimate   string               `gorm:"column:restock_estimate;type:varchar(100)" json:"restockEstimate,omitempty"`
+	RestockDate       *Date                `gorm:"column:restock_date;type:date" json:"restockDate,omitempty"`
+	CustomerChoice    string               `gorm:"column:customer_choice;type:varchar(50)" json:"customerChoice,omitempty"`
+	ReplacementBookID *int                 `gorm:"column:replacement_book_id" json:"replacementBookId,omitempty"`
+	ReplacementNote   string               `gorm:"column:replacement_note;type:text" json:"replacementNote,omitempty"`
 	Items             []OrderItem          `gorm:"foreignKey:OrderID;references:OrderID;constraint:OnDelete:CASCADE" json:"items"`
 	Timeline          []OrderStatusHistory `gorm:"foreignKey:OrderID;references:OrderID;constraint:OnDelete:CASCADE" json:"timeline"`
 }
@@ -82,17 +88,20 @@ func (OrderStatusHistory) TableName() string { return "customer_order_status_his
 // เว็บไซต์แนบสลิปตั้งแต่ตอนสั่ง คำสั่งซื้อทางเว็บจึงข้าม WAITING_PAYMENT ไป VERIFYING_PAYMENT เลย
 // ส่วน WAITING_PAYMENT เก็บไว้ให้ช่องทางอื่นที่ยังไม่ได้ชำระ
 var orderTransitions = map[OrderStatus][]OrderStatus{
-	OrderStatusPendingConfirm:   {OrderStatusStockConfirmed, OrderStatusCancelled, OrderStatusRejected},
-	OrderStatusStockConfirmed:   {OrderStatusVerifyingPayment, OrderStatusWaitingPayment, OrderStatusCancelled},
-	OrderStatusWaitingPayment:   {OrderStatusVerifyingPayment, OrderStatusCancelled},
-	OrderStatusVerifyingPayment: {OrderStatusPaid, OrderStatusRejected},
-	OrderStatusPaid:             {OrderStatusPacking, OrderStatusCancelled},
+	OrderStatusPendingConfirm:   {OrderStatusStockConfirmed, OrderStatusCancelled, OrderStatusRejected, OrderStatusOutOfStock},
+	OrderStatusStockConfirmed:   {OrderStatusVerifyingPayment, OrderStatusWaitingPayment, OrderStatusCancelled, OrderStatusOutOfStock},
+	OrderStatusWaitingPayment:   {OrderStatusVerifyingPayment, OrderStatusCancelled, OrderStatusOutOfStock},
+	OrderStatusVerifyingPayment: {OrderStatusPaid, OrderStatusRejected, OrderStatusOutOfStock},
+	OrderStatusPaid:             {OrderStatusPacking, OrderStatusCancelled, OrderStatusOutOfStock},
 	OrderStatusPacking:          {OrderStatusReadyToShip},
 	OrderStatusReadyToShip:      {OrderStatusShipped},
 	OrderStatusShipped:          {OrderStatusDelivered},
 	OrderStatusDelivered:        {},
 	OrderStatusCancelled:        {},
 	OrderStatusRejected:         {OrderStatusVerifyingPayment, OrderStatusCancelled},
+	OrderStatusOutOfStock:       {OrderStatusWaitingRestock, OrderStatusExchange, OrderStatusCancelled},
+	OrderStatusWaitingRestock:   {OrderStatusStockConfirmed, OrderStatusPaid, OrderStatusExchange, OrderStatusCancelled},
+	OrderStatusExchange:         {OrderStatusStockConfirmed, OrderStatusPendingConfirm, OrderStatusCancelled},
 }
 
 // CanTransitionTo — เปลี่ยนจากสถานะปัจจุบันไปสถานะนี้ได้ไหม

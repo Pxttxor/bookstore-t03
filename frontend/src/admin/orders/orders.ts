@@ -21,6 +21,9 @@ export type OrderStatus =
   | 'DELIVERED'
   | 'CANCELLED'
   | 'REJECTED'
+  | 'OUT_OF_STOCK'
+  | 'WAITING_RESTOCK'
+  | 'EXCHANGE_REQUESTED'
 
 export type OrderChannel = 'WEBSITE' | 'MESSAGE' | 'PHONE'
 
@@ -79,6 +82,13 @@ export interface CustomerOrder {
   refundNote?: string
   refundedAt?: string
   refundedBy?: string
+  outOfStockNote?: string
+  restockEstimate?: string
+  restockDate?: string
+  customerChoice?: 'WAIT_RESTOCK' | 'CHANGE_PRODUCT' | 'CANCEL' | string
+  replacementBookId?: number
+  replacementBookTitle?: string
+  replacementNote?: string
   items: OrderItem[]
   timeline: OrderStatusHistory[]
   shipment?: Shipment
@@ -98,6 +108,9 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   DELIVERED: 'ส่งถึงแล้ว',
   CANCELLED: 'ยกเลิกและรอคืนเงิน',
   REJECTED: 'สลิปไม่ถูกต้อง (รอแนบใหม่)',
+  OUT_OF_STOCK: 'สินค้าหมด (รอลูกค้าตัดสินใจ)',
+  WAITING_RESTOCK: 'รอสินค้าเติมสต็อก',
+  EXCHANGE_REQUESTED: 'รอดำเนินการเปลี่ยนสินค้า',
 }
 
 export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
@@ -112,6 +125,9 @@ export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
   DELIVERED: 'success',
   CANCELLED: 'rose',
   REJECTED: 'danger',
+  OUT_OF_STOCK: 'amber',
+  WAITING_RESTOCK: 'cyan',
+  EXCHANGE_REQUESTED: 'purple',
 }
 
 export function getOrderStatusLabel(order: Pick<CustomerOrder, 'status' | 'refundStatus'>): string {
@@ -166,6 +182,9 @@ const MILESTONE_OF: Record<OrderStatus, number> = {
   DELIVERED: 4,
   CANCELLED: -1,
   REJECTED: -1,
+  OUT_OF_STOCK: 0,
+  WAITING_RESTOCK: 0,
+  EXCHANGE_REQUESTED: 0,
 }
 
 export const milestoneOf = (status: OrderStatus) => MILESTONE_OF[status]

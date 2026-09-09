@@ -224,6 +224,13 @@ const (
 	NotifyOrderReadyToShip NotificationKind = "ORDER_READY_TO_SHIP"
 	NotifyShipmentFailed   NotificationKind = "SHIPMENT_FAILED"
 	NotifyReviewReported   NotificationKind = "REVIEW_REPORTED"
+	NotifyOrderOutOfStock  NotificationKind = "ORDER_OUT_OF_STOCK"
+	NotifyCustomerDecision NotificationKind = "CUSTOMER_DECISION"
+	NotifyOrderShipped     NotificationKind = "ORDER_SHIPPED"
+	NotifyOrderDelivered   NotificationKind = "ORDER_DELIVERED"
+	NotifyPaymentRejected  NotificationKind = "PAYMENT_REJECTED"
+	NotifyRefundCompleted  NotificationKind = "REFUND_COMPLETED"
+	NotifyStockRestocked   NotificationKind = "STOCK_RESTOCKED"
 )
 
 type NotificationChannel string

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'r
 import { apiGet, apiPost } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import { useAuth } from '../../auth/AuthContext'
-import { isEmployee, type Role } from '../../auth/roles'
+import type { Role } from '../../auth/roles'
 
 // ข้อมูลอยู่ในตาราง notification ของ PostgreSQL
 //
@@ -65,9 +65,8 @@ const newest = (a: AppNotification, b: AppNotification) =>
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
 
-  // Provider นี้อยู่ที่ main.tsx จึงครอบหน้าร้านด้วย แต่ `/api/notifications` เป็น roleStaff
-  // ถ้ายิงตอนยังไม่ล็อกอินหรือเป็นลูกค้าจะได้ 401/403 ทุกครั้งที่มีคนเปิดหน้าแรก
-  const enabled = user !== null && isEmployee(user.role)
+  // โหลดการแจ้งเตือนสำหรับผู้ใช้ที่ล็อกอินแล้วทั้งหมด (ทั้งพนักงานและลูกค้า)
+  const enabled = user !== null
   const { data, loading, error, reload, apply } = useResource(loadNotifications, enabled)
 
   useEffect(() => {

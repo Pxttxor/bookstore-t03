@@ -108,6 +108,30 @@ type RefundConfirmInput struct {
 	Note string `json:"note"`
 }
 
+// OutOfStockInput — ข้อมูลแจ้งสินค้าหมดและระยะเวลาเติมสต็อก
+type OutOfStockInput struct {
+	Note            string      `json:"note"`
+	RestockEstimate string      `json:"restockEstimate"`
+	RestockDate     *model.Date `json:"restockDate,omitempty"`
+}
+
+// CustomerChoiceInput — ตัวเลือกที่ลูกค้าเลือกกรณีสินค้าหมดสต็อก
+type CustomerChoiceInput struct {
+	Choice            string `json:"choice"` // "WAIT_RESTOCK" | "CHANGE_PRODUCT" | "CANCEL"
+	ReplacementBookID *int   `json:"replacementBookId,omitempty"`
+	Note              string `json:"note,omitempty"`
+	RefundBankName    string `json:"refundBankName,omitempty"`
+	RefundAccountNo   string `json:"refundAccountNo,omitempty"`
+	RefundAccountName string `json:"refundAccountName,omitempty"`
+}
+
+// ApproveExchangeInput — ยืนยันการเปลี่ยนหนังสือในคำสั่งซื้อ
+type ApproveExchangeInput struct {
+	OldBookID         *int   `json:"oldBookId,omitempty"`
+	ReplacementBookID int    `json:"replacementBookId"`
+	Note              string `json:"note,omitempty"`
+}
+
 // OrderShipmentInfo — พัสดุของคำสั่งซื้อที่จัดส่งแล้ว
 type OrderShipmentInfo struct {
 	ShipmentID     int                  `json:"shipmentId"`
@@ -120,13 +144,14 @@ type OrderShipmentInfo struct {
 
 // OrderView — คำสั่งซื้อพร้อมชื่อลูกค้า ชื่อหนังสือ และโปรโมชั่นที่ใช้
 type OrderView struct {
-	Order         model.Order
-	CustomerName  string
-	CustomerPhone string
-	CustomerEmail string
-	Books         map[int]model.Book
-	Promotion     *model.Promotion
-	Shipment      *OrderShipmentInfo
+	Order                model.Order
+	CustomerName         string
+	CustomerPhone        string
+	CustomerEmail        string
+	Books                map[int]model.Book
+	Promotion            *model.Promotion
+	Shipment             *OrderShipmentInfo
+	ReplacementBookTitle string
 }
 
 // ── อ่าน ────────────────────────────────────────────────────────────────
@@ -203,9 +228,15 @@ func (s *OrderService) Place(input PlaceOrderInput, current Identity) (*OrderVie
 		body := fmt.Sprintf("%s · %s · ฿%.2f · %d เล่ม",
 			model.FormatOrderCode(order.OrderID), order.Channel.Label(),
 			order.NetAmount, order.ItemCount())
-		return pushBothChannels(tx, s.notifications, model.RoleSales,
+		if err := pushBothChannels(tx, s.notifications, model.RoleSales,
 			model.NotifyOrderPlaced, "มีคำสั่งซื้อใหม่รอยืนยัน", body,
-			fmt.Sprintf("/admin/orders/%d", order.OrderID))
+			fmt.Sprintf("/admin/orders/%d", order.OrderID)); err != nil {
+			return err
+		}
+		return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+			model.NotifyOrderPlaced, "คำสั่งซื้อได้รับการบันทึกแล้ว",
+			fmt.Sprintf("%s · ยอดชำระ ฿%.2f รอตรวจสอบการชำระเงิน", model.FormatOrderCode(order.OrderID), order.NetAmount),
+			fmt.Sprintf("/orders/%d", order.OrderID))
 	})
 	if err != nil {
 		return nil, err
@@ -521,9 +552,15 @@ func (s *OrderService) VerifyPayment(orderID int, by string) (*OrderView, error)
 			}
 			body := fmt.Sprintf("%s · ฿%.2f · %d เล่ม",
 				model.FormatOrderCode(order.OrderID), order.NetAmount, order.ItemCount())
-			return pushBothChannels(tx, s.notifications, model.RoleWarehouse,
+			if err := pushBothChannels(tx, s.notifications, model.RoleWarehouse,
 				model.NotifyOrderPaid, "คำสั่งซื้อชำระเงินแล้ว รอแพ็กสินค้า", body,
-				fmt.Sprintf("/admin/orders/%d", order.OrderID))
+				fmt.Sprintf("/admin/orders/%d", order.OrderID)); err != nil {
+				return err
+			}
+			return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+				model.NotifyOrderPaid, "การชำระเงินได้รับการยืนยันแล้ว",
+				fmt.Sprintf("%s · ทางร้านกำลังจัดเตรียมและแพ็กสินค้าเพื่อจัดส่ง", model.FormatOrderCode(order.OrderID)),
+				fmt.Sprintf("/orders/%d", order.OrderID))
 		})
 }
 
@@ -536,7 +573,13 @@ func (s *OrderService) RejectPayment(orderID int, input OrderNoteInput, by strin
 	return s.advance(orderID, model.OrderStatusRejected, by, note,
 		func(tx *gorm.DB, order *model.Order) error {
 			order.CancelReason = note
-			return s.decidePayment(tx, orderID, note, by)
+			if err := s.decidePayment(tx, orderID, note, by); err != nil {
+				return err
+			}
+			return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+				model.NotifyPaymentRejected, "การชำระเงินไม่ถูกต้อง โปรดอัปโหลดสลิปใหม่",
+				fmt.Sprintf("%s · เหตุผล: %s", model.FormatOrderCode(order.OrderID), note),
+				fmt.Sprintf("/orders/%d", order.OrderID))
 		})
 }
 
@@ -602,7 +645,17 @@ func (s *OrderService) ReadyToShip(orderID int, by string) (*OrderView, error) {
 func (s *OrderService) Ship(orderID int, input ShipmentInput, by string) (*OrderView, error) {
 	return s.advance(orderID, model.OrderStatusShipped, by, "ส่งมอบให้ขนส่งแล้ว",
 		func(tx *gorm.DB, order *model.Order) error {
-			return s.recordShipment(tx, order, input)
+			if err := s.recordShipment(tx, order, input); err != nil {
+				return err
+			}
+			trackingInfo := ""
+			if input.TrackingNumber != "" {
+				trackingInfo = fmt.Sprintf(" · เลขพัสดุ: %s", input.TrackingNumber)
+			}
+			return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+				model.NotifyOrderShipped, "คำสั่งซื้อของคุณถูกจัดส่งแล้ว",
+				fmt.Sprintf("%s · สินค้าถูกส่งมอบให้บริษัทขนส่งแล้ว%s", model.FormatOrderCode(order.OrderID), trackingInfo),
+				fmt.Sprintf("/orders/%d", order.OrderID))
 		})
 }
 
@@ -616,7 +669,13 @@ func (s *OrderService) Deliver(orderID int, by string) (*OrderView, error) {
 			if err := s.closeShipment(tx, order); err != nil {
 				return err
 			}
-			return s.earnPoints(tx, order)
+			if err := s.earnPoints(tx, order); err != nil {
+				return err
+			}
+			return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+				model.NotifyOrderDelivered, "คำสั่งซื้อจัดส่งถึงคุณเรียบร้อยแล้ว",
+				fmt.Sprintf("%s · ขอบคุณที่สั่งซื้อหนังสือกับ BookHaven", model.FormatOrderCode(order.OrderID)),
+				fmt.Sprintf("/orders/%d", order.OrderID))
 		})
 }
 
@@ -773,7 +832,10 @@ func (s *OrderService) Cancel(orderID int, input OrderNoteInput, by string) (*Or
 		if input.RefundAccountName != "" {
 			order.RefundAccountName = strings.TrimSpace(input.RefundAccountName)
 		}
-		return nil
+		return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+			model.NotifyOrderCancelled, "คำสั่งซื้อถูกยกเลิกแล้ว",
+			fmt.Sprintf("%s · เหตุผล: %s", model.FormatOrderCode(order.OrderID), note),
+			fmt.Sprintf("/orders/%d", order.OrderID))
 	}
 	return s.advance(orderID, model.OrderStatusCancelled, by, note, hook)
 }
@@ -875,12 +937,229 @@ func (s *OrderService) ConfirmRefund(orderID int, input RefundConfirmInput, by s
 			return err
 		}
 		order = found
-		return nil
+		return pushCustomerNotification(tx, s.notifications, found.CustomerID,
+			model.NotifyRefundCompleted, "ร้านค้าดำเนินการคืนเงินเรียบร้อยแล้ว",
+			fmt.Sprintf("%s · ยอดเงิน ฿%.2f ดำเนินการโอนเงินคืนเรียบร้อยแล้ว", model.FormatOrderCode(found.OrderID), found.NetAmount),
+			fmt.Sprintf("/orders/%d", found.OrderID))
 	})
 	if err != nil {
 		return nil, err
 	}
 	return s.view(*order)
+}
+
+// NotifyOutOfStock — พนักงานแจ้งลูกค้าว่าสินค้าหมดสต็อก (PENDING_CONFIRM / STOCK_CONFIRMED / PAID → OUT_OF_STOCK)
+func (s *OrderService) NotifyOutOfStock(orderID int, input OutOfStockInput, by string) (*OrderView, error) {
+	note := strings.TrimSpace(input.Note)
+	if note == "" {
+		note = "สินค้าหมดสต็อกชั่วคราว รอลูกค้าตัดสินใจ"
+	}
+	estimate := strings.TrimSpace(input.RestockEstimate)
+	var restockDate *model.Date
+	if input.RestockDate != nil && !input.RestockDate.IsZero() {
+		restockDate = input.RestockDate
+	}
+	if estimate == "" && restockDate != nil {
+		estimate = restockDate.String()
+	}
+
+	hook := func(tx *gorm.DB, order *model.Order) error {
+		order.OutOfStockNote = note
+		order.RestockEstimate = estimate
+		order.RestockDate = restockDate
+		order.CustomerChoice = ""
+		body := fmt.Sprintf("%s · %s", model.FormatOrderCode(order.OrderID), note)
+		if err := pushBothChannels(tx, s.notifications, model.RoleSales,
+			model.NotifyOrderOutOfStock, "แจ้งสินค้าหมดสต็อก / รอลูกค้าตัดสินใจ", body,
+			fmt.Sprintf("/admin/orders/%d", order.OrderID)); err != nil {
+			return err
+		}
+		estMsg := ""
+		if estimate != "" {
+			estMsg = fmt.Sprintf(" (กำหนดการเติมสต็อก: %s)", estimate)
+		}
+		return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+			model.NotifyOrderOutOfStock, "สินค้าในคำสั่งซื้อหมดสต็อกชั่วคราว",
+			fmt.Sprintf("%s · ทางร้านได้แจ้งกำหนดการเติมสต็อก%s โปรดเลือกวิธีดำเนินการที่หน้าคำสั่งซื้อ", model.FormatOrderCode(order.OrderID), estMsg),
+			fmt.Sprintf("/orders/%d", order.OrderID))
+	}
+	timelineNote := note
+	if estimate != "" {
+		timelineNote += fmt.Sprintf(" (คาดว่าจะเติมสต็อก: %s)", estimate)
+	}
+	return s.advance(orderID, model.OrderStatusOutOfStock, by, timelineNote, hook)
+}
+
+// CustomerDecision — ลูกค้า (หรือพนักงานบันทึกแทนลูกค้า) เลือกการตัดสินใจ (รอของ / เปลี่ยนสินค้า / ยกเลิก)
+func (s *OrderService) CustomerDecision(orderID int, input CustomerChoiceInput, current Identity) (*OrderView, error) {
+	choice := strings.TrimSpace(input.Choice)
+	switch choice {
+	case "WAIT_RESTOCK":
+		hook := func(tx *gorm.DB, order *model.Order) error {
+			if current.IsCustomer() && order.CustomerID != current.CustomerID {
+				return model.ErrForbidden
+			}
+			order.CustomerChoice = "WAIT_RESTOCK"
+			body := fmt.Sprintf("%s · ลูกค้าเลือกรอสินค้าเติมสต็อก", model.FormatOrderCode(order.OrderID))
+			return pushBothChannels(tx, s.notifications, model.RoleSales,
+				model.NotifyCustomerDecision, "ลูกค้าเลือก: รอสินค้าเติมสต็อก", body,
+				fmt.Sprintf("/admin/orders/%d", order.OrderID))
+		}
+		note := "ลูกค้ายินดีรอสินค้าเติมสต็อก"
+		if input.Note != "" {
+			note += ": " + strings.TrimSpace(input.Note)
+		}
+		return s.advance(orderID, model.OrderStatusWaitingRestock, current.Name, note, hook)
+
+	case "CHANGE_PRODUCT":
+		hook := func(tx *gorm.DB, order *model.Order) error {
+			if current.IsCustomer() && order.CustomerID != current.CustomerID {
+				return model.ErrForbidden
+			}
+			order.CustomerChoice = "CHANGE_PRODUCT"
+			order.CancelReason = "ลูกค้าต้องการเปลี่ยนสินค้า (ยกเลิกรายการทั้งหมดเพื่อคืนเงิน)"
+			if input.Note != "" {
+				order.CancelReason += ": " + strings.TrimSpace(input.Note)
+			}
+			if order.RefundStatus != model.RefundStatusRefunded {
+				order.RefundStatus = model.RefundStatusPending
+			}
+			if input.RefundBankName != "" {
+				order.RefundBankName = strings.TrimSpace(input.RefundBankName)
+			}
+			if input.RefundAccountNo != "" {
+				order.RefundAccountNo = strings.TrimSpace(input.RefundAccountNo)
+			}
+			if input.RefundAccountName != "" {
+				order.RefundAccountName = strings.TrimSpace(input.RefundAccountName)
+			}
+			body := fmt.Sprintf("%s · ลูกค้าขอเปลี่ยนสินค้า (ยกเลิกคำสั่งซื้อเพื่อดำเนินการคืนเงิน)", model.FormatOrderCode(order.OrderID))
+			return pushBothChannels(tx, s.notifications, model.RoleSales,
+				model.NotifyCustomerDecision, "ลูกค้าเลือก: ขอเปลี่ยนสินค้า (ยกเลิกเพื่อคืนเงิน)", body,
+				fmt.Sprintf("/admin/orders/%d", order.OrderID))
+		}
+		note := "ลูกค้าขอเปลี่ยนสินค้า (ยกเลิกรายการทั้งหมดและเข้าสู่กระบวนการคืนเงิน)"
+		if input.Note != "" {
+			note += ": " + strings.TrimSpace(input.Note)
+		}
+		return s.advance(orderID, model.OrderStatusCancelled, current.Name, note, hook)
+
+	case "CANCEL":
+		hook := func(tx *gorm.DB, order *model.Order) error {
+			if current.IsCustomer() && order.CustomerID != current.CustomerID {
+				return model.ErrForbidden
+			}
+			order.CustomerChoice = "CANCEL"
+			order.CancelReason = "ลูกค้ายกเลิกคำสั่งซื้อเนื่องจากสินค้าหมดสต็อก"
+			if order.RefundStatus != model.RefundStatusRefunded {
+				order.RefundStatus = model.RefundStatusPending
+			}
+			if input.RefundBankName != "" {
+				order.RefundBankName = strings.TrimSpace(input.RefundBankName)
+			}
+			if input.RefundAccountNo != "" {
+				order.RefundAccountNo = strings.TrimSpace(input.RefundAccountNo)
+			}
+			if input.RefundAccountName != "" {
+				order.RefundAccountName = strings.TrimSpace(input.RefundAccountName)
+			}
+			body := fmt.Sprintf("%s · ลูกค้ายกเลิกคำสั่งซื้อเนื่องจากสินค้าหมด", model.FormatOrderCode(order.OrderID))
+			return pushBothChannels(tx, s.notifications, model.RoleSales,
+				model.NotifyCustomerDecision, "ลูกค้าเลือก: ขอยกเลิกคำสั่งซื้อ", body,
+				fmt.Sprintf("/admin/orders/%d", order.OrderID))
+		}
+		note := "ลูกค้ายกเลิกคำสั่งซื้อเนื่องจากสินค้าหมดสต็อก"
+		if input.Note != "" {
+			note += " (" + strings.TrimSpace(input.Note) + ")"
+		}
+		return s.advance(orderID, model.OrderStatusCancelled, current.Name, note, hook)
+
+	default:
+		return nil, model.Validation("INVALID_CHOICE", "กรุณาเลือกระหว่าง รอของ (WAIT_RESTOCK), เปลี่ยนสินค้า (CHANGE_PRODUCT) หรือ ยกเลิก (CANCEL)")
+	}
+}
+
+// ApproveExchange — พนักงานอนุมัติและเปลี่ยนหนังสือในคำสั่งซื้อ (EXCHANGE_REQUESTED → STOCK_CONFIRMED หรือ PAID)
+func (s *OrderService) ApproveExchange(orderID int, input ApproveExchangeInput, by string) (*OrderView, error) {
+	if input.ReplacementBookID <= 0 {
+		return nil, model.Validation("BOOK_REQUIRED", "กรุณาระบุหนังสือเล่มใหม่ที่จะเปลี่ยน")
+	}
+	newBook, err := s.books.Find(s.db, input.ReplacementBookID)
+	if err != nil {
+		return nil, err
+	}
+
+	targetStatus := model.OrderStatusStockConfirmed
+
+	hook := func(tx *gorm.DB, order *model.Order) error {
+		replaced := false
+		for i := range order.Items {
+			if input.OldBookID != nil && order.Items[i].BookID == *input.OldBookID {
+				order.Items[i].BookID = newBook.BookID
+				order.Items[i].UnitPrice = newBook.Price
+				order.Items[i].LineTotal = newBook.Price * float64(order.Items[i].Quantity)
+				replaced = true
+				break
+			}
+		}
+		if !replaced && len(order.Items) > 0 {
+			order.Items[0].BookID = newBook.BookID
+			order.Items[0].UnitPrice = newBook.Price
+			order.Items[0].LineTotal = newBook.Price * float64(order.Items[0].Quantity)
+		}
+
+		if err := tx.Where("order_id = ?", order.OrderID).Delete(&model.OrderItem{}).Error; err != nil {
+			return err
+		}
+		for i := range order.Items {
+			order.Items[i].OrderID = order.OrderID
+		}
+		if err := tx.Create(&order.Items).Error; err != nil {
+			return err
+		}
+
+		order.CalcTotal()
+		order.OutOfStockNote = ""
+		order.RestockEstimate = ""
+		order.CustomerChoice = ""
+		order.ReplacementBookID = nil
+		order.ReplacementNote = ""
+
+		payment, err := s.payments.FindByOrderForUpdate(tx, orderID)
+		if err == nil && payment.Status == model.PaymentStatusSuccess {
+			targetStatus = model.OrderStatusPaid
+		}
+		return nil
+	}
+
+	note := "อนุมัติเปลี่ยนสินค้าเป็น " + newBook.Title
+	if input.Note != "" {
+		note += " (" + strings.TrimSpace(input.Note) + ")"
+	}
+	return s.advance(orderID, targetStatus, by, note, hook)
+}
+
+// ConfirmRestocked — พนักงานยืนยันว่าสินค้าเข้าสต็อกแล้ว (WAITING_RESTOCK → STOCK_CONFIRMED หรือ PAID)
+func (s *OrderService) ConfirmRestocked(orderID int, by string) (*OrderView, error) {
+	targetStatus := model.OrderStatusStockConfirmed
+	hook := func(tx *gorm.DB, order *model.Order) error {
+		if err := s.assertStockAvailable(tx, order); err != nil {
+			return err
+		}
+		order.OutOfStockNote = ""
+		order.RestockEstimate = ""
+		order.CustomerChoice = ""
+
+		payment, err := s.payments.FindByOrderForUpdate(tx, orderID)
+		if err == nil && payment.Status == model.PaymentStatusSuccess {
+			targetStatus = model.OrderStatusPaid
+		}
+		return pushCustomerNotification(tx, s.notifications, order.CustomerID,
+			model.NotifyStockRestocked, "สินค้าที่คุณรอเข้าสต็อกแล้ว",
+			fmt.Sprintf("%s · สินค้าเข้าสต็อกแล้ว ทางร้านกำลังดำเนินการจัดเตรียมสินค้า", model.FormatOrderCode(order.OrderID)),
+			fmt.Sprintf("/orders/%d", order.OrderID))
+	}
+	return s.advance(orderID, targetStatus, by, "สินค้าเติมสต็อกแล้ว ดำเนินการต่อ", hook)
 }
 
 // advance — โครงร่วมของทุกการเปลี่ยนสถานะ
@@ -905,8 +1184,22 @@ func (s *OrderService) advance(
 			}
 		}
 
+		timelineNote := note
+		if next == model.OrderStatusCancelled {
+			// คืนสิทธิ์การใช้งานโค้ดส่วนลดจากการแลกแต้ม ให้ลูกค้านำไปใช้ซ้ำได้
+			if err := s.members.ResetRedemptionUsed(tx, order.OrderID); err != nil {
+				return err
+			}
+			if order.DiscountCode != "" {
+				if err := s.members.ResetRedemptionByCode(tx, order.DiscountCode); err != nil {
+					return err
+				}
+				timelineNote += fmt.Sprintf(" (คืนสิทธิ์โค้ดส่วนลด %s ให้ลูกค้าใช้ซ้ำได้)", order.DiscountCode)
+			}
+		}
+
 		before := len(order.Timeline)
-		if err := order.UpdateStatus(next, by, note, time.Now()); err != nil {
+		if err := order.UpdateStatus(next, by, timelineNote, time.Now()); err != nil {
 			return err
 		}
 		if err := s.orders.Save(tx, order); err != nil {
@@ -1034,6 +1327,11 @@ func (s *OrderService) views(orders []model.Order) ([]OrderView, error) {
 		}
 		if shp, ok := shipmentByOrder[order.OrderID]; ok {
 			views[i].Shipment = &shp
+		}
+		if order.ReplacementBookID != nil {
+			if replBook, ok := books[*order.ReplacementBookID]; ok {
+				views[i].ReplacementBookTitle = replBook.Title
+			}
 		}
 	}
 	return views, nil

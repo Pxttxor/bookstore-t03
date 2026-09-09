@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type RefObject } from 'react'
 import Icon from './Icon'
 import { useAuth } from '../auth/AuthContext'
+import { formatPhoneNumber } from '../data/phone'
 import './AuthForm.css'
 
 // การสมัครสมาชิกมีสองขั้นเพราะ backend เปิดบัญชีเป็น UNVERIFIED
@@ -49,7 +50,12 @@ export default function SignUpForm({
     const next: FieldErrors = {}
     if (!firstName.trim()) next.firstName = 'กรุณากรอกชื่อ'
     if (!lastName.trim()) next.lastName = 'กรุณากรอกนามสกุล'
-    if (!phone.trim()) next.phone = 'กรุณากรอกเบอร์โทรศัพท์'
+    const phoneDigits = phone.replace(/\D/g, '')
+    if (!phoneDigits) {
+      next.phone = 'กรุณากรอกเบอร์โทรศัพท์'
+    } else if (phoneDigits.length !== 10) {
+      next.phone = 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก'
+    }
     if (!address.trim()) next.address = 'กรุณากรอกที่อยู่'
     if (password.length < 6) next.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
     if (password !== confirm) next.confirm = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'
@@ -255,10 +261,11 @@ export default function SignUpForm({
             <input
               type="tel"
               autoComplete="tel"
-              placeholder="08X-XXX-XXXX"
+              placeholder="081-234-5678"
+              maxLength={12}
               value={phone}
               onChange={(e) => {
-                setPhone(e.target.value)
+                setPhone(formatPhoneNumber(e.target.value))
                 clearFieldError('phone')
               }}
               aria-invalid={!!fieldErrors.phone}

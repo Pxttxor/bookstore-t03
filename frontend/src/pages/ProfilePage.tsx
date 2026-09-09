@@ -7,6 +7,7 @@ import ErrorState from '../admin/components/ErrorState'
 import { apiPut, ApiError } from '../api/client'
 import { useResource } from '../api/useResource'
 import { loadMyProfile, type MyProfile } from '../data/profile'
+import { formatPhoneNumber } from '../data/phone'
 import { useAuth } from '../auth/AuthContext'
 import './ProfilePage.css'
 
@@ -38,7 +39,7 @@ export default function ProfilePage() {
     if (!profile) return
     setFirstName(profile.firstName)
     setLastName(profile.lastName)
-    setPhone(profile.phone)
+    setPhone(formatPhoneNumber(profile.phone))
     setAddress(profile.address)
     setFormError('')
     setIsEditing(true)
@@ -53,6 +54,15 @@ export default function ProfilePage() {
     }
     if (!lastName.trim()) {
       setFormError('กรุณากรอกนามสกุล')
+      return
+    }
+    const phoneDigits = phone.replace(/\D/g, '')
+    if (!phoneDigits) {
+      setFormError('กรุณากรอกเบอร์โทรศัพท์')
+      return
+    }
+    if (phoneDigits.length !== 10) {
+      setFormError('กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก')
       return
     }
     setSaving(true)
@@ -212,8 +222,9 @@ export default function ProfilePage() {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="เช่น 0812345678"
+                maxLength={12}
+                onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
+                placeholder="081-234-5678"
               />
             </label>
             <label className="profile-edit-form__field">

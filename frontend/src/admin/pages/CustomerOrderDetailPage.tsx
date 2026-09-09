@@ -13,6 +13,7 @@ import LoadingState from '../components/LoadingState'
 import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import { useToast } from '../components/ToastContext'
+import BookPicker from '../components/BookPicker'
 import { can } from '../permissions'
 import { useOrders } from '../orders/OrderContext'
 import { usePayments } from '../payments/PaymentContext'
@@ -47,6 +48,12 @@ const OWNER_ROLE: Partial<Record<OrderStatus, Role | 'customer'>> = {
   PACKING: 'warehouse',
   READY_TO_SHIP: 'delivery',
   SHIPPED: 'delivery',
+  DELIVERED: undefined,
+  CANCELLED: undefined,
+  REJECTED: 'customer',
+  OUT_OF_STOCK: 'customer',
+  WAITING_RESTOCK: 'sales',
+  EXCHANGE_REQUESTED: 'sales',
 }
 
 interface CarrierOption {
@@ -72,7 +79,17 @@ function getSlipSource(orderId: number, slipFileName?: string): string {
 export default function CustomerOrderDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const { findOrder, updateStatus, loading, error, reload } = useOrders()
+  const {
+    findOrder,
+    updateStatus,
+    loading,
+    error,
+    reload,
+    markOutOfStock,
+    submitCustomerChoice,
+    approveExchange,
+    confirmRestocked,
+  } = useOrders()
   const { reload: reloadPayments, payments, banks } = usePayments()
   const { reload: reloadInventory } = useInventory()
   // บริษัทขนส่งอยู่ในตาราง shipping_company · พัสดุเป็นคนละ endpoint กับใบสั่งซื้อ
@@ -90,6 +107,43 @@ export default function CustomerOrderDetailPage() {
 
   const [saving, setSaving] = useState(false)
   const [slipModalOpen, setSlipModalOpen] = useState(false)
+
+  // Out of stock states
+  const [oosModalOpen, setOosModalOpen] = useState(false)
+  const [oosNote, setOosNote] = useState('')
+  const [oosEstimate, setOosEstimate] = useState('ประมาณ 7 วัน')
+  const [oosDate, setOosDate] = useState('')
+  const [oosError, setOosError] = useState('')
+
+  const setDaysPreset = (days: number) => {
+    const target = new Date()
+    target.setDate(target.getDate() + days)
+    const isoDate = target.toISOString().slice(0, 10)
+    setOosDate(isoDate)
+    const thaiDate = target.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+    setOosEstimate(`ประมาณ ${days} วัน (${thaiDate})`)
+  }
+
+  const handleOosDateChange = (val: string) => {
+    setOosDate(val)
+    if (val) {
+      const d = new Date(val + 'T00:00:00')
+      if (!isNaN(d.getTime())) {
+        const now = new Date()
+        now.setHours(0, 0, 0, 0)
+        const diffDays = Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        const thaiDate = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+        if (diffDays > 0) {
+          setOosEstimate(`ประมาณ ${diffDays} วัน (${thaiDate})`)
+        } else {
+          setOosEstimate(`วันที่ ${thaiDate}`)
+        }
+      }
+    }
+  }
+
+  // Staff exchange book picker modal
+  const [staffExchangeModalOpen, setStaffExchangeModalOpen] = useState(false)
 
   const role = user!.role
   const order = findOrder(Number(id))
@@ -275,6 +329,59 @@ export default function CustomerOrderDetailPage() {
       run: () => askReason('CANCELLED'),
     })
   }
+  if (
+    (order.status === 'PENDING_CONFIRM' ||
+      order.status === 'STOCK_CONFIRMED' ||
+      order.status === 'WAITING_PAYMENT' ||
+      order.status === 'VERIFYING_PAYMENT' ||
+      order.status === 'PAID') &&
+    can.confirmStock(role)
+  ) {
+    actions.push({
+      label: 'แจ้งสินค้าหมดสต็อก',
+      tone: 'outline',
+      run: () => {
+        setOosNote('สินค้าหมดสต็อกชั่วคราว')
+        setDaysPreset(7)
+        setOosError('')
+        setOosModalOpen(true)
+      },
+    })
+  }
+  if (order.status === 'WAITING_RESTOCK' && can.confirmStock(role)) {
+    actions.push({
+      label: 'สินค้าเข้าแล้ว (ยืนยันสต็อก)',
+      tone: 'primary',
+      run: () => void (async () => {
+        try {
+          await confirmRestocked(order.orderId)
+          notify('success', 'ยืนยันสินค้าเข้าสต็อกเรียบร้อยแล้ว ดำเนินการต่อ')
+        } catch (err) {
+          notify('error', err instanceof Error ? err.message : 'ยืนยันสต็อกไม่สำเร็จ')
+        }
+      })(),
+    })
+  }
+  if (order.status === 'EXCHANGE_REQUESTED' && can.confirmStock(role)) {
+    actions.push({
+      label: 'อนุมัติการเปลี่ยนสินค้า',
+      tone: 'primary',
+      run: () => {
+        if (order.replacementBookId) {
+          void (async () => {
+            try {
+              await approveExchange(order.orderId, order.replacementBookId!)
+              notify('success', 'เปลี่ยนสินค้าในคำสั่งซื้อเรียบร้อยแล้ว')
+            } catch (err) {
+              notify('error', err instanceof Error ? err.message : 'อนุมัติเปลี่ยนสินค้าไม่สำเร็จ')
+            }
+          })()
+        } else {
+          setStaffExchangeModalOpen(true)
+        }
+      },
+    })
+  }
 
   const btnClass = (tone: 'primary' | 'outline' | 'danger') =>
     tone === 'primary'
@@ -334,6 +441,11 @@ export default function CustomerOrderDetailPage() {
               <strong>เหตุผลที่ยกเลิก:</strong> {order.cancelReason}
             </p>
           )}
+          {order.discountCode && (
+            <p className="order-detail__cancel-reason-text" style={{ color: '#166534', marginTop: '6px' }}>
+              <Icon name="tag" size={14} /> <strong>โค้ดส่วนลด {order.discountCode}:</strong> ได้รับการคืนสิทธิ์ให้ลูกค้านำไปใช้ซ้ำในคำสั่งซื้อใหม่แล้ว
+            </p>
+          )}
         </div>
       )}
       {order.status === 'REJECTED' && (
@@ -345,6 +457,144 @@ export default function CustomerOrderDetailPage() {
             <p className="order-detail__cancel-reason-text">
               <strong>เหตุผลที่ปฏิเสธ:</strong> {order.cancelReason}
             </p>
+          )}
+        </div>
+      )}
+
+      {order.status === 'OUT_OF_STOCK' && (
+        <div className="order-detail__banner order-detail__banner--warning">
+          <p className="order-detail__banner-title">
+            <Icon name="alert-triangle" size={18} /> แจ้งสินค้าหมดสต็อกแล้ว — อยู่ระหว่างรอลูกค้าตัดสินใจ
+          </p>
+          {order.outOfStockNote && (
+            <p className="order-detail__cancel-reason-text">
+              <strong>ข้อความแจ้งลูกค้า:</strong> {order.outOfStockNote}
+            </p>
+          )}
+          {order.restockEstimate && (
+            <p className="order-detail__cancel-reason-text">
+              <strong>กำหนดการเติมสต็อกที่แจ้ง:</strong> {order.restockEstimate}
+            </p>
+          )}
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ลูกค้าติดต่อกลับมาทางโทรศัพท์/แชทหรือไม่? บันทึกการตัดสินใจแทนลูกค้า:</span>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => void (async () => {
+                try {
+                  await submitCustomerChoice(order.orderId, 'WAIT_RESTOCK')
+                  notify('success', 'บันทึกลูกค้าเลือกรอสินค้าเติมสต็อกแล้ว')
+                } catch (err) {
+                  notify('error', err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ')
+                }
+              })()}
+            >
+              ลูกค้ายินดีรอของ
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => void (async () => {
+                if (!window.confirm('ลูกค้ายืนยันต้องการเปลี่ยนสินค้า? ระบบจะทำการยกเลิกรายการทั้งหมดและนำเข้าสู่ขั้นตอนการคืนเงิน')) return
+                try {
+                  await submitCustomerChoice(order.orderId, 'CHANGE_PRODUCT')
+                  notify('success', 'บันทึกสำเร็จ: คำสั่งซื้อถูกยกเลิกเพื่อดำเนินการคืนเงินให้ลูกค้า')
+                } catch (err) {
+                  notify('error', err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ')
+                }
+              })()}
+            >
+              ลูกค้าต้องการเปลี่ยนสินค้า (ยกเลิกและคืนเงิน)
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={() => askReason('CANCELLED')}
+            >
+              ลูกค้ายกเลิกคำสั่งซื้อ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {order.status === 'WAITING_RESTOCK' && (
+        <div className="order-detail__banner order-detail__banner--info">
+          <p className="order-detail__banner-title">
+            <Icon name="clock" size={18} /> ลูกค้ายินดีรอสินค้าเติมสต็อก (กำหนดการ: {order.restockEstimate || 'ตามที่แจ้ง'})
+          </p>
+          <div style={{ marginTop: '10px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {can.confirmStock(role) && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => void (async () => {
+                  try {
+                    await confirmRestocked(order.orderId)
+                    notify('success', 'ยืนยันสินค้าเข้าสต็อกแล้ว ดำเนินการต่อ')
+                  } catch (err) {
+                    notify('error', err instanceof Error ? err.message : 'ยืนยันสต็อกไม่สำเร็จ')
+                  }
+                })()}
+              >
+                สินค้าเข้าแล้ว (ยืนยันสต็อก)
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => askReason('CANCELLED')}
+            >
+              ขอยกเลิกคำสั่งซื้อ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {order.status === 'EXCHANGE_REQUESTED' && (
+        <div className="order-detail__banner order-detail__banner--info">
+          <p className="order-detail__banner-title">
+            <Icon name="package" size={18} /> ลูกค้าประสงค์ขอเปลี่ยนสินค้า
+          </p>
+          <p className="order-detail__cancel-reason-text">
+            <strong>หนังสือที่ลูกค้าต้องการเปลี่ยนเป็น:</strong>{' '}
+            {order.replacementBookTitle || (order.replacementBookId ? `หนังสือรหัส ${order.replacementBookId}` : 'ยังไม่ได้ระบุ')}
+          </p>
+          {order.replacementNote && (
+            <p className="order-detail__cancel-reason-text">
+              <strong>หมายเหตุจากลูกค้า:</strong> {order.replacementNote}
+            </p>
+          )}
+          {can.confirmStock(role) && (
+            <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  if (order.replacementBookId) {
+                    void (async () => {
+                      try {
+                        await approveExchange(order.orderId, order.replacementBookId!)
+                        notify('success', 'เปลี่ยนสินค้าในคำสั่งซื้อเรียบร้อยแล้ว')
+                      } catch (err) {
+                        notify('error', err instanceof Error ? err.message : 'อนุมัติเปลี่ยนสินค้าไม่สำเร็จ')
+                      }
+                    })()
+                  } else {
+                    setStaffExchangeModalOpen(true)
+                  }
+                }}
+              >
+                อนุมัติและเปลี่ยนสินค้าในใบสั่งซื้อ
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setStaffExchangeModalOpen(true)}
+              >
+                เลือกหนังสือเล่มอื่น
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -742,6 +992,167 @@ export default function CustomerOrderDetailPage() {
             />
           </div>
         </Modal>
+      )}
+
+      {oosModalOpen && (
+        <Modal
+          title={`แจ้งสินค้าหมดสต็อก ${formatOrderCode(order.orderId)}`}
+          onClose={() => setOosModalOpen(false)}
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setOosModalOpen(false)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                disabled={saving}
+                onClick={() => {
+                  if (!oosNote.trim()) {
+                    setOosError('กรุณาระบุรายละเอียดสินค้าที่หมด')
+                    return
+                  }
+                  void (async () => {
+                    setSaving(true)
+                    try {
+                      await markOutOfStock(order.orderId, oosNote.trim(), oosEstimate.trim(), oosDate || undefined)
+                      setOosModalOpen(false)
+                      notify('success', 'ส่งแจ้งเตือนสินค้าหมดไปยังลูกค้าแล้ว')
+                    } catch (err) {
+                      notify('error', err instanceof Error ? err.message : 'แจ้งสินค้าหมดไม่สำเร็จ')
+                    } finally {
+                      setSaving(false)
+                    }
+                  })()
+                }}
+              >
+                {saving ? 'กำลังบันทึก…' : 'ยืนยันแจ้งสินค้าหมด'}
+              </button>
+            </div>
+          }
+        >
+          <div className="order-detail__modal-form">
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '12px' }}>
+              ระบบจะแจ้งให้ลูกค้าทราบ และให้ลูกค้าเลือกว่าจะรอสินค้าเติมสต็อก, เปลี่ยนสินค้า, หรือยกเลิกคำสั่งซื้อ
+            </p>
+            <label className="admin-field">
+              <span className="admin-field__label">
+                รายละเอียดสินค้าที่หมด / ข้อความถึงลูกค้า <span className="admin-field__required">*</span>
+              </span>
+              <textarea
+                className="admin-field__textarea"
+                rows={3}
+                value={oosNote}
+                placeholder="เช่น สินค้าบางรายการหมดสต็อกชั่วคราว อยู่ระหว่างรอเติมของ"
+                onChange={(e) => {
+                  setOosNote(e.target.value)
+                  setOosError('')
+                }}
+              />
+              {oosError && <span className="admin-field__error">{oosError}</span>}
+            </label>
+
+            <div className="admin-field" style={{ marginTop: '12px' }}>
+              <span className="admin-field__label">วันที่คาดว่าของจะเข้า (ถ้ามี)</span>
+              <div style={{ display: 'flex', gap: '8px', margin: '6px 0 8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '12px', padding: '3px 10px' }}
+                  onClick={() => setDaysPreset(3)}
+                >
+                  +3 วัน
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '12px', padding: '3px 10px' }}
+                  onClick={() => setDaysPreset(7)}
+                >
+                  +7 วัน
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '12px', padding: '3px 10px' }}
+                  onClick={() => setDaysPreset(14)}
+                >
+                  +14 วัน
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '12px', padding: '3px 10px' }}
+                  onClick={() => setDaysPreset(30)}
+                >
+                  +30 วัน
+                </button>
+                {oosDate && (
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    style={{ fontSize: '12px', padding: '3px 8px' }}
+                    onClick={() => {
+                      setOosDate('')
+                      setOosEstimate('')
+                    }}
+                  >
+                    ล้างวันที่
+                  </button>
+                )}
+              </div>
+              <input
+                type="date"
+                className="admin-field__input"
+                value={oosDate}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => handleOosDateChange(e.target.value)}
+              />
+              {oosDate && (
+                <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--primary-deep)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Icon name="check-circle" size={14} /> คาดว่าจะเข้า: {new Date(oosDate + 'T00:00:00').toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              )}
+            </div>
+
+            <label className="admin-field" style={{ marginTop: '12px' }}>
+              <span className="admin-field__label">ข้อความระบุระยะเวลาที่จะแสดงให้ลูกค้าเห็น</span>
+              <input
+                type="text"
+                className="admin-field__input"
+                value={oosEstimate}
+                placeholder="เช่น ประมาณ 7 วัน หรือ วันที่ 15 ก.ย. 2026"
+                onChange={(e) => setOosEstimate(e.target.value)}
+              />
+            </label>
+          </div>
+        </Modal>
+      )}
+
+      {staffExchangeModalOpen && (
+        <BookPicker
+          title="เลือกหนังสือใหม่ที่ลูกค้าต้องการเปลี่ยน"
+          exclude={order.items.map((it) => it.bookId)}
+          onClose={() => setStaffExchangeModalOpen(false)}
+          onSelect={(book) => {
+            void (async () => {
+              setSaving(true)
+              try {
+                await approveExchange(order.orderId, book.bookId)
+                setStaffExchangeModalOpen(false)
+                notify('success', `เปลี่ยนสินค้าเป็น ${book.title} เรียบร้อยแล้ว`)
+              } catch (err) {
+                notify('error', err instanceof Error ? err.message : 'เปลี่ยนสินค้าไม่สำเร็จ')
+              } finally {
+                setSaving(false)
+              }
+            })()
+          }}
+        />
       )}
     </div>
   )
