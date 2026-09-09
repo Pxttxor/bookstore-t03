@@ -78,13 +78,6 @@
   color: var(--status-warning);
 }
 
-.receive__link {
-  color: var(--status-warning);
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .receive__actions {
   display: flex;
   align-items: center;
