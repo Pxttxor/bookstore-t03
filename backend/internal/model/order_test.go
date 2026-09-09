@@ -327,4 +327,3 @@ func TestOrderOutOfStockChangeProductAndCancel(t *testing.T) {
 		t.Errorf("คูปองที่ถูกรีเซ็ต (order_id=nil, used_date=nil) ต้องถือว่ายังไม่ได้ใช้ เพื่อให้ลูกค้าใช้ซ้ำได้")
 	}
 }
-

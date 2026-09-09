@@ -1,0 +1,69 @@
+# ตรวจ gate เดียวกับตาราง Verify ใน CLAUDE.md ทุก PR เข้า main และทุก push บน main
+# repo นี้ไม่เคยมี CI — จิรพนธ์ merge b9d919d บนเว็บโดยไม่ผ่าน gofmt/eslint ทำให้ main แดงอยู่พักหนึ่ง
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# PR ที่ push ทับรัวๆ ให้ยกเลิกรอบเก่าทิ้ง ประหยัดโควตา Actions
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # ตรึงให้ตรงกับ toolchain ที่ทีมใช้ตรวจในเครื่อง (go1.26.x) — บรรทัด `go 1.25.0`
+          # ใน go.mod เป็นเวอร์ชันภาษาขั้นต่ำ ไม่ใช่ตัวที่ต้องรัน และ gofmt เปลี่ยนกฎจัดคอลัมน์ข้ามเวอร์ชันได้
+          go-version: '1.26.x'
+          cache-dependency-path: backend/go.sum
+
+      - run: go build ./...
+
+      - run: go vet ./...
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "ไฟล์ต่อไปนี้ยังไม่ผ่าน gofmt — รัน 'gofmt -w' แล้ว commit ใหม่:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - run: go test ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # npm run build = tsc -b && vite build — เป็น type-check gate ของฝั่ง frontend
+      - run: npm run build
+
+      - run: npm run lint

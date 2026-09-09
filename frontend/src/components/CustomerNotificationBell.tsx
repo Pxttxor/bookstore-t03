@@ -23,12 +23,6 @@ export default function CustomerNotificationBell() {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
 
-  if (!user) return null
-
-  const entries = listFor(user.role).filter(inApp)
-  const unread = loading || error ? 0 : entries.filter((entry) => !entry.read).length
-  const badgeLabel = unread > 99 ? '99' : String(unread)
-
   useEffect(() => {
     if (!open) return
     const close = (event: MouseEvent) => {
@@ -37,6 +31,12 @@ export default function CustomerNotificationBell() {
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [open])
+
+  if (!user) return null
+
+  const entries = listFor(user.role).filter(inApp)
+  const unread = loading || error ? 0 : entries.filter((entry) => !entry.read).length
+  const badgeLabel = unread > 99 ? '99' : String(unread)
 
   const openEntry = (entry: AppNotification) => {
     void markRead(entry.id).catch(() => {

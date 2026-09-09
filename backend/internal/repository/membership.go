@@ -350,4 +350,3 @@ func (r *MembershipRepository) ResetRedemptionByCode(tx *gorm.DB, code string) e
 			"used_date": nil,
 		}).Error
 }
-
