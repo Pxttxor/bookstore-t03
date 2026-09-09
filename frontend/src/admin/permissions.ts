@@ -41,6 +41,9 @@ export const can = {
   // may moderate reviews and handle escalations too.
   moderateReview: (role: Role) => role === 'sales' || role === 'manager',
   manageReportedReviews: (role: Role) => role === 'manager',
+  // การส่งเรื่องขึ้นไปหาผู้จัดการเป็นงานของฝ่ายขายเท่านั้น — ผู้จัดการคือ "ปลายทาง" ของรายงาน
+  // จะรายงานหาตัวเองไม่ได้ ให้ใช้ปุ่มอนุมัติ/ซ่อน/ลบ ในหน้าจัดการรีวิวที่มีปัญหาแทน
+  reportReviewToManager: (role: Role) => role === 'sales',
 
   // Customer orders (Order + Delivery subsystems). Responsibility is split by role:
   // sales handle intake and payment, warehouse packs, delivery ships and confirms.

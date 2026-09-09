@@ -183,12 +183,23 @@
   border-radius: 20px;
 }
 
+.review-under-review-badge-sales--decided {
+  color: #4b5563;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .review-report-detail-box-sales {
   margin-top: 12px;
   background: #fef2f2;
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 12px 14px;
+}
+
+.review-report-detail-box-sales--decided {
+  background: #f9fafb;
+  border-color: #e5e7eb;
 }
 
 .review-report-detail-title-sales {
@@ -201,14 +212,26 @@
   margin-bottom: 8px;
 }
 
+.review-report-detail-title-sales--decided {
+  color: #4b5563;
+}
+
 .review-report-detail-row-sales {
   font-size: 0.82rem;
   color: #7f1d1d;
   margin: 4px 0 0 0;
 }
 
+.review-report-detail-box-sales--decided .review-report-detail-row-sales {
+  color: #4b5563;
+}
+
 .review-report-detail-row-sales strong {
   color: #991b1b;
+}
+
+.review-report-detail-box-sales--decided .review-report-detail-row-sales strong {
+  color: #374151;
 }
 
 .review-headline-sales--italic {

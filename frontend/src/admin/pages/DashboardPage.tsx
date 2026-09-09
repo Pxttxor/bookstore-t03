@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const { belowReorder, items, pendingReports } = inventory
   const { requisitions, orders, returns, budget } = purchasing
   const { orders: customerOrders } = order
-  const { unrepliedCount, reportedCount } = review
+  const { unrepliedCount, pendingCount } = review
 
   const role = user!.role
   // Wait only for resources used by this role. A forbidden subsystem must not
@@ -133,14 +133,14 @@ export default function DashboardPage() {
           <section className="dash__row">
             <StatTile
               label="จัดการรีวิวที่มีปัญหา"
-              value={reportedCount}
+              value={pendingCount}
               note={
-                reportedCount > 0
-                  ? `พบรีวิวที่ถูกรายงาน ${reportedCount} รายการ`
-                  : 'ไม่มีรีวิวที่มีปัญหา'
+                pendingCount > 0
+                  ? `รอผู้จัดการตัดสิน ${pendingCount} รายการ`
+                  : 'ไม่มีรีวิวที่มีปัญหาค้างอยู่'
               }
               icon="alert-triangle"
-              tone={reportedCount > 0 ? 'danger' : 'default'}
+              tone={pendingCount > 0 ? 'danger' : 'default'}
               to="/admin/reviews/manage"
             />
             <StatTile

@@ -237,19 +237,23 @@ const MENU: MenuGroup[] = [
 
 export default function AdminSidebar({ role }: { role: Role }) {
   const { belowReorder, pendingReports, loading: stockLoading } = useInventory()
-  const { pendingCount, reportedCount, loading: reviewLoading } = useReviews()
+  const { unrepliedCount, pendingCount, loading: reviewLoading } = useReviews()
 
   // แถบเมนูอยู่บนโครงหน้าตลอด จะขึ้นจอโหลดเต็มไม่ได้ — ระหว่างยังไม่รู้ตัวเลขจริง
   // ให้ถือว่าไม่มีงานค้าง จุดแดงจึงไม่กระพริบขึ้นแล้วหายทุกครั้งที่เปิดหลังร้าน
+  //
+  // เมนู "ตรวจสอบรีวิว" เป็นของฝ่ายขาย → จุดแดงต้องนับรีวิวที่รอตอบกลับ (unrepliedCount)
+  // เมนู "จัดการรีวิวที่มีปัญหา" เป็นของผู้จัดการ → จุดแดงต้องนับรายงานที่ยังค้าง (pendingCount)
+  // (เดิมสองตัวนี้สลับกันอยู่)
   const dotCount = (source: MenuItem['dot']) =>
     stockLoading || reviewLoading
       ? 0
       : source === 'reorder'
       ? belowReorder.length
       : source === 'reviews'
-      ? pendingCount
+      ? unrepliedCount
       : source === 'reportedReviews'
-      ? reportedCount
+      ? pendingCount
       : source === 'discrepancy'
       ? pendingReports.length
       : 0

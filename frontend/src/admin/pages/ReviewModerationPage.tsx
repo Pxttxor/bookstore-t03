@@ -9,8 +9,9 @@ import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import { useToast } from '../components/ToastContext'
-import { coverFor } from '../../data/covers'
+import BookCover from '../../components/BookCover'
 import { useReviews } from '../reviews/ReviewContext'
+import { hasPendingReport, REPORT_DECISION_LABELS, salesBucketOf } from '../reviews/reviews'
 import type { Review } from '../reviews/reviews'
 import ReviewDetailDrawer from './ReviewDetailDrawer'
 import ReportToManagerModal from './ReportToManagerModal'
@@ -49,6 +50,8 @@ export default function ReviewModerationPage() {
 
   const role = user!.role
   const mayModerate = can.moderateReview(role)
+  // ผู้จัดการเป็นปลายทางของรายงาน จะรายงานหาตัวเองไม่ได้ — ปุ่มนี้จึงมีเฉพาะฝ่ายขาย
+  const mayReport = can.reportReviewToManager(role)
 
   const kpiTotal = reviews.length
   const kpiUnreplied = unrepliedCount
@@ -58,9 +61,7 @@ export default function ReviewModerationPage() {
   const filteredReviews = useMemo(() => {
     const needle = term.trim().toLowerCase()
     let result = reviews.filter((r) => {
-      if (statusFilter === 'UNREPLIED' && r.reply) return false
-      if (statusFilter === 'REPLIED' && !r.reply) return false
-      if (statusFilter === 'REPORTED' && !r.report?.isReported) return false
+      if (statusFilter !== 'ALL' && salesBucketOf(r) !== statusFilter) return false
       if (!needle) return true
       return (
         r.bookTitle.toLowerCase().includes(needle) ||
@@ -239,10 +240,13 @@ export default function ReviewModerationPage() {
           />
         ) : (
           rows.map((review) => {
-            // รูปปกอยู่ในโปรเจกต์ ไม่ใช่คอลัมน์ในตาราง book — ค้นจาก bookId ตรง ๆ
-            const bookCover = review.coverUrl || coverFor(review.bookId)
             const isReported = !!review.report?.isReported
             const isFlagged = review.flagged
+            // ตัดสินแล้ว (APPROVED/REJECTED) ต่างจากยังค้างอยู่ (PENDING) — ป้ายและปุ่มต้องแยกกัน
+            const isPending = hasPendingReport(review)
+            const decision = review.report?.managerStatus && review.report.managerStatus !== 'PENDING'
+              ? review.report.managerStatus
+              : undefined
 
             return (
               <article
@@ -256,18 +260,7 @@ export default function ReviewModerationPage() {
                 {/* LEFT: Book cover + info side-by-side */}
                 <div className="review-card-left-sales">
                   <div className="review-book-cover-sales">
-                    {bookCover ? (
-                      <img
-                        src={bookCover}
-                        alt={review.bookTitle}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="review-book-cover-placeholder-sales">
-                        <Icon name="book" size={28} />
-                      </div>
-                    )}
+                    <BookCover bookId={review.bookId} title={review.bookTitle} author={review.author} />
                   </div>
                   <div className="review-book-meta-sales">
                     <h3 className="review-book-title-sales">{review.bookTitle}</h3>
@@ -281,13 +274,21 @@ export default function ReviewModerationPage() {
 
                 {/* RIGHT: Review content & Actions */}
                 <div className="review-card-right-sales">
-                  {/* UNDER REVIEW badge */}
+                  {/* UNDER REVIEW badge — เฉพาะรายงานที่ยังค้าง ตัดสินแล้วให้ขึ้นผลแทน */}
                   {isReported && (
                     <div className="review-card-status-bar-sales">
-                      <span className="review-under-review-badge-sales">
-                        <Icon name="alert-triangle" size={13} />
-                        UNDER REVIEW
-                      </span>
+                      {isPending ? (
+                        <span className="review-under-review-badge-sales">
+                          <Icon name="alert-triangle" size={13} />
+                          UNDER REVIEW
+                        </span>
+                      ) : (
+                        <span className="review-under-review-badge-sales review-under-review-badge-sales--decided">
+                          <Icon name="check-check" size={13} />
+                          {review.report?.reason ? `${review.report.reason} — ` : ''}
+                          {decision ? REPORT_DECISION_LABELS[decision] : 'พิจารณาแล้ว'}
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -327,10 +328,20 @@ export default function ReviewModerationPage() {
 
                     {/* Inline report detail box (only when already reported) */}
                     {isReported && review.report && (
-                      <div className="review-report-detail-box-sales">
-                        <div className="review-report-detail-title-sales">
-                          <Icon name="alert-triangle" size={15} />
-                          พบเนื้อหาที่อาจไม่เหมาะสม — รอผู้จัดการตรวจสอบ
+                      <div
+                        className={`review-report-detail-box-sales${
+                          !isPending ? ' review-report-detail-box-sales--decided' : ''
+                        }`}
+                      >
+                        <div
+                          className={`review-report-detail-title-sales${
+                            !isPending ? ' review-report-detail-title-sales--decided' : ''
+                          }`}
+                        >
+                          <Icon name={isPending ? 'alert-triangle' : 'check-check'} size={15} />
+                          {isPending
+                            ? `${review.report.reason || 'พบเนื้อหาที่อาจไม่เหมาะสม'} — รอผู้จัดการตรวจสอบ`
+                            : `${review.report.reason || 'พบเนื้อหาที่อาจไม่เหมาะสม'} — ${decision ? REPORT_DECISION_LABELS[decision] : 'พิจารณาแล้ว'}`}
                         </div>
                         <p className="review-report-detail-row-sales">
                           <strong>Reason:</strong> {review.report.reason}
@@ -344,6 +355,13 @@ export default function ReviewModerationPage() {
                             ? new Date(review.report.reportedDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
                             : 'ไม่ระบุ'}
                         </p>
+                        {!isPending && review.report.decidedBy && (
+                          <p className="review-report-detail-row-sales">
+                            <strong>Decided By:</strong> {review.report.decidedBy}
+                            {review.report.decidedDate &&
+                              ` · ${new Date(review.report.decidedDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -351,14 +369,20 @@ export default function ReviewModerationPage() {
                     {isFlagged && !isReported && (
                       <div className="review-flagged-warning-sales">
                         <Icon name="alert-triangle" size={14} />
-                        <span>ระบบตรวจพบข้อความมีปัญหา — กด "รายงานให้ผู้จัดการ" เพื่อดำเนินการ</span>
+                        <span>
+                          {mayReport
+                            ? 'ระบบตรวจพบข้อความมีปัญหา — กด "รายงานให้ผู้จัดการ" เพื่อดำเนินการ'
+                            : 'ระบบตรวจพบข้อความมีปัญหา — จัดการได้ที่หน้า "จัดการรีวิวที่มีปัญหา"'}
+                        </span>
                       </div>
                     )}
 
-                    {/* Staff reply */}
+                    {/* Staff reply — ระบุชื่อคนตอบจริงจาก repliedBy ไม่ใช่เดายศให้ */}
                     {review.reply && (
                       <div className="review-staff-reply-nested-sales">
-                        <div className="review-reply-label-sales">ฝ่ายขายตอบกลับ:</div>
+                        <div className="review-reply-label-sales">
+                          ตอบกลับโดย {review.reply.repliedBy || 'ทีมงานร้าน'}:
+                        </div>
                         <p className="review-reply-content-sales">{review.reply.replyText}</p>
                       </div>
                     )}
@@ -379,15 +403,15 @@ export default function ReviewModerationPage() {
                     <div className="actions-right-sales">
                       {isReported ? (
                         <button type="button" className="btn-reported-status-sales" onClick={() => setStatusReview(review)}>
-                          <Icon name="clock" size={15} />
-                          รอผู้จัดการตรวจสอบ (คลิกดูสถานะ)
+                          <Icon name={isPending ? 'clock' : 'check-check'} size={15} />
+                          {isPending ? 'รอผู้จัดการตรวจสอบ (คลิกดูสถานะ)' : 'ผู้จัดการตัดสินแล้ว (คลิกดูสถานะ)'}
                         </button>
-                      ) : (
+                      ) : mayReport ? (
                         <button type="button" className="btn-report-action-sales" onClick={() => setReportReview(review)}>
                           <Icon name="flag" size={15} />
                           รายงานให้ผู้จัดการ
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
