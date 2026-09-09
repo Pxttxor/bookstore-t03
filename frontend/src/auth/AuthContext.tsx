@@ -41,7 +41,7 @@ interface AuthValue {
   initialising: boolean
   login: (email: string, password: string) => Promise<AuthUser>
   register: (input: RegisterInput) => Promise<void>
-  verifyOtp: (email: string, otp: string) => Promise<void>
+  verifyOtp: (email: string, otp: string, registrationData?: RegisterInput) => Promise<void>
   refreshUser: () => Promise<void>
   logout: () => void
 }
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return result.user
     }
 
-    // สมัครแล้วบัญชียังเป็น UNVERIFIED — ต้องยืนยัน OTP ก่อนจึงจะล็อกอินได้
+    // ตรวจสอบข้อมูลและขอรับรหัส OTP — backend จะยังไม่บันทึกข้อมูลลงระบบจนกว่าจะยืนยัน OTP
     // username ใช้อีเมลไปเลย หน้าจอไม่ได้ถามแยก
     const register = async (input: RegisterInput) => {
       await apiPost('/api/auth/register', {
@@ -112,8 +112,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
     }
 
-    const verifyOtp = async (email: string, otp: string) => {
-      await apiPost('/api/auth/verify-otp', { email: email.trim(), otp: otp.trim() })
+    const verifyOtp = async (email: string, otp: string, registrationData?: RegisterInput) => {
+      await apiPost('/api/auth/verify-otp', {
+        email: email.trim(),
+        otp: otp.trim(),
+        ...(registrationData
+          ? {
+              firstName: registrationData.firstName.trim(),
+              lastName: registrationData.lastName.trim(),
+              phone: registrationData.phone.trim(),
+              address: registrationData.address.trim(),
+              username: registrationData.email.trim(),
+              password: registrationData.password,
+            }
+          : {}),
+      })
     }
 
     const refreshUser = async () => {

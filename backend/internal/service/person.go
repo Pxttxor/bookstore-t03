@@ -8,6 +8,8 @@ package service
 import (
 	"net/mail"
 	"strings"
+	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -19,10 +21,20 @@ import (
 // MinPasswordLength — ความยาวรหัสผ่านขั้นต่ำของบัญชีลูกค้า
 const MinPasswordLength = 8
 
+// pendingRegistration — ข้อมูลการสมัครสมาชิกระหว่างรอการยืนยัน OTP
+type pendingRegistration struct {
+	person    *model.Person
+	customer  *model.Customer
+	account   *model.UserAccount
+	expiresAt time.Time
+}
+
 type PersonService struct {
-	db      *gorm.DB
-	people  *repository.PersonRepository
-	members *repository.MembershipRepository
+	db        *gorm.DB
+	people    *repository.PersonRepository
+	members   *repository.MembershipRepository
+	pendingMu sync.RWMutex
+	pending   map[string]pendingRegistration
 }
 
 func NewPersonService(
@@ -30,7 +42,12 @@ func NewPersonService(
 	people *repository.PersonRepository,
 	members *repository.MembershipRepository,
 ) *PersonService {
-	return &PersonService{db: db, people: people, members: members}
+	return &PersonService{
+		db:      db,
+		people:  people,
+		members: members,
+		pending: make(map[string]pendingRegistration),
+	}
 }
 
 // ── DTO ที่หน้าจอส่งเข้ามา ───────────────────────────────────────────────
@@ -46,8 +63,14 @@ type RegisterInput struct {
 }
 
 type VerifyOtpInput struct {
-	Email string `json:"email"`
-	Otp   string `json:"otp"`
+	Email     string `json:"email"`
+	Otp       string `json:"otp"`
+	FirstName string `json:"firstName,omitempty"`
+	LastName  string `json:"lastName,omitempty"`
+	Phone     string `json:"phone,omitempty"`
+	Address   string `json:"address,omitempty"`
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password,omitempty"`
 }
 
 type ProfileInput struct {
@@ -67,40 +90,45 @@ type RegisterResult struct {
 	OtpHint string `json:"otpHint"`
 }
 
-// Register — สมัครบัญชีลูกค้าใหม่ (สถานะเริ่มต้น UNVERIFIED)
+// Register — ตรวจสอบข้อมูลและเตรียมคำขอสมัครสมาชิก (สถานะเริ่มต้น UNVERIFIED)
+// ข้อมูลจะยังไม่ถูกบันทึกลงในระบบจนกว่าลูกค้าจะยืนยันตัวตนด้วย OTP สำเร็จ
 func (s *PersonService) Register(input RegisterInput) (*RegisterResult, error) {
 	person, customer, account, err := s.buildRegistration(input)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.db.Transaction(func(tx *gorm.DB) error {
-		// ตรวจซ้ำในทรานแซกชันเดียวกับที่เขียน เพื่อให้ unique index เป็นด่านสุดท้ายจริง ๆ
-		taken, err := s.people.PersonEmailTaken(tx, person.Email)
-		if err != nil {
-			return err
-		}
-		if taken {
-			return model.ErrEmailTaken
-		}
-		taken, err = s.people.UsernameTaken(tx, account.Username)
-		if err != nil {
-			return err
-		}
-		if taken {
-			return model.ErrUsernameTaken
-		}
-		if err := s.people.CreateCustomer(tx, person, customer, account); err != nil {
-			return err
-		}
-		return s.enroll(tx, customer)
-	})
+	// ตรวจสอบว่าอีเมลและชื่อผู้ใช้ถูกใช้ไปแล้วหรือไม่
+	taken, err := s.people.PersonEmailTaken(s.db, person.Email)
 	if err != nil {
 		return nil, err
 	}
+	if taken {
+		return nil, model.ErrEmailTaken
+	}
+	taken, err = s.people.UsernameTaken(s.db, account.Username)
+	if err != nil {
+		return nil, err
+	}
+	if taken {
+		return nil, model.ErrUsernameTaken
+	}
+
+	// ยังไม่บันทึกลงฐานข้อมูล — เก็บไว้ใน pending ชั่วคราว (หมดอายุใน 15 นาที)
+	s.pendingMu.Lock()
+	if s.pending == nil {
+		s.pending = make(map[string]pendingRegistration)
+	}
+	s.pending[strings.ToLower(person.Email)] = pendingRegistration{
+		person:    person,
+		customer:  customer,
+		account:   account,
+		expiresAt: time.Now().Add(15 * time.Minute),
+	}
+	s.pendingMu.Unlock()
 
 	return &RegisterResult{
-		CustomerID: customer.CustomerID,
+		CustomerID: 0,
 		Username:   account.Username,
 		Status:     account.Status,
 		OtpHint:    model.DevOtpCode,
@@ -176,18 +204,100 @@ func (s *PersonService) buildRegistration(
 }
 
 // VerifyOtp — ยืนยันตัวตนแล้วเปิดใช้งานบัญชี (UserAccount.verifyOtp ใน class diagram)
+// หากเป็นลูกค้าที่เพิ่งสมัคร จะบันทึกข้อมูล person, customer, user_account, member ลงระบบเมื่อรหัส OTP ถูกต้อง
+// หากเป็นบัญชีที่มีอยู่เดิม (เช่น UNVERIFIED ใน DB) จะอัปเดตสถานะเป็น ACTIVE
 func (s *PersonService) VerifyOtp(input VerifyOtpInput) (*model.UserAccount, error) {
-	account, err := s.people.FindAccountByUsername(input.Email)
+	otp := strings.TrimSpace(input.Otp)
+	if otp != model.DevOtpCode {
+		return nil, model.ErrInvalidOtp
+	}
+
+	emailTerm := strings.ToLower(strings.TrimSpace(input.Email))
+
+	// 1. ตรวจสอบใน pending registrations
+	s.pendingMu.Lock()
+	pending, hasPending := s.pending[emailTerm]
+	if hasPending && time.Now().After(pending.expiresAt) {
+		delete(s.pending, emailTerm)
+		hasPending = false
+	}
+	s.pendingMu.Unlock()
+
+	var person *model.Person
+	var customer *model.Customer
+	var account *model.UserAccount
+
+	if hasPending {
+		person = pending.person
+		customer = pending.customer
+		account = pending.account
+	} else if strings.TrimSpace(input.FirstName) != "" && input.Password != "" {
+		// หากเซิร์ฟเวอร์เพิ่ง restart แต่หน้าจอส่งข้อมูลการสมัครมาด้วย
+		p, c, a, err := s.buildRegistration(RegisterInput{
+			FirstName: input.FirstName,
+			LastName:  input.LastName,
+			Email:     input.Email,
+			Phone:     input.Phone,
+			Address:   input.Address,
+			Username:  input.Username,
+			Password:  input.Password,
+		})
+		if err != nil {
+			return nil, err
+		}
+		person = p
+		customer = c
+		account = a
+	}
+
+	if person != nil && customer != nil && account != nil {
+		if err := account.VerifyOtp(otp); err != nil {
+			return nil, err
+		}
+
+		err := s.db.Transaction(func(tx *gorm.DB) error {
+			taken, err := s.people.PersonEmailTaken(tx, person.Email)
+			if err != nil {
+				return err
+			}
+			if taken {
+				return model.ErrEmailTaken
+			}
+			taken, err = s.people.UsernameTaken(tx, account.Username)
+			if err != nil {
+				return err
+			}
+			if taken {
+				return model.ErrUsernameTaken
+			}
+			if err := s.people.CreateCustomer(tx, person, customer, account); err != nil {
+				return err
+			}
+			return s.enroll(tx, customer)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		s.pendingMu.Lock()
+		delete(s.pending, emailTerm)
+		s.pendingMu.Unlock()
+
+		return account, nil
+	}
+
+	// 2. ถ้าไม่มีใน pending ให้ค้นหาบัญชีเดิมในฐานข้อมูล (เช่น บัญชี seed kanya@example.com)
+	existingAccount, err := s.people.FindAccountByUsername(input.Email)
 	if err != nil {
 		return nil, err
 	}
-	if err := account.VerifyOtp(strings.TrimSpace(input.Otp)); err != nil {
+	if err := existingAccount.VerifyOtp(otp); err != nil {
 		return nil, err
 	}
-	if err := s.people.SaveAccount(account); err != nil {
+	if err := s.people.SaveAccount(existingAccount); err != nil {
 		return nil, err
 	}
-	return account, nil
+	return existingAccount, nil
 }
 
 // ── ข้อมูลลูกค้า ────────────────────────────────────────────────────────

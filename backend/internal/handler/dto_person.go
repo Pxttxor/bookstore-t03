@@ -14,6 +14,7 @@ import (
 
 type accountDTO struct {
 	AccountID   int                 `json:"accountId"`
+	PersonID    int                 `json:"personId,omitempty"`
 	Username    string              `json:"username"`
 	Status      model.AccountStatus `json:"status"`
 	StatusLabel string              `json:"statusLabel"`
@@ -39,6 +40,7 @@ func toAccountDTO(account *model.UserAccount) *accountDTO {
 	}
 	return &accountDTO{
 		AccountID:   account.AccountID,
+		PersonID:    account.PersonID,
 		Username:    account.Username,
 		Status:      account.Status,
 		StatusLabel: account.Status.Label(),

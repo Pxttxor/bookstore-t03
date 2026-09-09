@@ -4,9 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 import { formatPhoneNumber } from '../data/phone'
 import './AuthForm.css'
 
-// การสมัครสมาชิกมีสองขั้นเพราะ backend เปิดบัญชีเป็น UNVERIFIED
-// (`PersonService.Register` เขียน person + customer + user_account + member สี่แถวพร้อมกัน)
-// แล้วต้อง POST /api/auth/verify-otp ก่อนจึงจะเข้าสู่ระบบได้
+// การสมัครสมาชิก: ขั้นแรกผู้ใช้กรอกข้อมูลและขอรับรหัส OTP (backend จะยังไม่บันทึกข้อมูลลงฐานข้อมูล)
+// เมื่อผู้ใช้กรอกรหัส OTP ถูกต้องในขั้นที่สอง (POST /api/auth/verify-otp) ข้อมูลจึงจะถูกบันทึกลงในระบบ
 type Step = 'form' | 'otp'
 
 // ช่องที่ตรวจฝั่งไคลเอนต์ได้เอง — ข้อความของช่องเหล่านี้ไปอยู่ "ใต้ช่องนั้น" ไม่ใช่แถบบนหัวฟอร์ม
@@ -57,7 +56,7 @@ export default function SignUpForm({
       next.phone = 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก'
     }
     if (!address.trim()) next.address = 'กรุณากรอกที่อยู่'
-    if (password.length < 6) next.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
+    if (password.length < 8) next.password = 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'
     if (password !== confirm) next.confirm = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'
     return next
   }
@@ -107,7 +106,7 @@ export default function SignUpForm({
     setSubmitting(true)
     setError('')
     try {
-      await verifyOtp(email, otp)
+      await verifyOtp(email, otp, { firstName, lastName, email, phone, address, password })
       onVerified()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ยืนยันรหัส OTP ไม่สำเร็จ')
