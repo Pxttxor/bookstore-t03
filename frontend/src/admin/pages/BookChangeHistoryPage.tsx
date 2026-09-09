@@ -1,6 +1,7 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { apiGet } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import Icon from '../../components/Icon'
 import Breadcrumb from '../components/Breadcrumb'
 import EmptyState from '../components/EmptyState'
 import ErrorState from '../components/ErrorState'
@@ -16,8 +17,20 @@ export default function BookChangeHistoryPage() {
   const { books } = useBooks()
   const load = useCallback(() => apiGet<BookChangeLog[]>('/api/book-change-logs'), [])
   const { data, loading, error, reload } = useResource(load)
+  const [term, setTerm] = useState('')
   const changes = data ?? []
   const bookNames = new Map(books.map((book) => [book.bookId, book]))
+
+  // ค้นหาด้วยชื่อหนังสือหรือรหัสหนังสือ (BKxx หรือตัวเลข)
+  const filtered = useMemo(() => {
+    const query = term.trim().toLowerCase()
+    if (!query) return changes
+    return changes.filter((change) => {
+      const book = bookNames.get(change.bookId)
+      const searchable = `${book?.title ?? ''} ${formatBookCode(change.bookId)} ${change.bookId}`.toLowerCase()
+      return searchable.includes(query)
+    })
+  }, [changes, bookNames, term])
 
   return (
     <div className="admin-page">
@@ -33,15 +46,31 @@ export default function BookChangeHistoryPage() {
       </div>
 
       <section className="admin-card book-history__card">
+        <div className="filter-bar">
+          <label className="filter-bar__search">
+            <Icon name="search" size={18} />
+            <input
+              type="search"
+              value={term}
+              placeholder="ค้นหาชื่อหนังสือ หรือรหัสหนังสือ"
+              onChange={(e) => setTerm(e.target.value)}
+            />
+          </label>
+        </div>
+
         {loading ? (
           <LoadingState label="กำลังโหลดประวัติการแก้ไข…" />
         ) : error ? (
           <ErrorState message={error} onRetry={() => void reload()} />
-        ) : changes.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon="clock"
-            title="ยังไม่มีประวัติการแก้ไข"
-            description="เมื่อมีการแก้ไขข้อมูลหนังสือ รายการจะปรากฏที่นี่"
+            title={changes.length ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ยังไม่มีประวัติการแก้ไข'}
+            description={
+              changes.length
+                ? 'ลองค้นหาด้วยชื่อหนังสือหรือรหัสหนังสือ (เช่น BK1)'
+                : 'เมื่อมีการแก้ไขข้อมูลหนังสือ รายการจะปรากฏที่นี่'
+            }
           />
         ) : (
           <div className="table-wrap">
@@ -57,7 +86,7 @@ export default function BookChangeHistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {changes.map((change) => {
+                {filtered.map((change) => {
                   const book = bookNames.get(change.bookId)
                   return (
                     <tr key={change.logId}>
