@@ -9,6 +9,7 @@ import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { can } from '../permissions'
+import { matchesSearch } from '../search'
 import { usePurchasing } from '../purchasing/PurchasingContext'
 import {
   formatGRCode,
@@ -71,15 +72,17 @@ export default function ReceiptsListPage() {
   )
 
   const filtered = useMemo(() => {
-    const needle = term.trim().toLowerCase()
     return history.filter((receipt) => {
       if (status !== 'ALL' && receipt.status !== status) return false
-      if (!needle) return true
       // เลขที่ใบรับกับเลขใบสั่งซื้อเป็นค่าที่ format ขึ้นมา ไม่ใช่ฟิลด์ใน DTO จึงต้องค้นจากสตริงที่แสดงจริง
-      const haystack = `${formatGRCode(receipt.grId)} ${formatPOCode(receipt.poId)} ${
-        receipt.deliveryNoteNo
-      } ${receipt.receivedBy} ${receipt.receivedDate}`.toLowerCase()
-      return haystack.includes(needle)
+      return matchesSearch(
+        term,
+        formatGRCode(receipt.grId),
+        formatPOCode(receipt.poId),
+        receipt.deliveryNoteNo,
+        receipt.receivedBy,
+        receipt.receivedDate,
+      )
     })
   }, [history, status, term])
 

@@ -9,6 +9,7 @@ import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
+import { matchesSearch } from '../search'
 import { useSuppliers } from '../suppliers/SupplierContext'
 import {
   formatSupplierCode,
@@ -42,17 +43,16 @@ export default function SupplierListPage() {
   }, [suppliers])
 
   const filtered = useMemo(() => {
-    const needle = term.trim().toLowerCase()
     return suppliers.filter((supplier) => {
       if (status !== 'ALL' && supplier.status !== status) return false
       if (publisher !== 'ALL' && !supplier.books.some((b) => b.publisher === publisher))
         return false
-      if (!needle) return true
-      return (
-        supplier.companyName.toLowerCase().includes(needle) ||
-        supplier.contactName.toLowerCase().includes(needle) ||
-        supplier.phone.includes(needle) ||
-        formatSupplierCode(supplier.supplierId).toLowerCase().includes(needle)
+      return matchesSearch(
+        term,
+        supplier.companyName,
+        supplier.contactName,
+        supplier.phone,
+        formatSupplierCode(supplier.supplierId),
       )
     })
   }, [suppliers, term, status, publisher])

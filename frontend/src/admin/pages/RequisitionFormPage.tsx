@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
 import Breadcrumb from '../components/Breadcrumb'
@@ -28,7 +28,55 @@ import './RequisitionFormPage.css'
 // รายการจะว่างเปล่าถาวรถึงแม้เอกสารจะโหลดมาครบทีหลังแล้วก็ตาม
 export default function RequisitionFormPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   const { loading, error, reload } = usePurchasing()
+  const role = user!.role
+
+  // ต้องเช็คสิทธิ์ *ก่อน* loading/error เสมอ — PurchasingProvider โหลดทุก role ที่เข้า AdminLayout
+  // และ endpoint ใน loadPurchasing() ทั้งหมดเป็น rolePurchasing (warehouse/manager) เท่านั้น
+  // สำหรับ sales/delivery ค่า error จึงถูกเซ็ตเป็น 403 ภาษาไทยไว้แล้วตั้งแต่โหลด ถ้า gate อยู่หลัง
+  // error สองบทบาทนั้นจะเจอ ErrorState แทนหน้า "ไม่มีสิทธิ์" ที่ควรเห็น
+  if (!id && !can.createRequisition(role)) {
+    return (
+      <div className="admin-page">
+        <Breadcrumb
+          items={[
+            { label: 'หน้าหลัก', to: '/admin' },
+            { label: 'เอกสารจัดซื้อ', to: '/admin/purchasing' },
+            { label: 'ใบขอสั่งซื้อ' },
+          ]}
+        />
+        <section className="admin-card">
+          <EmptyState
+            icon="lock"
+            title="บทบาทของคุณไม่มีสิทธิ์สร้างใบขอสั่งซื้อ"
+            description="เฉพาะพนักงานคลังสินค้าเท่านั้นที่จัดทำใบขอสั่งซื้อได้"
+          />
+        </section>
+      </div>
+    )
+  }
+
+  if (!can.viewPurchasing(role)) {
+    return (
+      <div className="admin-page">
+        <Breadcrumb
+          items={[
+            { label: 'หน้าหลัก', to: '/admin' },
+            { label: 'เอกสารจัดซื้อ', to: '/admin/purchasing' },
+            { label: 'ใบขอสั่งซื้อ' },
+          ]}
+        />
+        <section className="admin-card">
+          <EmptyState
+            icon="lock"
+            title="บทบาทของคุณไม่มีสิทธิ์ดูเอกสารจัดซื้อ"
+            description="เฉพาะพนักงานคลังสินค้าและผู้จัดการร้านเท่านั้นที่ดูเอกสารจัดซื้อได้"
+          />
+        </section>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -66,7 +114,13 @@ function RequisitionForm() {
   const navigate = useNavigate()
 
   const existing = id ? findRequisition(Number(id)) : undefined
-  const editable = !existing || existing.status === 'DRAFT' || existing.status === 'REJECTED'
+  const role = user!.role
+  // สิทธิ์ *แก้* = createRequisition (warehouse) + สถานะที่ยังแก้ได้เท่านั้น — ตัวห่อด้านบน
+  // อนุญาต viewPurchasing ให้เข้าหน้านี้แล้ว ผู้ที่มาถึงตรงนี้แต่ไม่มีสิทธิ์สร้างจึงเห็นเอกสารแบบ
+  // อ่านอย่างเดียวโดยอัตโนมัติผ่านตัวแปรเดียวนี้ ไม่ต้องเช็คซ้ำที่ JSX
+  const editable =
+    can.createRequisition(role) &&
+    (!existing || existing.status === 'DRAFT' || existing.status === 'REJECTED')
 
   const [supplierId, setSupplierId] = useState<number | ''>(
     existing?.supplierId ?? state?.supplierId ?? '',
@@ -74,7 +128,6 @@ function RequisitionForm() {
   const [lines, setLines] = useState<LineRow[]>(existing?.items ?? state?.lines ?? [])
   const [working, setWorking] = useState(false)
 
-  const role = user!.role
   const supplier = suppliers.find((entry) => entry.supplierId === supplierId)
   const total = documentTotal(lines)
 
@@ -109,27 +162,6 @@ function RequisitionForm() {
               label: 'กลับไปหน้าเอกสารจัดซื้อ',
               onClick: () => navigate('/admin/purchasing'),
             }}
-          />
-        </section>
-      </div>
-    )
-  }
-
-  if (!can.createRequisition(role)) {
-    return (
-      <div className="admin-page">
-        <Breadcrumb
-          items={[
-            { label: 'หน้าหลัก', to: '/admin' },
-            { label: 'เอกสารจัดซื้อ', to: '/admin/purchasing' },
-            { label: 'ใบขอสั่งซื้อ' },
-          ]}
-        />
-        <section className="admin-card">
-          <EmptyState
-            icon="lock"
-            title="บทบาทของคุณไม่มีสิทธิ์สร้างใบขอสั่งซื้อ"
-            description="เฉพาะพนักงานคลังสินค้าเท่านั้นที่จัดทำใบขอสั่งซื้อได้"
           />
         </section>
       </div>
@@ -217,6 +249,17 @@ function RequisitionForm() {
               : 'เลือกผู้จัดจำหน่าย เพิ่มรายการหนังสือ แล้วส่งให้ผู้จัดการร้านพิจารณา'}
           </p>
         </div>
+        {existing && existing.status === 'SUBMITTED' && can.approveRequisition(role) && (
+          <div className="admin-page__actions">
+            <Link
+              to={`/admin/purchasing/pr/${existing.prId}/approve`}
+              className="btn btn-primary btn-sm"
+            >
+              <Icon name="check" size={18} />
+              อนุมัติ
+            </Link>
+          </div>
+        )}
       </div>
 
       {existing && (
