@@ -54,6 +54,7 @@ func shipBody(carrierID int, tracking string) map[string]any {
 func runDeliveryFlow(e *env) {
 	warehouse, manager, sales, delivery, customer := e.warehouse, e.manager, e.sales, e.delivery, e.customer
 	var orderID, shipmentID int
+	var firstTracking string
 	onHandBefore := onHand(warehouse, deliveryBookID)
 
 	section("บริษัทขนส่ง (Shipment --> ShippingCompany)")
@@ -104,6 +105,7 @@ func runDeliveryFlow(e *env) {
 	})
 	check("บันทึกการจัดส่งแล้วใบเป็น SHIPPED และเปิดพัสดุให้อัตโนมัติ", func() error {
 		tracking := fmt.Sprintf("TH-SMOKE-%d", orderID)
+		firstTracking = tracking
 		body, err := post(delivery, fmt.Sprintf("/api/orders/%d/ship", orderID), shipBody(2, tracking), 200)
 		if err != nil {
 			return err
@@ -159,6 +161,14 @@ func runDeliveryFlow(e *env) {
 			return fmt.Errorf("ลิงก์ติดตาม %q ไม่มีเลขพัสดุอยู่ในนั้น", url)
 		}
 		return nil
+	})
+	check("เลขพัสดุซ้ำกับใบอื่น → 409 TRACKING_DUPLICATED", func() error {
+		secondOrderID, err := readyOrder(customer, sales, warehouse)
+		if err != nil {
+			return err
+		}
+		return expectError("POST", fmt.Sprintf("/api/orders/%d/ship", secondOrderID), delivery,
+			shipBody(2, firstTracking), 409, "TRACKING_DUPLICATED")
 	})
 
 	section("ติดตามสถานะพัสดุ (Shipment 1--* ShipmentTracking)")
@@ -329,10 +339,12 @@ func runDeliveryFlow(e *env) {
 
 	section("คืนยอดสต็อกที่ flow จัดส่งตัดไป")
 	check("คืนยอดเล่มที่ใช้ทดสอบกลับเป็นค่าเดิม", func() error {
+		// 2 หน่วย: ใบหลักที่จัดส่งจริง + ใบที่สองของเช็คเลขพัสดุซ้ำ (แพ็กจนตัดสต็อกไปแล้ว
+		// แต่ถูกปฏิเสธตอน ship จึงค้างที่ READY_TO_SHIP ไม่มีเส้นทางคืนสต็อกอัตโนมัติ)
 		_, err := post(warehouse, "/api/inventory/adjust", map[string]any{
 			"lines": []any{map[string]any{
 				"bookId":         deliveryBookID,
-				"quantityChange": 1,
+				"quantityChange": 2,
 				"reason":         "คืนยอดหลังทดสอบการจัดส่ง",
 				"referenceDoc":   "SMOKE",
 			}},

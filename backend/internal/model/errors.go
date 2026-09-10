@@ -212,6 +212,7 @@ var (
 	ErrCarrierNotFound       = NotFound("CARRIER_NOT_FOUND", "ไม่พบบริษัทขนส่งที่เลือก")
 	ErrShipmentExists        = Conflict("SHIPMENT_EXISTS", "คำสั่งซื้อนี้มีรายการจัดส่งอยู่แล้ว")
 	ErrTrackingRequired      = Validation("TRACKING_REQUIRED", "กรุณากรอกเลขติดตามพัสดุ")
+	ErrTrackingDuplicated    = Conflict("TRACKING_DUPLICATED", "หมายเลขพัสดุนี้ถูกใช้กับคำสั่งซื้ออื่นแล้ว กรุณาตรวจสอบอีกครั้ง")
 	ErrRecipientRequired     = Validation("RECIPIENT_REQUIRED", "กรุณาระบุชื่อผู้รับ")
 	ErrInvalidShipmentStatus = Validation("INVALID_SHIPMENT_STATUS", "สถานะการจัดส่งไม่ถูกต้อง")
 
