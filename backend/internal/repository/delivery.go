@@ -3,6 +3,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -123,6 +124,16 @@ func (r *DeliveryRepository) FindForUpdate(tx *gorm.DB, shipmentID int) (*model.
 func (r *DeliveryRepository) ExistsForOrder(db *gorm.DB, orderID int) (bool, error) {
 	var count int64
 	err := db.Model(&model.Shipment{}).Where("order_id = ?", orderID).Count(&count).Error
+	return count > 0, err
+}
+
+// TrackingExists — เลขพัสดุนี้ถูกใช้ไปแล้วหรือยัง (ตัดช่องว่างหัวท้ายให้ตรงกับ
+// unique index uq_shipment_tracking_number ที่ migrate.go สร้างไว้)
+func (r *DeliveryRepository) TrackingExists(db *gorm.DB, tracking string) (bool, error) {
+	var count int64
+	err := db.Model(&model.Shipment{}).
+		Where("btrim(tracking_number) = ?", strings.TrimSpace(tracking)).
+		Count(&count).Error
 	return count > 0, err
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { apiGet } from '../../api/client'
+import { apiGet, ApiError } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import Icon from '../../components/Icon'
 import { useAuth } from '../../auth/AuthContext'
@@ -257,6 +257,10 @@ export default function CustomerOrderDetailPage() {
           `บันทึกการจัดส่ง ${formatOrderCode(order.orderId)} ทาง${chosen.name} แล้ว`,
         )
       } catch (err) {
+        if (err instanceof ApiError && (err.code === 'TRACKING_DUPLICATED' || err.code === 'TRACKING_REQUIRED')) {
+          setTrackingError(err.message)
+          return
+        }
         notify('error', err instanceof Error ? err.message : 'บันทึกการจัดส่งไม่สำเร็จ')
       }
     })()

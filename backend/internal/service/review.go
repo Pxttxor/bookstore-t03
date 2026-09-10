@@ -43,8 +43,12 @@ func NewReviewService(
 }
 
 // ReviewInput — ฟอร์มเขียนรีวิวของลูกค้า (`Customer.writeReview()`)
+//
+// OrderID เป็นใบที่ลูกค้ากดส่งรีวิวมาจริง ๆ — ซื้อเล่มเดิมซ้ำหลายใบจึงรีวิวได้ใบละครั้ง
+// ไม่ส่งมา = ให้เซิร์ฟเวอร์เลือกใบที่ส่งถึงแล้วใบล่าสุดให้เอง (พฤติกรรมเดิม)
 type ReviewInput struct {
 	BookID  int    `json:"bookId"`
+	OrderID int    `json:"orderId,omitempty"`
 	Rating  int    `json:"rating"`
 	Comment string `json:"comment"`
 }
@@ -83,12 +87,25 @@ func (s *ReviewService) Submit(current Identity, input ReviewInput) (*repository
 	var created model.Review
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		// ต้องเคยซื้อและได้รับของแล้ว — ใบที่พบจะถูกผูกเป็น verified purchase ให้เอง
-		orderID, err := s.orders.DeliveredOrderForBook(tx, current.CustomerID, input.BookID)
-		if err != nil {
-			return err
-		}
-		if orderID == 0 {
-			return model.ErrReviewNotPurchased
+		// ระบุใบมาเอง (ซื้อเล่มเดิมซ้ำหลายใบ) ก็ตรวจเฉพาะใบนั้น ไม่ระบุ = ใช้ใบล่าสุดเหมือนเดิม
+		orderID := input.OrderID
+		if orderID > 0 {
+			ok, err := s.orders.DeliveredOrderHasBook(tx, current.CustomerID, orderID, input.BookID)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return model.ErrReviewNotPurchased
+			}
+		} else {
+			found, err := s.orders.DeliveredOrderForBook(tx, current.CustomerID, input.BookID)
+			if err != nil {
+				return err
+			}
+			if found == 0 {
+				return model.ErrReviewNotPurchased
+			}
+			orderID = found
 		}
 
 		taken, err := s.reviews.ExistsFor(tx, current.CustomerID, input.BookID, orderID)

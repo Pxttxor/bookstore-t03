@@ -457,6 +457,8 @@ func applyIndexes(db *gorm.DB) error {
 		// จึงไม่ติด constraint นี้ — ตรงกับที่ต้องการพอดี
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_review_customer_book_order
 		 ON review (customer_id, book_id, order_id)`,
+		// เลขพัสดุห้ามซ้ำข้ามคำสั่งซื้อ — service ตรวจให้ก่อนแล้ว index นี้กันการยิงพร้อมกันเล็ดลอด
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_shipment_tracking_number ON shipment (btrim(tracking_number))`,
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement).Error; err != nil {

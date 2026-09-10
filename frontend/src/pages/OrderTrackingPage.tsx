@@ -58,13 +58,14 @@ interface CustomerReview {
 
 interface ReviewFormProps {
   bookId: number
+  orderId: number
   title: string
   existingReview?: CustomerReview
   onRefresh: () => void | Promise<void>
 }
 
 // ReviewForm — จัดการรีวิวของลูกค้า (เขียนใหม่ / ลบ)
-function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProps) {
+function ReviewForm({ bookId, orderId, title, existingReview, onRefresh }: ReviewFormProps) {
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -106,6 +107,7 @@ function ReviewForm({ bookId, title, existingReview, onRefresh }: ReviewFormProp
     try {
       await apiPost('/api/reviews', {
         bookId,
+        orderId,
         rating,
         comment: comment.trim(),
       })
@@ -1384,19 +1386,18 @@ function RealOrderView({ order }: { order: CustomerOrder }) {
               ) : (
                 <div className="track__reviews">
                   {currentOrder.items.map((line) => {
-                    const existingReview =
-                      reviews.find(
-                        (r) =>
-                          r.bookId === line.bookId &&
-                          (r.orderId == null || r.orderId === currentOrder.orderId) &&
-                          r.status !== 'REMOVED'
-                      ) ||
-                      reviews.find((r) => r.bookId === line.bookId && r.status !== 'REMOVED')
+                    // เจาะจงใบนี้เท่านั้น — ซื้อเล่มเดิมซ้ำหลายใบต้องรีวิวได้ใบละครั้ง
+                    // (รีวิวเก่าก่อนระบบผูกใบสั่งซื้อ (orderId == null) จับคู่กับใบไหนก็ได้ไม่ได้
+                    // อีกต่อไป ไม่งั้นซื้อซ้ำแล้วจะโดนรีวิวเก่าบังฟอร์มเขียนใหม่)
+                    const existingReview = reviews.find(
+                      (r) => r.bookId === line.bookId && r.orderId === currentOrder.orderId && r.status !== 'REMOVED'
+                    )
 
                     return (
                       <ReviewForm
                         key={line.bookId}
                         bookId={line.bookId}
+                        orderId={currentOrder.orderId}
                         title={line.title}
                         existingReview={existingReview}
                         onRefresh={loadReviews}

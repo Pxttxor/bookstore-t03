@@ -135,6 +135,18 @@ func (r *OrderRepository) DeliveredOrderForBook(db *gorm.DB, customerID, bookID 
 	return orderID, err
 }
 
+// DeliveredOrderHasBook — ใบนี้เป็นของลูกค้ารายนี้ ส่งถึงแล้ว และมีหนังสือเล่มนี้อยู่จริงไหม
+// ใช้ตอนลูกค้าระบุใบที่จะรีวิวมาเอง (รีวิวผูกกับใบที่กดส่งจริง ไม่ใช่ใบล่าสุดเสมอไป)
+func (r *OrderRepository) DeliveredOrderHasBook(db *gorm.DB, customerID, orderID, bookID int) (bool, error) {
+	var count int64
+	err := db.Model(&model.Order{}).
+		Joins("JOIN customer_order_item item ON item.order_id = customer_order.order_id").
+		Where("customer_order.order_id = ? AND customer_order.customer_id = ? AND item.book_id = ? AND customer_order.status = ?",
+			orderID, customerID, bookID, model.OrderStatusDelivered).
+		Count(&count).Error
+	return count > 0, err
+}
+
 // ── โปรโมชั่น ───────────────────────────────────────────────────────────
 
 type PromotionRepository struct{ db *gorm.DB }

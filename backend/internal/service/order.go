@@ -734,6 +734,14 @@ func (s *OrderService) recordShipment(tx *gorm.DB, order *model.Order, input Shi
 		return model.ErrShipmentExists
 	}
 
+	taken, err := s.deliveries.TrackingExists(tx, tracking)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return model.ErrTrackingDuplicated
+	}
+
 	found, err := s.deliveries.CarrierExists(tx, input.CarrierID)
 	if err != nil {
 		return err
