@@ -10,6 +10,7 @@ import LoadingState from '../components/LoadingState'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { can } from '../permissions'
+import { matchesSearch } from '../search'
 import { usePurchasing } from '../purchasing/PurchasingContext'
 import {
   documentTotal,
@@ -135,7 +136,6 @@ export default function PurchasingListPage() {
   }, [requisitions, orders, mayApprove, mayHandleOrders, role])
 
   const filtered = useMemo(() => {
-    const needle = term.trim().toLowerCase()
     const nameOf = (supplierId: number) =>
       suppliers.find((entry) => entry.supplierId === supplierId)?.companyName ?? ''
 
@@ -154,12 +154,7 @@ export default function PurchasingListPage() {
         )
       )
         return false
-      if (!needle) return true
-      return (
-        row.code.toLowerCase().includes(needle) ||
-        nameOf(row.supplierId).toLowerCase().includes(needle) ||
-        formatSupplierCode(row.supplierId).toLowerCase().includes(needle)
-      )
+      return matchesSearch(term, row.code, nameOf(row.supplierId), formatSupplierCode(row.supplierId))
     })
   }, [rows, tab, term, suppliers])
 
