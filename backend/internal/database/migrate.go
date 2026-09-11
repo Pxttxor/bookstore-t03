@@ -8,6 +8,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"gorm.io/gorm"
@@ -85,6 +86,9 @@ func Migrate(db *gorm.DB) error {
 		return err
 	}
 	if err := applyChecks(db); err != nil {
+		return err
+	}
+	if err := dedupeShipmentTracking(db); err != nil {
 		return err
 	}
 	if err := applyIndexes(db); err != nil {
@@ -428,6 +432,40 @@ func applyChecks(db *gorm.DB) error {
 		if err := db.Exec(statement).Error; err != nil {
 			return fmt.Errorf("สร้าง constraint จำนวนไม่สำเร็จ: %w", err)
 		}
+	}
+	return nil
+}
+
+// dedupeShipmentTracking — ปลดล็อก uq_shipment_tracking_number (applyIndexes ข้างล่าง)
+// บนฐานที่มีอยู่ก่อน commit 3f87b9e (PR #44) ซึ่งเป็นจุดแรกที่ service เริ่มกันเลขพัสดุซ้ำ
+// (TrackingExists) — แถวที่พิมพ์เลขซ้ำผ่านหน้าจอก่อนหน้านั้นยังค้างอยู่ในฐานเก่า ทำให้สร้าง
+// unique index ไม่ผ่าน (23505) ฟังก์ชันนี้เก็บแถว shipment_id น้อยที่สุดของแต่ละเลขไว้ตามเดิม
+// ส่วนแถวที่เหลือต่อท้ายด้วย -DUP<shipment_id> ให้ไม่ชนกันเอง (ID ไม่ซ้ำ) แล้วรออัปเดตเป็นเลขจริง
+// จากหน้าจัดส่ง — รันซ้ำได้ รอบสองกระทบ 0 แถว
+func dedupeShipmentTracking(db *gorm.DB) error {
+	type renamedShipment struct {
+		ShipmentID     int
+		TrackingNumber string
+	}
+	const statement = `
+		WITH dup AS (
+			SELECT shipment_id,
+			       row_number() OVER (PARTITION BY btrim(tracking_number) ORDER BY shipment_id) AS seq
+			FROM shipment
+		)
+		UPDATE shipment s
+		SET tracking_number = left(btrim(s.tracking_number), 88) || '-DUP' || s.shipment_id
+		FROM dup
+		WHERE dup.shipment_id = s.shipment_id AND dup.seq > 1
+		RETURNING s.shipment_id, s.tracking_number`
+
+	var renamed []renamedShipment
+	if err := db.Raw(statement).Scan(&renamed).Error; err != nil {
+		return fmt.Errorf("แก้เลขพัสดุซ้ำไม่สำเร็จ: %w", err)
+	}
+	for _, row := range renamed {
+		log.Printf("[migrate] เลขพัสดุซ้ำ — เปลี่ยนพัสดุ %d เป็น %q แล้ว กรุณาแก้เป็นเลขจริงในหน้าจัดส่ง",
+			row.ShipmentID, row.TrackingNumber)
 	}
 	return nil
 }
